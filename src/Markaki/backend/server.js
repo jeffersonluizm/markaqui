@@ -1,0 +1,358 @@
+const express = require('express');
+const fs = require('fs').promises;
+const path = require('path');
+const cors = require('cors');
+
+const app = express();
+const PORT = 3000;
+const DATA_FILE = path.join(__dirname, 'database.json');
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+
+// ============================================
+// FUNÇÕES AUXILIARES
+// ============================================
+
+async function lerDados() {
+  try {
+    const data = await fs.readFile(DATA_FILE, 'utf8');
+    return JSON.parse(data);
+  } catch (error) {
+    return {
+      medicos: [],
+      horarios: [],
+      agendamentos: []
+    };
+  }
+}
+
+async function salvarDados(data) {
+  await fs.writeFile(DATA_FILE, JSON.stringify(data, null, 2), 'utf8');
+}
+
+function gerarId() {
+  return String(Date.now());
+}
+
+// ============================================
+// ROTAS - MÉDICOS
+// ============================================
+
+// Listar todos os médicos
+app.get('/api/medicos', async (req, res) => {
+  try {
+    const dados = await lerDados();
+    res.json(dados.medicos);
+  } catch (error) {
+    res.status(500).json({ erro: 'Erro ao buscar médicos' });
+  }
+});
+
+// Buscar médico por ID
+app.get('/api/medicos/:id', async (req, res) => {
+  try {
+    const dados = await lerDados();
+    const medico = dados.medicos.find(m => m.id === req.params.id);
+    
+    if (!medico) {
+      return res.status(404).json({ erro: 'Médico não encontrado' });
+    }
+    
+    res.json(medico);
+  } catch (error) {
+    res.status(500).json({ erro: 'Erro ao buscar médico' });
+  }
+});
+
+// Cadastrar novo médico
+app.post('/api/medicos', async (req, res) => {
+  try {
+    const { nome, especialidade, imagem } = req.body;
+    
+    if (!nome || !especialidade) {
+      return res.status(400).json({ 
+        erro: 'Nome e especialidade são obrigatórios' 
+      });
+    }
+    
+    const dados = await lerDados();
+    
+    const novoMedico = {
+      id: gerarId(),
+      nome,
+      especialidade,
+      imagem: imagem || 'https://via.placeholder.com/80'
+    };
+    
+    dados.medicos.push(novoMedico);
+    await salvarDados(dados);
+    
+    res.status(201).json(novoMedico);
+  } catch (error) {
+    res.status(500).json({ erro: 'Erro ao cadastrar médico' });
+  }
+});
+
+// Atualizar médico
+app.put('/api/medicos/:id', async (req, res) => {
+  try {
+    const { nome, especialidade, imagem } = req.body;
+    const dados = await lerDados();
+    const index = dados.medicos.findIndex(m => m.id === req.params.id);
+    
+    if (index === -1) {
+      return res.status(404).json({ erro: 'Médico não encontrado' });
+    }
+    
+    dados.medicos[index] = {
+      ...dados.medicos[index],
+      nome: nome || dados.medicos[index].nome,
+      especialidade: especialidade || dados.medicos[index].especialidade,
+      imagem: imagem || dados.medicos[index].imagem
+    };
+    
+    await salvarDados(dados);
+    res.json(dados.medicos[index]);
+  } catch (error) {
+    res.status(500).json({ erro: 'Erro ao atualizar médico' });
+  }
+});
+
+// Remover médico
+app.delete('/api/medicos/:id', async (req, res) => {
+  try {
+    const dados = await lerDados();
+    const medicosFiltrados = dados.medicos.filter(m => m.id !== req.params.id);
+    
+    if (dados.medicos.length === medicosFiltrados.length) {
+      return res.status(404).json({ erro: 'Médico não encontrado' });
+    }
+    
+    dados.medicos = medicosFiltrados;
+    await salvarDados(dados);
+    
+    res.json({ mensagem: 'Médico removido com sucesso' });
+  } catch (error) {
+    res.status(500).json({ erro: 'Erro ao remover médico' });
+  }
+});
+
+// ============================================
+// ROTAS - HORÁRIOS
+// ============================================
+
+// Listar todos os horários
+app.get('/api/horarios', async (req, res) => {
+  try {
+    const dados = await lerDados();
+    res.json(dados.horarios);
+  } catch (error) {
+    res.status(500).json({ erro: 'Erro ao buscar horários' });
+  }
+});
+
+// Buscar horário por ID
+app.get('/api/horarios/:id', async (req, res) => {
+  try {
+    const dados = await lerDados();
+    const horario = dados.horarios.find(h => h.id === req.params.id);
+    
+    if (!horario) {
+      return res.status(404).json({ erro: 'Horário não encontrado' });
+    }
+    
+    res.json(horario);
+  } catch (error) {
+    res.status(500).json({ erro: 'Erro ao buscar horário' });
+  }
+});
+
+// Cadastrar novo horário
+app.post('/api/horarios', async (req, res) => {
+  try {
+    const { data, hora, disponivel } = req.body;
+    
+    if (!data || !hora) {
+      return res.status(400).json({ 
+        erro: 'Data e hora são obrigatórios' 
+      });
+    }
+    
+    const dados = await lerDados();
+    
+    const novoHorario = {
+      id: gerarId(),
+      data,
+      hora,
+      disponivel: disponivel !== undefined ? disponivel : true,
+      paciente_nome: '',
+      medico_id: null,
+      medico_nome: ''
+    };
+    
+    dados.horarios.push(novoHorario);
+    await salvarDados(dados);
+    
+    res.status(201).json(novoHorario);
+  } catch (error) {
+    res.status(500).json({ erro: 'Erro ao cadastrar horário' });
+  }
+});
+
+// Atualizar horário
+app.put('/api/horarios/:id', async (req, res) => {
+  try {
+    const dados = await lerDados();
+    const index = dados.horarios.findIndex(h => h.id === req.params.id);
+    
+    if (index === -1) {
+      return res.status(404).json({ erro: 'Horário não encontrado' });
+    }
+    
+    dados.horarios[index] = {
+      ...dados.horarios[index],
+      ...req.body
+    };
+    
+    await salvarDados(dados);
+    res.json(dados.horarios[index]);
+  } catch (error) {
+    res.status(500).json({ erro: 'Erro ao atualizar horário' });
+  }
+});
+
+// Remover horário
+app.delete('/api/horarios/:id', async (req, res) => {
+  try {
+    const dados = await lerDados();
+    const horariosFiltrados = dados.horarios.filter(h => h.id !== req.params.id);
+    
+    if (dados.horarios.length === horariosFiltrados.length) {
+      return res.status(404).json({ erro: 'Horário não encontrado' });
+    }
+    
+    dados.horarios = horariosFiltrados;
+    await salvarDados(dados);
+    
+    res.json({ mensagem: 'Horário removido com sucesso' });
+  } catch (error) {
+    res.status(500).json({ erro: 'Erro ao remover horário' });
+  }
+});
+
+// ============================================
+// ROTAS - AGENDAMENTOS
+// ============================================
+
+// Listar todos os agendamentos
+app.get('/api/agendamentos', async (req, res) => {
+  try {
+    const dados = await lerDados();
+    res.json(dados.agendamentos);
+  } catch (error) {
+    res.status(500).json({ erro: 'Erro ao buscar agendamentos' });
+  }
+});
+
+// Criar novo agendamento
+app.post('/api/agendamentos', async (req, res) => {
+  try {
+    const { horario_id, medico_id, paciente_nome } = req.body;
+    
+    if (!horario_id || !medico_id || !paciente_nome) {
+      return res.status(400).json({ 
+        erro: 'Horário, médico e nome do paciente são obrigatórios' 
+      });
+    }
+    
+    const dados = await lerDados();
+    
+    // Verificar se o horário existe e está disponível
+    const horario = dados.horarios.find(h => h.id === horario_id);
+    if (!horario) {
+      return res.status(404).json({ erro: 'Horário não encontrado' });
+    }
+    
+    if (!horario.disponivel) {
+      return res.status(400).json({ erro: 'Horário não está disponível' });
+    }
+    
+    // Verificar se o médico existe
+    const medico = dados.medicos.find(m => m.id === medico_id);
+    if (!medico) {
+      return res.status(404).json({ erro: 'Médico não encontrado' });
+    }
+    
+    // Criar agendamento
+    const novoAgendamento = {
+      id: gerarId(),
+      horario_id,
+      medico_id,
+      medico_nome: medico.nome,
+      medico_especialidade: medico.especialidade,
+      paciente_nome,
+      data: horario.data,
+      hora: horario.hora,
+      status: 'agendado',
+      criado_em: new Date().toISOString()
+    };
+    
+    // Marcar horário como não disponível
+    const horarioIndex = dados.horarios.findIndex(h => h.id === horario_id);
+    dados.horarios[horarioIndex].disponivel = false;
+    dados.horarios[horarioIndex].paciente_nome = paciente_nome;
+    dados.horarios[horarioIndex].medico_id = medico_id;
+    dados.horarios[horarioIndex].medico_nome = medico.nome;
+    
+    dados.agendamentos.push(novoAgendamento);
+    await salvarDados(dados);
+    
+    res.status(201).json(novoAgendamento);
+  } catch (error) {
+    console.error('Erro ao criar agendamento:', error);
+    res.status(500).json({ erro: 'Erro ao criar agendamento' });
+  }
+});
+
+// Cancelar agendamento
+app.delete('/api/agendamentos/:id', async (req, res) => {
+  try {
+    const dados = await lerDados();
+    const agendamento = dados.agendamentos.find(a => a.id === req.params.id);
+    
+    if (!agendamento) {
+      return res.status(404).json({ erro: 'Agendamento não encontrado' });
+    }
+    
+    // Liberar o horário
+    const horarioIndex = dados.horarios.findIndex(h => h.id === agendamento.horario_id);
+    if (horarioIndex !== -1) {
+      dados.horarios[horarioIndex].disponivel = true;
+      dados.horarios[horarioIndex].paciente_nome = '';
+      dados.horarios[horarioIndex].medico_id = null;
+      dados.horarios[horarioIndex].medico_nome = '';
+    }
+    
+    // Remover agendamento
+    dados.agendamentos = dados.agendamentos.filter(a => a.id !== req.params.id);
+    await salvarDados(dados);
+    
+    res.json({ mensagem: 'Agendamento cancelado com sucesso' });
+  } catch (error) {
+    res.status(500).json({ erro: 'Erro ao cancelar agendamento' });
+  }
+});
+
+// ============================================
+// INICIAR SERVIDOR
+// ============================================
+
+app.listen(PORT, () => {
+  console.log(`🚀 Servidor rodando em http://localhost:${PORT}`);
+  console.log(`📋 Endpoints disponíveis:`);
+  console.log(`   - GET/POST    /api/medicos`);
+  console.log(`   - GET/POST    /api/horarios`);
+  console.log(`   - GET/POST    /api/agendamentos`);
+});

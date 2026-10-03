@@ -1,0 +1,25 @@
+{
+  "about": {
+    "title": "Sobre o Markaqui",
+    "subtitle": "Nossa missão, visão e valores",
+    "mission": {
+      "title": "Nossa missão",
+      "text": "Simplificar a gestão de horários, conectar serviços de forma eficiente e sem conflitos."
+    },
+    "vision": {
+      "title": "Nossa visão",
+      "text": "Simplificando cada agendamento e construindo um futuro onde o tempo de todos é valorizado e bem aproveitado."
+    },
+    "values": {
+      "title": "Nossos valores",
+      "items": ["Praticidade", "Autonomia", "Transparência"]
+    },
+    "ctaButton": "Comece agendar agora"
+  },
+  "terms": {
+    "title": "Termos do Contrato",
+    "contractText": "Você está concordando com todos os termos e condições estabelecidos neste contrato. Por favor, leia atentamente antes de aceitar. O contrato do aplicativo Markaqui estabelece os direitos e responsabilidades do usuário ao utilizar nossos serviços de agendamento. Ao aceitar este contrato, você concorda em usar o aplicativo de acordo com as leis aplicáveis e respeitar as políticas de privacidade e segurança. Reservamo-nos o direito de modificar estes termos a qualquer momento, e notificaremos os usuários sobre quaisquer alterações significativas. Se você não concordar com os termos, por favor, não utilize o aplicativo. Obrigado por escolher o Markaqui para suas necessidades de agendamento. Os termos completos do contrato estão disponíveis no aplicativo.",
+    "acceptButton": "Aceito",
+    "declineButton": "Não Aceito"
+  }
+}

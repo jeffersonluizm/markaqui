@@ -1,0 +1,122 @@
+import React from "react";
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, Image } from "react-native";
+
+export default function App() {
+  return (
+    <View style={styles.container}>
+      {/* Navbar */}
+      <View style={styles.navbar}>
+        <Text style={styles.logoText}>Markaqui</Text>
+        <View style={styles.menu}>
+          <Text style={styles.menuItem}>Inicio</Text>
+          <Text style={styles.menuItem}>Sobre</Text>
+          <Text style={styles.menuItem}>Contato</Text>
+        </View>
+      </View>
+
+      {/* Conteúdo principal */}
+      <View style={styles.main}>
+        <Image
+          source={require("./assets/logo.png")} style={styles.logo} 
+          
+        />
+
+        <Text style={styles.title}>MARKAQUI</Text>
+
+        <View style={styles.form}>
+          <TextInput
+            placeholder="Login"
+            style={styles.input}
+            placeholderTextColor="#555"
+          />
+          <TextInput
+            placeholder="Senha"
+            style={styles.input}
+            secureTextEntry
+            placeholderTextColor="#555"
+          />
+
+           <TouchableOpacity style={styles.button}>
+            <Text style={styles.buttonText}>Entrar</Text>
+          </TouchableOpacity>
+
+          
+            <Text>Recuperar Senha</Text>
+          
+        </View>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#d8ecf5",
+  },
+  navbar: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+  },
+  logoText: {
+    fontSize: 22,
+    fontWeight: "bold",
+    color: "#000",
+  },
+  menu: {
+    flexDirection: "row",
+  },
+  menuItem: {
+    marginLeft: 20,
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#000",
+  },
+  main: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  logo: {
+    width: 100,
+    height: 100,
+    marginBottom: 20,
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: "bold",
+    color: "#1e3a56",
+    marginBottom: 40,
+  },
+  form: {
+    width: "80%",
+    alignItems: "center",
+  },
+  input: {
+    width: "100%",
+    backgroundColor: "#fff",
+    borderRadius: 30,
+    paddingVertical: 7,
+    paddingHorizontal: 20,
+    fontSize: 16,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: "#ccc",
+  },
+  button: {
+    backgroundColor: "#1e3a56",
+    borderRadius: 30,
+    marginTop:12,
+    paddingVertical: 7,
+    width: "70%",
+    alignItems: "center",
+  },
+  buttonText: {
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: 16,
+  },
+});
