@@ -31,7 +31,9 @@ screens/
 └── MeusAgendamentos.js ⭐ Tela de consultas
 
 services/
-└── api.js              ⭐ Todas as funções de API
+├── api.js              ⭐ Todas as funções de API
+├── http.js             URL da API (EXPO_PUBLIC_API_URL)
+└── horarios.js         Regras puras dos horários
 
 App.js                  ⭐ Componente principal
 ```
@@ -51,19 +53,19 @@ INICIO_RAPIDO.md       ⚡ Setup em 5 minutos
 ✅ Buscar por nome  
 ✅ Filtrar por especialidade  
 ✅ Cadastrar novo médico  
-✅ Remover médico  
+✅ Remover médico (bloqueado com agendamentos: 409)  
 ✅ Pull-to-refresh  
 
 ### 2. Gestão de Horários
-✅ Listar horários disponíveis e ocupados  
-✅ Criar novos horários  
+✅ Listar horários disponíveis e ocupados, com o médico de cada um  
+✅ Criar novos horários na agenda de um médico  
 ✅ Ver informações de quem agendou  
 ✅ Remover horários disponíveis  
 ✅ Indicadores visuais de status  
 
 ### 3. Agendar Consulta (⭐ NOVA INTEGRAÇÃO)
 ✅ **Selecionar médico** da lista cadastrada  
-✅ **Selecionar horário** disponível  
+✅ **Selecionar horário** disponível da agenda do médico escolhido  
 ✅ Digitar nome do paciente  
 ✅ Confirmação com todos os detalhes  
 ✅ Validações automáticas  
@@ -92,14 +94,14 @@ INICIO_RAPIDO.md       ⚡ Setup em 5 minutos
 ┌──────────────────────────────────────────┐
 │ 2. CRIAR HORÁRIOS                        │
 │    Tela: GerenciarHorarios               │
-│    → Define datas e horários disponíveis │
+│    → Define a agenda de cada médico      │
 └──────────────────────────────────────────┘
                    ↓
 ┌──────────────────────────────────────────┐
 │ 3. AGENDAR CONSULTA                      │
 │    Tela: AgendarConsulta                 │
 │    → Seleciona médico (lista do passo 1) │
-│    → Seleciona horário (lista do passo 2)│
+│    → Seleciona horário do médico         │
 │    → Digite nome do paciente             │
 │    → CONFIRMA                            │
 └──────────────────────────────────────────┘
@@ -161,7 +163,7 @@ INICIO_RAPIDO.md       ⚡ Setup em 5 minutos
 2. **Frontend:**
    ```bash
    npm install
-   # Configure API_URL em services/api.js
+   # Copie .env.example para .env e ajuste EXPO_PUBLIC_API_URL
    npm start
    ```
 
@@ -181,10 +183,12 @@ INICIO_RAPIDO.md       ⚡ Setup em 5 minutos
 - `DELETE /api/medicos/:id` - Remover
 
 ### Horários
-- `GET /api/horarios` - Listar
-- `POST /api/horarios` - Criar
-- `PUT /api/horarios/:id` - Atualizar
-- `DELETE /api/horarios/:id` - Remover
+- `GET /api/horarios` - Listar (`?medico_id=ID` traz só a agenda do médico)
+- `POST /api/horarios` - Criar (`medico_id` obrigatório)
+- `PUT /api/horarios/:id` - Atualizar (só `disponivel`, `data`, `hora`)
+- `DELETE /api/horarios/:id` - Remover (não remove horário agendado)
+
+Regras completas da agenda por médico (códigos 400/409): ver `README.md`.
 
 ### Agendamentos (⭐ NOVO)
 - `GET /api/agendamentos` - Listar todos
@@ -205,6 +209,8 @@ INICIO_RAPIDO.md       ⚡ Setup em 5 minutos
 ### 🔥 Validações Automáticas
 - ✅ Não permite agendar em horário ocupado
 - ✅ Não permite remover horário com agendamento
+- ✅ Não permite agendar com médico diferente do dono do horário
+- ✅ Não permite excluir médico com agendamentos
 - ✅ Valida todos os campos obrigatórios
 
 ### 🔄 Sincronização Automática
@@ -227,7 +233,7 @@ INICIO_RAPIDO.md       ⚡ Setup em 5 minutos
 1. **Usuário abre aba "📅+" (Agendar)**
 2. Vê lista de médicos disponíveis
 3. **Seleciona:** "Dr. João Silva - Cardiologista"
-4. Vê lista de horários disponíveis
+4. Vê os horários disponíveis do médico escolhido
 5. **Seleciona:** "2025-11-25 às 14:00"
 6. **Digita:** "Maria Silva"
 7. **Clica:** "Confirmar Agendamento"
@@ -241,18 +247,20 @@ INICIO_RAPIDO.md       ⚡ Setup em 5 minutos
 
 ## 🔧 Configuração
 
-### API URL (services/api.js):
+### API URL (arquivo .env, fora do Git; modelo em .env.example):
 
-```javascript
-// Emulador Android
-const API_URL = 'http://10.0.2.2:3000/api';
+```bash
+# Emulador Android
+EXPO_PUBLIC_API_URL=http://10.0.2.2:3000/api
 
-// Emulador iOS  
-const API_URL = 'http://localhost:3000/api';
+# Emulador iOS / navegador
+EXPO_PUBLIC_API_URL=http://localhost:3000/api
 
-// Dispositivo Físico
-const API_URL = 'http://192.168.1.XXX:3000/api';
+# Dispositivo Físico
+EXPO_PUBLIC_API_URL=http://192.168.1.XXX:3000/api
 ```
+
+Reinicie o Expo depois de mudar o `.env`.
 
 ---
 

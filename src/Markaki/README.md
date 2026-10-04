@@ -4,8 +4,8 @@
 
 Sistema completo que integra:
 - ✅ **Gestão de Médicos** - Cadastrar, listar, remover médicos
-- ✅ **Gestão de Horários** - Criar e gerenciar horários disponíveis
-- ✅ **Agendamento de Consultas** - Agendar consultas com médico e horário específicos
+- ✅ **Gestão de Horários** - Cada médico tem a própria agenda de horários
+- ✅ **Agendamento de Consultas** - Escolher o médico e um horário livre da agenda dele
 - ✅ **Meus Agendamentos** - Visualizar e cancelar consultas agendadas
 
 ---
@@ -15,18 +15,19 @@ Sistema completo que integra:
 ### 1. Lista de Médicos
 - Busca e filtros por especialidade
 - Cadastro de novos médicos
-- Remoção de médicos
+- Remoção de médicos (bloqueada enquanto o médico tiver agendamentos)
 - Pull-to-refresh
 
 ### 2. Gerenciar Horários
-- Criar novos horários disponíveis
+- Criar horários escolhendo o médico (o horário entra na agenda dele)
+- Ver o médico de cada horário
 - Visualizar horários ocupados/disponíveis
-- Remover horários (apenas disponíveis)
+- Remover horários (apenas os não agendados)
 - Ver informações de agendamentos
 
 ### 3. Agendar Consulta
 - **Seleção de Médico** - Escolha entre os médicos cadastrados
-- **Seleção de Horário** - Escolha entre horários disponíveis
+- **Seleção de Horário** - Só aparecem os horários livres do médico escolhido
 - **Nome do Paciente** - Digite seu nome
 - Confirmação do agendamento com todos os detalhes
 
@@ -58,17 +59,17 @@ O backend estará rodando em `http://localhost:3000`
 ### Passo 2: Frontend
 
 ```bash
-# Na raiz do projeto
+# Nesta pasta (src/Markaki)
 npm install
 
-# Configure o endereço da API em services/api.js
-# Para emulador Android: http://10.0.2.2:3000/api
-# Para emulador iOS: http://localhost:3000/api
-# Para dispositivo físico: http://SEU_IP:3000/api
+# Crie o .env a partir do modelo e ajuste EXPO_PUBLIC_API_URL
+copy .env.example .env      # Windows (no Mac/Linux: cp .env.example .env)
 
 # Inicie o app
 npm start
 ```
+
+Atalho no Windows: o `iniciar.bat` na raiz do repositório abre a API e o Expo em janelas separadas.
 
 ---
 
@@ -89,8 +90,11 @@ sistema-integrado/
 │   └── MeusAgendamentos.js # Tela de consultas
 │
 ├── services/
-│   └── api.js              # Funções de API
+│   ├── api.js              # Funções de API
+│   ├── http.js             # URL da API (EXPO_PUBLIC_API_URL) e erros com status
+│   └── horarios.js         # Regras puras dos horários (testadas)
 │
+├── .env.example            # Modelo do .env (o .env não vai para o Git)
 ├── App.js                  # Componente principal
 └── package.json            # Dependências frontend
 ```
@@ -107,16 +111,32 @@ sistema-integrado/
 - `DELETE /api/medicos/:id` - Remover
 
 ### Horários
-- `GET /api/horarios` - Listar todos
+- `GET /api/horarios` - Listar todos (`?medico_id=ID` traz só a agenda de um médico)
 - `GET /api/horarios/:id` - Buscar por ID
-- `POST /api/horarios` - Cadastrar
-- `PUT /api/horarios/:id` - Atualizar
+- `POST /api/horarios` - Cadastrar (`medico_id`, `data` e `hora` obrigatórios)
+- `PUT /api/horarios/:id` - Atualizar (só `disponivel`, `data` e `hora`)
 - `DELETE /api/horarios/:id` - Remover
 
 ### Agendamentos
 - `GET /api/agendamentos` - Listar todos
-- `POST /api/agendamentos` - Criar agendamento
-- `DELETE /api/agendamentos/:id` - Cancelar
+- `POST /api/agendamentos` - Criar agendamento (`horario_id` e `paciente_nome`; `medico_id` é opcional, mas, se vier, tem de ser o médico do horário)
+- `DELETE /api/agendamentos/:id` - Cancelar (o horário volta a ficar livre na agenda do mesmo médico)
+
+### Regras da agenda por médico
+
+| Situação | Resposta |
+|---|---|
+| `POST /api/horarios` sem `medico_id` ou com médico inexistente | 400 |
+| Mesmo médico, mesma data e hora já cadastradas (POST ou PUT) | 409 |
+| Dois médicos diferentes na mesma data e hora | permitido |
+| `POST /api/agendamentos` com `medico_id` diferente do médico do horário | 400 |
+| Agendar horário antigo sem médico | 400 |
+| `PUT /api/horarios/:id` com outro campo além de `disponivel`, `data`, `hora` | 400 |
+| `PUT` ou `DELETE` em horário agendado | 409 (cancele o agendamento primeiro) |
+| `DELETE /api/medicos/:id` com agendamentos | 409 ("cancele os agendamentos primeiro") |
+| `DELETE /api/medicos/:id` sem agendamentos | 200; os horários livres ou bloqueados do médico saem junto (`horarios_removidos`), porque sem o médico ninguém conseguiria agendá-los |
+
+Os ids novos são gerados com `crypto.randomUUID()` (antes era `Date.now()`, que repetia o id quando dois cadastros caíam no mesmo milissegundo).
 
 ---
 
@@ -197,18 +217,20 @@ sistema-integrado/
 
 ## 🔧 Configuração da API
 
-Edite `services/api.js`:
+O endereço da API vem da variável `EXPO_PUBLIC_API_URL`, lida do arquivo `.env` nesta pasta. O `.env` fica fora do Git; copie o modelo `.env.example`:
 
-```javascript
-// Para emulador Android
-const API_URL = 'http://10.0.2.2:3000/api';
+```bash
+# Navegador ou emulador iOS na mesma máquina
+EXPO_PUBLIC_API_URL=http://localhost:3000/api
 
-// Para emulador iOS
-const API_URL = 'http://localhost:3000/api';
+# Emulador Android
+EXPO_PUBLIC_API_URL=http://10.0.2.2:3000/api
 
-// Para dispositivo físico (use seu IP)
-const API_URL = 'http://192.168.1.XXX:3000/api';
+# Dispositivo físico (use o IP do computador)
+EXPO_PUBLIC_API_URL=http://192.168.1.XXX:3000/api
 ```
+
+Sem a variável, o app usa `http://localhost:3000/api`. Depois de mudar o `.env`, reinicie o Expo (`npm start -- --clear`).
 
 **Como descobrir seu IP:**
 ```bash
@@ -241,10 +263,19 @@ ifconfig
   "hora": "09:00 - 10:00",
   "disponivel": true,
   "paciente_nome": "",
-  "medico_id": null,
-  "medico_nome": ""
+  "medico_id": "1",
+  "medico_nome": "Dr. Levi Alves"
 }
 ```
+
+O horário pertence a um médico (`medico_id`). `paciente_nome` só é preenchido pelo agendamento.
+
+### Dados antigos (horários sem médico)
+
+Antes da agenda por médico, o horário era criado com `medico_id: null` e o médico só era gravado ao agendar. Tratamento:
+
+- Os seis horários de exemplo do `backend/database.json` foram migrados: cada um foi atribuído a um médico do próprio arquivo.
+- Se outra cópia do `database.json` ainda tiver horários com `medico_id: null`, a API continua listando esses horários em `GET /api/horarios` (fora do filtro por médico) e permite removê-los, mas recusa agendá-los (400). No app eles aparecem como "Sem médico (cadastro antigo)" na aba de horários: remova e cadastre de novo na agenda do médico certo.
 
 ### Agendamento
 ```json
@@ -275,8 +306,10 @@ netstat -ano | findstr :3000
 # Mac/Linux
 lsof -i :3000
 
-# Se ocupada, mude a porta no server.js
-const PORT = 3001;
+# Se ocupada, suba em outra porta com a variável PORT
+# Windows (cmd): set PORT=3001 && npm start
+# Mac/Linux:     PORT=3001 npm start
+# e ajuste a porta em EXPO_PUBLIC_API_URL no .env
 ```
 
 ### Frontend não conecta
@@ -286,6 +319,7 @@ const PORT = 3001;
 4. Testou no navegador: `http://localhost:3000/api/medicos`?
 
 ### Horário não aparece na lista de agendamento
+- O horário aparece só para o médico dono dele: confira o médico escolhido
 - Certifique-se de que o horário está marcado como `disponível: true`
 - Recarregue a tela (pull-to-refresh)
 
@@ -300,6 +334,7 @@ const PORT = 3001;
 
 ### 1. Validações Automáticas
 - Não permite agendar em horários ocupados
+- Não permite agendar com médico diferente do dono do horário
 - Não permite remover médicos/horários com agendamentos
 - Valida campos obrigatórios
 
@@ -330,7 +365,7 @@ const PORT = 3001;
 2. **Frontend** (2 min)
    ```bash
    npm install
-   # Configure API_URL
+   # Crie o .env a partir do .env.example
    npm start
    ```
 
@@ -366,8 +401,10 @@ const PORT = 3001;
 cd backend
 npm start              # Iniciar servidor
 npm run dev           # Modo desenvolvimento (auto-reload)
+npm test              # Testes das rotas (node:test + supertest, arquivo de dados temporário)
 
 # Frontend
+npm test              # Testes das regras puras em services/
 npm start             # Iniciar Metro
 npm run android       # Rodar no Android
 npm run ios           # Rodar no iOS
