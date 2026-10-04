@@ -47,3 +47,69 @@ test('gerarId não repete mesmo quando chamado várias vezes no mesmo milissegun
   const ids = new Set(Array.from({ length: 1000 }, () => gerarId()));
   assert.equal(ids.size, 1000);
 });
+
+// ============================================
+// HORÁRIOS POR MÉDICO
+// ============================================
+
+test('POST /api/horarios sem medico_id responde 400', async () => {
+  const res = await request(app)
+    .post('/api/horarios')
+    .send({ data: '2025-11-25', hora: '09:00 - 10:00' });
+  assert.equal(res.status, 400);
+  assert.match(res.body.erro, /médico/i);
+  assert.equal(lerDados().horarios.length, 0);
+});
+
+test('POST /api/horarios com médico inexistente responde 400', async () => {
+  const res = await request(app)
+    .post('/api/horarios')
+    .send({ data: '2025-11-25', hora: '09:00 - 10:00', medico_id: 'nao-existe' });
+  assert.equal(res.status, 400);
+  assert.equal(lerDados().horarios.length, 0);
+});
+
+test('POST /api/horarios grava o médico do horário', async () => {
+  const res = await request(app)
+    .post('/api/horarios')
+    .send({ data: '2025-11-25', hora: '09:00 - 10:00', medico_id: 'm1' });
+  assert.equal(res.status, 201);
+  assert.equal(res.body.medico_id, 'm1');
+  assert.equal(res.body.medico_nome, 'Dra. Ana');
+  assert.equal(res.body.disponivel, true);
+  assert.equal(lerDados().horarios[0].medico_id, 'm1');
+});
+
+test('dois médicos podem ter o mesmo horário', async () => {
+  const corpo = { data: '2025-11-25', hora: '09:00 - 10:00' };
+  const a = await request(app).post('/api/horarios').send({ ...corpo, medico_id: 'm1' });
+  const b = await request(app).post('/api/horarios').send({ ...corpo, medico_id: 'm2' });
+  assert.equal(a.status, 201);
+  assert.equal(b.status, 201);
+  assert.equal(lerDados().horarios.length, 2);
+});
+
+test('o mesmo médico não pode ter o mesmo horário duas vezes (409)', async () => {
+  const corpo = { data: '2025-11-25', hora: '09:00 - 10:00', medico_id: 'm1' };
+  await request(app).post('/api/horarios').send(corpo);
+  const res = await request(app).post('/api/horarios').send(corpo);
+  assert.equal(res.status, 409);
+  assert.equal(lerDados().horarios.length, 1);
+});
+
+test('GET /api/horarios?medico_id= devolve só os horários do médico', async () => {
+  gravarDados({
+    medicos: medicosBase,
+    horarios: [
+      { id: 'h1', data: '2025-11-25', hora: '09:00', disponivel: true, paciente_nome: '', medico_id: 'm1', medico_nome: 'Dra. Ana' },
+      { id: 'h2', data: '2025-11-25', hora: '09:00', disponivel: true, paciente_nome: '', medico_id: 'm2', medico_nome: 'Dr. Beto' },
+      { id: 'h3', data: '2025-11-26', hora: '10:00', disponivel: true, paciente_nome: '', medico_id: 'm1', medico_nome: 'Dra. Ana' },
+    ],
+  });
+  const res = await request(app).get('/api/horarios').query({ medico_id: 'm1' });
+  assert.equal(res.status, 200);
+  assert.deepEqual(res.body.map((h) => h.id), ['h1', 'h3']);
+
+  const todos = await request(app).get('/api/horarios');
+  assert.equal(todos.body.length, 3);
+});

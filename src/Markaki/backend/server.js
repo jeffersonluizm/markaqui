@@ -146,11 +146,15 @@ app.delete('/api/medicos/:id', async (req, res) => {
 // ROTAS - HORÁRIOS
 // ============================================
 
-// Listar todos os horários
+// Listar horários (todos, ou só os de um médico com ?medico_id=)
 app.get('/api/horarios', async (req, res) => {
   try {
     const dados = await lerDados();
-    res.json(dados.horarios);
+    const { medico_id } = req.query;
+    const horarios = medico_id
+      ? dados.horarios.filter(h => h.medico_id === medico_id)
+      : dados.horarios;
+    res.json(horarios);
   } catch (error) {
     res.status(500).json({ erro: 'Erro ao buscar horários' });
   }
@@ -175,15 +179,31 @@ app.get('/api/horarios/:id', async (req, res) => {
 // Cadastrar novo horário
 app.post('/api/horarios', async (req, res) => {
   try {
-    const { data, hora, disponivel } = req.body;
+    const { data, hora, disponivel, medico_id } = req.body;
     
-    if (!data || !hora) {
+    if (!data || !hora || !medico_id) {
       return res.status(400).json({ 
-        erro: 'Data e hora são obrigatórios' 
+        erro: 'Médico, data e hora são obrigatórios' 
       });
     }
     
     const dados = await lerDados();
+
+    // O horário pertence a um médico: é a agenda dele.
+    const medico = dados.medicos.find(m => m.id === medico_id);
+    if (!medico) {
+      return res.status(400).json({ erro: 'Médico não encontrado' });
+    }
+
+    // Dois médicos podem ter o mesmo horário; o mesmo médico, não.
+    const repetido = dados.horarios.some(
+      h => h.medico_id === medico_id && h.data === data && h.hora === hora
+    );
+    if (repetido) {
+      return res.status(409).json({
+        erro: 'Este médico já tem um horário cadastrado nessa data e hora'
+      });
+    }
     
     const novoHorario = {
       id: gerarId(),
@@ -191,8 +211,8 @@ app.post('/api/horarios', async (req, res) => {
       hora,
       disponivel: disponivel !== undefined ? disponivel : true,
       paciente_nome: '',
-      medico_id: null,
-      medico_nome: ''
+      medico_id,
+      medico_nome: medico.nome
     };
     
     dados.horarios.push(novoHorario);
