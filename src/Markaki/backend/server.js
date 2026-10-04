@@ -4,8 +4,9 @@ const path = require('path');
 const cors = require('cors');
 
 const app = express();
-const PORT = 3000;
-const DATA_FILE = path.join(__dirname, 'database.json');
+const PORT = Number(process.env.PORT) || 3000;
+// DATA_FILE permite apontar para outro arquivo (os testes usam um arquivo temporário).
+const DATA_FILE = process.env.DATA_FILE || path.join(__dirname, 'database.json');
 
 // Middleware
 app.use(cors());
@@ -349,10 +350,15 @@ app.delete('/api/agendamentos/:id', async (req, res) => {
 // INICIAR SERVIDOR
 // ============================================
 
-app.listen(PORT, () => {
-  console.log(`🚀 Servidor rodando em http://localhost:${PORT}`);
-  console.log(`📋 Endpoints disponíveis:`);
-  console.log(`   - GET/POST    /api/medicos`);
-  console.log(`   - GET/POST    /api/horarios`);
-  console.log(`   - GET/POST    /api/agendamentos`);
-});
+// Só sobe o servidor quando executado direto (node server.js); os testes importam o app.
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`🚀 Servidor rodando em http://localhost:${PORT}`);
+    console.log(`📋 Endpoints disponíveis:`);
+    console.log(`   - GET/POST    /api/medicos`);
+    console.log(`   - GET/POST    /api/horarios`);
+    console.log(`   - GET/POST    /api/agendamentos`);
+  });
+}
+
+module.exports = { app };
