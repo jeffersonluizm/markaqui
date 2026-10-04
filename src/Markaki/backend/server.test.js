@@ -296,3 +296,51 @@ test('horário antigo sem médico aparece na lista geral, fica fora do filtro e 
   assert.equal(res.status, 200);
   assert.equal(lerDados().horarios.length, 0);
 });
+
+// ============================================
+// CONCORRÊNCIA E ARQUIVO DE DADOS
+// ============================================
+
+test('POSTs de horário simultâneos são todos gravados', async () => {
+  const respostas = await Promise.all(
+    Array.from({ length: 20 }, (_, i) =>
+      request(app)
+        .post('/api/horarios')
+        .send({ data: '2025-11-25', hora: `h${i}`, medico_id: 'm1' })
+    )
+  );
+  assert.deepEqual(respostas.map((r) => r.status), Array(20).fill(201));
+  assert.equal(lerDados().horarios.length, 20);
+});
+
+test('agendamentos simultâneos no mesmo horário: só um é aceito', async () => {
+  gravarDados({ medicos: medicosBase, horarios: [horarioLivre('h1', medicosBase[0])] });
+  const respostas = await Promise.all(
+    Array.from({ length: 10 }, (_, i) =>
+      request(app)
+        .post('/api/agendamentos')
+        .send({ horario_id: 'h1', paciente_nome: `Paciente ${i}` })
+    )
+  );
+  const status = respostas.map((r) => r.status).sort();
+  assert.deepEqual(status, [201, ...Array(9).fill(400)]);
+  assert.equal(lerDados().agendamentos.length, 1);
+});
+
+test('arquivo de dados corrompido responde 500 e não é sobrescrito', async () => {
+  fs.writeFileSync(arquivoDados, '{ "medicos": [ corrompido');
+  const res = await request(app)
+    .post('/api/medicos')
+    .send({ nome: 'Dr. Novo', especialidade: 'Clínico Geral' });
+  assert.equal(res.status, 500);
+  assert.equal(fs.readFileSync(arquivoDados, 'utf8'), '{ "medicos": [ corrompido');
+  const lista = await request(app).get('/api/medicos');
+  assert.equal(lista.status, 500);
+});
+
+test('arquivo de dados inexistente vale como base vazia', async () => {
+  fs.rmSync(arquivoDados);
+  const res = await request(app).get('/api/medicos');
+  assert.equal(res.status, 200);
+  assert.deepEqual(res.body, []);
+});

@@ -13,25 +13,58 @@ const DATA_FILE = process.env.DATA_FILE || path.join(__dirname, 'database.json')
 app.use(cors());
 app.use(express.json());
 
+// Trava das escritas: toda rota que altera dados lê, valida e grava o arquivo.
+// Sem a fila, duas requisições simultâneas liam a mesma versão e a última gravação
+// apagava a outra (ou dois pacientes ficavam com o mesmo horário). Cada requisição
+// de escrita só começa quando a anterior terminou de responder.
+let fila = Promise.resolve();
+const comTrava = (fn) => (fila = fila.then(fn, fn));
+
+app.use((req, res, next) => {
+  if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') {
+    return next();
+  }
+  comTrava(() => new Promise((resolve) => {
+    res.on('finish', resolve);
+    res.on('close', resolve);
+    next();
+  }));
+});
+
 // ============================================
 // FUNÇÕES AUXILIARES
 // ============================================
 
+// Só a falta do arquivo vale como base vazia. JSON inválido é erro (a rota
+// responde 500) para que a próxima gravação não apague os dados existentes.
 async function lerDados() {
+  let data;
   try {
-    const data = await fs.readFile(DATA_FILE, 'utf8');
-    return JSON.parse(data);
+    data = await fs.readFile(DATA_FILE, 'utf8');
   } catch (error) {
-    return {
-      medicos: [],
-      horarios: [],
-      agendamentos: []
-    };
+    if (error.code === 'ENOENT') {
+      return {
+        medicos: [],
+        horarios: [],
+        agendamentos: []
+      };
+    }
+    throw error;
   }
+  return JSON.parse(data);
 }
 
+// Grava num arquivo temporário e troca pelo definitivo com rename: se o processo
+// cair no meio da gravação, o database.json antigo continua inteiro.
 async function salvarDados(data) {
-  await fs.writeFile(DATA_FILE, JSON.stringify(data, null, 2), 'utf8');
+  const temporario = `${DATA_FILE}.${process.pid}.${crypto.randomUUID()}.tmp`;
+  try {
+    await fs.writeFile(temporario, JSON.stringify(data, null, 2), 'utf8');
+    await fs.rename(temporario, DATA_FILE);
+  } catch (error) {
+    await fs.rm(temporario, { force: true });
+    throw error;
+  }
 }
 
 // Únicos campos que o PUT /api/horarios/:id aceita. Paciente e médico só
