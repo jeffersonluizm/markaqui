@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,7 @@ import {
   agendarConsulta,
 } from '../services/api';
 import { horariosDisponiveisDoMedico } from '../services/horarios';
+import { criarControleUltimaRequisicao } from '../services/requisicoes';
 
 export default function AgendarConsulta() {
   const [medicos, setMedicos] = useState([]);
@@ -28,6 +29,11 @@ export default function AgendarConsulta() {
   const [loading, setLoading] = useState(false);
   const [mostrarMedicos, setMostrarMedicos] = useState(false);
   const [mostrarHorarios, setMostrarHorarios] = useState(false);
+  // Só a resposta do último pedido de horários entra na tela (troca rápida de médico).
+  const controleHorarios = useRef(null);
+  if (!controleHorarios.current) {
+    controleHorarios.current = criarControleUltimaRequisicao();
+  }
 
   useEffect(() => {
     carregarDados();
@@ -36,6 +42,7 @@ export default function AgendarConsulta() {
   const carregarDados = async () => {
     try {
       setLoading(true);
+      controleHorarios.current.invalidar();
       const medicosData = await buscarMedicos();
       setMedicos(medicosData);
       setHorarios([]);
@@ -48,14 +55,22 @@ export default function AgendarConsulta() {
 
   // Cada médico tem a própria agenda: ao escolher o médico, busca só os horários dele.
   const carregarHorariosDoMedico = async (medicoId) => {
+    const pedido = controleHorarios.current.nova();
     try {
       setLoading(true);
-      setHorarios(await buscarHorarios(medicoId));
+      const dados = await buscarHorarios(medicoId);
+      if (controleHorarios.current.ehAtual(pedido)) {
+        setHorarios(dados);
+      }
     } catch (error) {
-      setHorarios([]);
-      Alert.alert('Erro', 'Não foi possível carregar os horários do médico');
+      if (controleHorarios.current.ehAtual(pedido)) {
+        setHorarios([]);
+        Alert.alert('Erro', 'Não foi possível carregar os horários do médico');
+      }
     } finally {
-      setLoading(false);
+      if (controleHorarios.current.ehAtual(pedido)) {
+        setLoading(false);
+      }
     }
   };
 
@@ -106,6 +121,7 @@ export default function AgendarConsulta() {
         {
           text: 'Confirmar',
           onPress: async () => {
+            let falhou = false;
             try {
               setLoading(true);
 
@@ -133,9 +149,16 @@ export default function AgendarConsulta() {
                 ]
               );
             } catch (error) {
+              // O horário pode ter sido ocupado ou removido: limpa a escolha e
+              // recarrega a agenda do médico para mostrar o que ainda está livre.
+              falhou = true;
+              setHorarioSelecionado(null);
               Alert.alert('Erro', error.message || 'Erro ao agendar consulta');
             } finally {
               setLoading(false);
+            }
+            if (falhou) {
+              carregarHorariosDoMedico(medicoSelecionado.id);
             }
           },
         },
