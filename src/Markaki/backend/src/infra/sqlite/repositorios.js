@@ -47,8 +47,8 @@ function criarRepositorios(db) {
     usuarioPorEmail: p('SELECT * FROM usuarios WHERE email = ?'),
     usuarios: p('SELECT * FROM usuarios ORDER BY rowid'),
     usuarioInserir: p(`
-      INSERT INTO usuarios (id, nome, email, telefone, senha_hash, papel, criado_em)
-      VALUES (@id, @nome, @email, @telefone, @senha_hash, @papel, @criado_em)`),
+      INSERT INTO usuarios (id, nome, email, telefone, senha_hash, papel, criado_em, demo)
+      VALUES (@id, @nome, @email, @telefone, @senha_hash, @papel, @criado_em, @demo)`),
 
     medicos: p('SELECT id, nome, especialidade FROM medicos ORDER BY rowid'),
     medicoPorId: p('SELECT id, nome, especialidade FROM medicos WHERE id = ?'),
@@ -121,7 +121,7 @@ function criarRepositorios(db) {
     buscarPorEmail: (email) => q.usuarioPorEmail.get(email),
     listar: () => q.usuarios.all(),
     inserir(u) {
-      q.usuarioInserir.run({ telefone: '', criado_em: new Date().toISOString(), ...u });
+      q.usuarioInserir.run({ telefone: '', criado_em: new Date().toISOString(), ...u, demo: Number(Boolean(u.demo)) });
       return usuarios.buscar(u.id);
     },
     atualizar(id, campos) {

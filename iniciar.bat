@@ -1,109 +1,109 @@
 @echo off
+setlocal EnableDelayedExpansion
 title Markaqui - Iniciador
 cd /d "%~dp0"
 
 set "APP=%~dp0src\Markaki"
+set "API=%~dp0src\Markaki\backend"
 set "API_PORT=3000"
 set "EXPO_PORT=8081"
 
 echo ============================================
-echo        Markaqui - Iniciando tudo...
+echo   Markaqui - preparando a demonstracao local
 echo ============================================
 echo.
 
+rem 1. Pre-requisito: Node.js 22 ou mais novo.
 where node > nul 2>&1
 if errorlevel 1 (
-    echo Node.js nao encontrado. Instale o Node.js LTS e rode de novo.
-    goto fim
+    echo [erro] Node.js nao encontrado. Instale o Node.js LTS: https://nodejs.org/
+    echo        Depois feche esta janela e rode o iniciar.bat de novo.
+    pause
+    exit /b 1
+)
+for /f "tokens=1 delims=." %%v in ('node -p "process.versions.node"') do set "NODE_MAIOR=%%v"
+if %NODE_MAIOR% LSS 22 (
+    echo [erro] Node.js %NODE_MAIOR% e antigo demais. Instale o Node.js 22 ou mais novo: https://nodejs.org/
+    pause
+    exit /b 1
+)
+echo [ok] Node.js encontrado.
+
+rem 2. Dependencias (so na primeira vez).
+if not exist "%API%\node_modules" (
+    echo [..] Instalando as dependencias da API, so na primeira vez...
+    call npm --prefix "%API%" ci --no-audit --no-fund
+    if errorlevel 1 ( echo [erro] Falha ao instalar as dependencias da API. & pause & exit /b 1 )
+)
+if not exist "%APP%\node_modules" (
+    echo [..] Instalando as dependencias do app, so na primeira vez. Pode levar alguns minutos...
+    call npm --prefix "%APP%" ci --no-audit --no-fund
+    if errorlevel 1 ( echo [erro] Falha ao instalar as dependencias do app. & pause & exit /b 1 )
+)
+echo [ok] Dependencias instaladas.
+
+rem 3. Configuracao da API (src\Markaki\backend\.env): segredo aleatorio e modo
+rem    demonstracao ligado. As senhas das contas demo sao geradas a cada partida.
+if not exist "%API%\.env" (
+    for /f "usebackq delims=" %%s in (`node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"`) do set "JWT=%%s"
+    > "%API%\.env" echo # Criado pelo iniciar.bat. Nao vai para o Git. Modelo: .env.example
+    >> "%API%\.env" echo JWT_SECRET=!JWT!
+    >> "%API%\.env" echo PORT=%API_PORT%
+    >> "%API%\.env" echo # 0.0.0.0 deixa o celular na mesma rede alcancar a API; ela fica visivel na rede local.
+    >> "%API%\.env" echo HOST=0.0.0.0
+    >> "%API%\.env" echo CORS_ORIGENS=http://localhost:%EXPO_PORT%
+    >> "%API%\.env" echo DEMO_ENABLED=true
+    echo [ok] Criado src\Markaki\backend\.env com um segredo aleatorio.
 )
 
-rem O app le o endereco da API de src\Markaki\.env (EXPO_PUBLIC_API_URL).
-rem Na primeira vez o .env e criado com o IP desta maquina na rede, que e o que
-rem o celular fisico consegue alcancar (no celular, localhost e o proprio celular).
-if exist "%APP%\.env" goto env_pronto
+rem 4. Configuracao do app (src\Markaki\.env): endereco da API.
+if not exist "%APP%\.env" (
+    > "%APP%\.env" echo EXPO_PUBLIC_API_URL=http://localhost:%API_PORT%/api
+    echo [ok] Criado src\Markaki\.env apontando para http://localhost:%API_PORT%/api
+)
 
-echo Criando src\Markaki\.env (endereco da API usado pelo app)...
-set "LAN_IP="
-for /f "usebackq delims=" %%i in (`powershell -NoProfile -Command "$r = Get-NetRoute -DestinationPrefix 0.0.0.0/0 -ErrorAction SilentlyContinue | Sort-Object RouteMetric | Select-Object -First 1; if ($r) { (Get-NetIPAddress -InterfaceIndex $r.InterfaceIndex -AddressFamily IPv4 -ErrorAction SilentlyContinue | Select-Object -First 1).IPAddress }"`) do set "LAN_IP=%%i"
-if not defined LAN_IP goto env_sem_ip
-> "%APP%\.env" echo EXPO_PUBLIC_API_URL=http://%LAN_IP%:%API_PORT%/api
->> "%APP%\.env" echo EXPO_PUBLIC_MOSTRAR_DEMO=1
-echo   Gravado: EXPO_PUBLIC_API_URL=http://%LAN_IP%:%API_PORT%/api
-echo   (IP desta maquina na rede; serve para o celular na mesma rede Wi-Fi)
-goto env_aviso
+rem 5. Banco SQLite com os dados de demonstracao (so se estiver vazio).
+pushd "%API%"
+call npm run --silent semear
+if errorlevel 1 ( popd & echo [erro] Falha ao preparar o banco. & pause & exit /b 1 )
+popd
 
-:env_sem_ip
-copy "%APP%\.env.example" "%APP%\.env" > nul
-echo   Nao consegui descobrir o IP desta maquina: o .env ficou com localhost,
-echo   que so funciona no navegador ou no emulador iOS desta maquina.
-
-:env_aviso
-echo.
-echo   ATENCAO: o celular fisico NAO alcanca "localhost". Ele precisa do IP do
-echo   computador na mesma rede Wi-Fi (veja com "ipconfig", linha IPv4).
-echo   No emulador Android use http://10.0.2.2:%API_PORT%/api
-echo   Confira e, se precisar, edite agora o arquivo:
-echo     %APP%\.env
-echo   Depois pressione uma tecla para abrir a API e o Expo.
-pause
-echo.
-
-:env_pronto
-rem A API le o segredo do login e as contas de demonstracao de
-rem src\Markaki\backend\.env. Na primeira vez ele e criado com um segredo aleatorio.
-if exist "%APP%\backend\.env" goto api_env_pronto
-echo Criando src\Markaki\backend\.env (segredo do login e contas de demonstracao)...
-set "JWT="
-for /f "usebackq delims=" %%s in (`node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"`) do set "JWT=%%s"
-(
-    echo # Criado pelo iniciar.bat. Nao vai para o Git. Modelo: .env.example
-    echo JWT_SECRET=%JWT%
-    echo PORT=%API_PORT%
-    echo # 0.0.0.0 deixa o celular na mesma rede alcancar a API; ela fica visivel na rede local.
-    echo HOST=0.0.0.0
-    echo CORS_ORIGENS=http://localhost:%EXPO_PORT%,http://localhost:19006
-    echo DEMO_GESTOR_EMAIL=gestor@markaqui.demo
-    echo DEMO_GESTOR_SENHA=Gestor2026
-    echo DEMO_PACIENTE_EMAIL=paciente@markaqui.demo
-    echo DEMO_PACIENTE_SENHA=Paciente2026
-) > "%APP%\backend\.env"
-echo   Pronto. Contas de demonstracao: gestor@markaqui.demo e paciente@markaqui.demo
-echo.
-
-:api_env_pronto
-for /f "usebackq tokens=1,* delims==" %%a in (`findstr /b "EXPO_PUBLIC_API_URL=" "%APP%\.env"`) do echo Endereco da API usado pelo app: %%b
-echo.
-
-echo Abrindo a API e o Expo em janelas separadas.
-echo Na primeira vez cada janela instala as dependencias (npm install).
-echo.
-
+rem 6. API numa janela propria e espera ela responder.
 netstat -ano | findstr /R /C:":%API_PORT% .*LISTENING" > nul
 if errorlevel 1 (
-    rem "npm run semear" so cria os dados de demonstracao se o banco estiver vazio.
-    start "Markaqui - API" cmd /k "title Markaqui API && cd /d ""%APP%\backend"" && ((if not exist node_modules npm install) & npm run semear & npm start)"
+    start "Markaqui - API" /D "%API%" cmd /k "title Markaqui API && npm start"
 ) else (
-    echo API ja esta rodando na porta %API_PORT%.
+    echo [aviso] Ja existe algo na porta %API_PORT%; usando a API que esta rodando.
 )
+echo [..] Esperando a API responder...
+powershell -NoProfile -Command "$fim=(Get-Date).AddSeconds(60); while((Get-Date) -lt $fim){ try { Invoke-RestMethod http://localhost:%API_PORT%/api/saude -TimeoutSec 2 | Out-Null; exit 0 } catch { Start-Sleep -Milliseconds 500 } }; exit 1"
+if errorlevel 1 (
+    echo [erro] A API nao respondeu em 60 s. Veja a janela "Markaqui - API".
+    pause
+    exit /b 1
+)
+echo [ok] API no ar.
 
+rem 7. App pelo Expo: abre no navegador (w) e mostra o QR code para o Expo Go.
 netstat -ano | findstr /R /C:":%EXPO_PORT% .*LISTENING" > nul
 if errorlevel 1 (
-    start "Markaqui - App (Expo)" cmd /k "title Markaqui App Expo && cd /d ""%APP%"" && ((if not exist node_modules npm install) & npx expo start --port %EXPO_PORT%)"
+    start "Markaqui - App (Expo)" /D "%APP%" cmd /k "title Markaqui App && npx expo start --web --port %EXPO_PORT%"
 ) else (
-    echo Expo ja esta rodando na porta %EXPO_PORT%.
+    echo [aviso] Ja existe algo na porta %EXPO_PORT%; abra http://localhost:%EXPO_PORT% no navegador.
 )
 
 echo.
 echo ============================================
-echo   API     : http://localhost:%API_PORT%/api/saude
-echo   App     : escaneie o QR code na janela do Expo (Expo Go),
-echo             tecle "a" para o emulador Android ou "w" para o navegador
-echo   Contas  : paciente@markaqui.demo / Paciente2026
-echo             gestor@markaqui.demo   / Gestor2026
-echo   Endereco da API usado pelo app: src\Markaki\.env
-echo   Para parar: feche as janelas "Markaqui - API" e "Markaqui - App (Expo)"
+echo   Pronto. O navegador abre sozinho em alguns segundos:
+echo     http://localhost:%EXPO_PORT%
+echo   Na tela inicial, use "Explore a demonstracao" e entre como
+echo   paciente ou como clinica com um clique.
+echo.
+echo   API: http://localhost:%API_PORT%/api/saude
+echo   Celular: leia o QR code da janela "Markaqui - App" com o Expo Go.
+echo     No celular, troque localhost em src\Markaki\.env pelo IP deste
+echo     computador (ipconfig, linha IPv4) e reinicie o Expo.
+echo   Para parar: feche as janelas "Markaqui - API" e "Markaqui - App".
 echo ============================================
-
-:fim
 echo.
 pause

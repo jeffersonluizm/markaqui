@@ -3,9 +3,10 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { api, sessaoHttp } from '../servicos/api';
 import { guardaToken } from '../servicos/guardaToken';
+import { aguardarServidor } from '../servicos/acordar';
 
 const ContextoSessao = createContext(null);
-const INICIAL = { carregando: true, usuario: null, aviso: null, erroInicial: null };
+const INICIAL = { carregando: true, acordando: false, usuario: null, aviso: null, erroInicial: null };
 
 export function ProvedorSessao({ children }) {
   const [estado, setEstado] = useState(INICIAL);
@@ -26,6 +27,12 @@ export function ProvedorSessao({ children }) {
   // conexão, o token fica guardado e a tela inicial oferece "tentar de novo".
   const restaurar = useCallback(async () => {
     setEstado(INICIAL);
+    try {
+      await aguardarServidor({ verificar: api.saude, aoDemorar: () => setEstado((e) => ({ ...e, acordando: true })) });
+    } catch (erro) {
+      setEstado({ ...INICIAL, carregando: false, erroInicial: erro });
+      return;
+    }
     const token = await guardaToken.ler();
     if (!token) {
       setEstado({ ...INICIAL, carregando: false });

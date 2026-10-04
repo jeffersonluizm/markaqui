@@ -85,13 +85,20 @@ export default function Perfil({ navigation }) {
             description={usuario.telefone ? telefoneFormatado(usuario.telefone) : 'Não informado'}
             left={(p) => <List.Icon {...p} icon="phone-outline" color={cores.marinho} />}
           />
-          <BotaoSecundario icon="pencil-outline" onPress={() => setEditando(true)}>
-            Editar dados
-          </BotaoSecundario>
+          {usuario.demo ? (
+            <Text variant="bodySmall" style={estilos.secundario}>
+              Conta de demonstração: dados e senha não podem ser alterados.
+            </Text>
+          ) : (
+            <BotaoSecundario icon="pencil-outline" onPress={() => setEditando(true)}>
+              Editar dados
+            </BotaoSecundario>
+          )}
         </View>
       )}
 
       <View style={estilos.cartao}>
+        {usuario.demo ? null : (
         <List.Item
           title="Trocar senha"
           left={(p) => <List.Icon {...p} icon="lock-reset" color={cores.marinho} />}
@@ -100,6 +107,7 @@ export default function Perfil({ navigation }) {
           accessibilityRole="button"
           style={estilos.item}
         />
+        )}
         <List.Item
           title="Sobre o Markaqui"
           description="Como o app foi feito"

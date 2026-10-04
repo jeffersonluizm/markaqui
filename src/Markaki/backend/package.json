@@ -3,9 +3,13 @@
   "version": "1.0.0",
   "description": "API do Markaqui: agendamento de consultas em clínica médica",
   "main": "server.js",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "start": "node --env-file-if-exists=.env server.js",
     "semear": "node --env-file-if-exists=.env scripts/semear.js",
+    "criar-gestor": "node --env-file-if-exists=.env scripts/criar-gestor.js",
     "dev": "node --watch --env-file-if-exists=.env server.js",
     "test": "node --test \"test/*.test.js\"",
     "carga": "node carga/executar.js"

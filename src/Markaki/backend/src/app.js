@@ -23,6 +23,7 @@ function limitador(max, mensagem) {
 
 function criarApp({ armazenamento, config }) {
   const app = express();
+  if (config.trustProxy) app.set('trust proxy', config.trustProxy);
   app.use(helmet());
   // Só navegadores mandam Origin; o app nativo e o curl não passam por CORS.
   app.use(cors({ origin: (origem, ok) => ok(null, !origem || config.corsOrigens.includes(origem)) }));
@@ -35,6 +36,12 @@ function criarApp({ armazenamento, config }) {
   const limiteAuth = limitador(config.limiteAuthMax, 'Muitas tentativas. Aguarde um minuto e tente de novo.');
 
   app.get('/api/saude', (req, res) => res.json({ status: 'ok' }));
+  // Contas do modo demonstração (sem login). Com o modo desligado, a rota não existe.
+  app.get('/api/demo', (req, res) => {
+    if (!config.demo?.ativo) return res.status(404).json({ erro: 'Rota não encontrada.' });
+    const contas = Object.values(config.demo.contas).map(({ papel, nome, email, senha }) => ({ papel, nome, email, senha }));
+    return res.json({ contas });
+  });
   app.use('/api/auth', rotasAuth(armazenamento, config, { limiteAuth, autenticar: exigeLogin }));
   app.use('/api/medicos', exigeLogin, rotasMedicos(armazenamento, config));
   app.use('/api/horarios', exigeLogin, rotasHorarios(armazenamento, config));

@@ -6,6 +6,7 @@ import { Icon, Text } from 'react-native-paper';
 import { Logo } from '../../componentes/Logo';
 import { Tela } from '../../componentes/Tela';
 import { BotaoPrincipal, BotaoSecundario, BotaoTexto } from '../../componentes/Formulario';
+import { CartaoDemonstracao } from '../../componentes/CartaoDemonstracao';
 import { cores, espaco, fontes, raio } from '../../tema/tokens';
 
 const PILARES = [
@@ -32,6 +33,8 @@ export default function BoasVindas({ navigation }) {
           Veja os horários livres dos médicos da clínica, agende na hora e acompanhe tudo pelo celular.
         </Text>
       </View>
+
+      <CartaoDemonstracao />
 
       <View style={estilos.pilares}>
         {PILARES.map((p) => (

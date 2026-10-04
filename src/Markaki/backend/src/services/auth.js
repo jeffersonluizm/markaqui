@@ -3,11 +3,12 @@
 const bcrypt = require('bcryptjs');
 const { gerarId } = require('../infra/ids');
 const { emitirToken } = require('../infra/tokens');
-const { conflito, naoAutenticado, requisicaoInvalida } = require('../erros');
+const { conflito, naoAutenticado, requisicaoInvalida, semPermissao } = require('../erros');
 const { usuarioPublico } = require('./apresentacao');
 const { momentoLocal } = require('../dominio/tempo');
 
 const MSG_LOGIN = 'E-mail ou senha inválidos.';
+const MSG_DEMO = 'Contas de demonstração não podem ser alteradas.';
 
 function criarServicoAuth(armazenamento, config) {
   // Hash de comparação para e-mail inexistente: o login leva o mesmo tempo com ou
@@ -38,6 +39,7 @@ function criarServicoAuth(armazenamento, config) {
 
     async atualizarPerfil(usuarioId, { nome, telefone }) {
       const usuario = await armazenamento.escrita((r) => {
+        if (r.usuarios.buscar(usuarioId).demo) throw semPermissao(MSG_DEMO);
         const atualizado = r.usuarios.atualizar(usuarioId, { nome, telefone });
         if (nome) r.agendamentos.renomearPacienteNosAtivos(usuarioId, nome, momentoLocal(config.relogio()));
         return atualizado;
@@ -47,6 +49,7 @@ function criarServicoAuth(armazenamento, config) {
 
     async trocarSenha(usuarioId, { senhaAtual, novaSenha }) {
       const usuario = await armazenamento.leitura((r) => r.usuarios.buscar(usuarioId));
+      if (usuario.demo) throw semPermissao(MSG_DEMO);
       if (!(await bcrypt.compare(senhaAtual, usuario.senha_hash))) {
         throw requisicaoInvalida('A senha atual não confere.');
       }

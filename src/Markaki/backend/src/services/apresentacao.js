@@ -2,8 +2,8 @@
 // hash da senha de ninguém.
 const { chave, momentoLocal } = require('../dominio/tempo');
 
-function usuarioPublico({ id, nome, email, telefone, papel, criado_em }) {
-  return { id, nome, email, telefone, papel, criado_em };
+function usuarioPublico({ id, nome, email, telefone, papel, criado_em, demo }) {
+  return { id, nome, email, telefone, papel, criado_em, demo: Boolean(demo) };
 }
 
 function horarioParaPaciente(h) {

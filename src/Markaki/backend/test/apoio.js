@@ -60,6 +60,8 @@ function criarAmbiente(opcoes = {}) {
     limiteAuthMax: 1000,
     limiteGlobalMax: 0,
     limiteConsultasAtivas: 3,
+    trustProxy: 0,
+    demo: { ativo: false, contas: {} },
     relogio: () => AGORA,
     ...opcoes,
   };

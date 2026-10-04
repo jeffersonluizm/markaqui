@@ -58,6 +58,8 @@ const MIGRACOES = [
   // 2: versão dos tokens do usuário; trocar a senha incrementa e os tokens antigos
   // (com a versão anterior) deixam de valer.
   `ALTER TABLE usuarios ADD COLUMN versao_token INTEGER NOT NULL DEFAULT 0;`,
+  // 3: contas do modo demonstração (protegidas: não trocam senha nem perfil).
+  `ALTER TABLE usuarios ADD COLUMN demo INTEGER NOT NULL DEFAULT 0;`,
 ];
 
 function migrar(db) {

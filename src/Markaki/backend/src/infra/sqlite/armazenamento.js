@@ -33,6 +33,8 @@ function criarArmazenamentoSqlite(arquivo) {
     async escrita(operacao) {
       return transacao(operacao);
     },
+    // Mesma transação, sem promessa: para tarefas de partida (modo demonstração).
+    escritaSincrona: transacao,
 
     // Troca todo o conteúdo do banco pelo documento dado. Usado pelos testes, pela
     // carga e pelo script de dados de demonstração.

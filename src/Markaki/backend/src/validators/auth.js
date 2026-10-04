@@ -67,4 +67,4 @@ function validarTrocaDeSenha(corpo) {
   return { senhaAtual: corpo.senha_atual, novaSenha: senhaNova(corpo, 'nova_senha') };
 }
 
-module.exports = { validarCadastro, validarLogin, validarPerfil, validarTrocaDeSenha };
+module.exports = { senhaNova, validarCadastro, validarLogin, validarPerfil, validarTrocaDeSenha };

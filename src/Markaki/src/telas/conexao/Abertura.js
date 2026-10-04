@@ -9,7 +9,7 @@ import { useSessao } from '../../contexto/Sessao';
 import { cores, espaco, fontes } from '../../tema/tokens';
 
 export default function Abertura() {
-  const { erroInicial, tentarDeNovo } = useSessao();
+  const { erroInicial, tentarDeNovo, acordando } = useSessao();
   return (
     <View style={estilos.raiz}>
       <Marca tamanho={96} />
@@ -21,7 +21,19 @@ export default function Abertura() {
           <EstadoErro erro={erroInicial} aoTentarDeNovo={tentarDeNovo} />
         </View>
       ) : (
-        <ActivityIndicator color={cores.marinho} accessibilityLabel="Abrindo o Markaqui" />
+        <>
+          <ActivityIndicator color={cores.marinho} accessibilityLabel="Abrindo o Markaqui" />
+          {acordando ? (
+            <View style={estilos.acordando} accessibilityLiveRegion="polite">
+              <Text variant="titleMedium" style={estilos.tituloAcordando}>
+                Acordando o servidor de demonstração
+              </Text>
+              <Text variant="bodyMedium" style={estilos.textoAcordando}>
+                A demonstração fica numa hospedagem gratuita que dorme quando ninguém usa. Leva até um minuto na primeira visita.
+              </Text>
+            </View>
+          ) : null}
+        </>
       )}
     </View>
   );
@@ -31,4 +43,7 @@ const estilos = StyleSheet.create({
   raiz: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: espaco.md, backgroundColor: cores.gelo, padding: espaco.lg },
   nome: { fontFamily: fontes.negrito, fontSize: 32, color: cores.marinhoEscuro, letterSpacing: -0.5 },
   erro: { maxWidth: 480, width: '100%' },
+  acordando: { maxWidth: 420, alignItems: 'center', gap: espaco.xs },
+  tituloAcordando: { color: cores.marinhoEscuro, textAlign: 'center' },
+  textoAcordando: { color: cores.textoSecundario, textAlign: 'center' },
 });

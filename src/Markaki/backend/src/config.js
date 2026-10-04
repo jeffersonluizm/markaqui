@@ -1,7 +1,31 @@
+const crypto = require('crypto');
 const path = require('path');
 
 const caminhoBanco = (env = process.env) =>
   env.DB_FILE || path.join(__dirname, '..', 'dados', 'markaqui.db');
+
+// Senha forte aleatória (letras e números), usada quando o .env não define uma.
+const senhaAleatoria = () => `${crypto.randomBytes(15).toString('base64url')}a7`;
+
+// Modo demonstração: desligado por padrão. Ligado (DEMO_ENABLED=true), cria uma
+// paciente e um gestor de demonstração, com senhas do .env ou geradas na partida,
+// e expõe GET /api/demo para o app mostrar "Entrar como...". Nenhuma senha fica
+// no código.
+function lerDemo(env) {
+  const conta = (papel, nome, emailPadrao) => {
+    const prefixo = `DEMO_${papel.toUpperCase()}`;
+    return { papel, nome, email: (env[`${prefixo}_EMAIL`] || emailPadrao).toLowerCase(), senha: env[`${prefixo}_SENHA`] || senhaAleatoria() };
+  };
+  return {
+    ativo: env.DEMO_ENABLED === 'true',
+    // Minutos entre os resets dos dados (0 = só na partida).
+    resetMinutos: Number(env.DEMO_RESET_MINUTOS) || 0,
+    contas: {
+      paciente: conta('paciente', 'Marina Albuquerque', 'paciente@markaqui.demo'),
+      gestor: conta('gestor', 'Gestão Clínica Markaqui', 'gestor@markaqui.demo'),
+    },
+  };
+}
 
 // Configuração lida do ambiente (arquivo .env ao lado do server.js; modelo em
 // .env.example). Sem JWT_SECRET forte a API não sobe.
@@ -32,6 +56,9 @@ function lerConfig(env = process.env) {
     limiteGlobalMax: numero(env.LIMITE_GLOBAL_POR_MINUTO, 300),
     // Consultas futuras ativas por paciente (uma conta não reserva a agenda toda).
     limiteConsultasAtivas: numero(env.LIMITE_CONSULTAS_ATIVAS, 3),
+    // Proxies na frente da API (1 no Render): o limite por IP passa a usar o IP do visitante.
+    trustProxy: numero(env.TRUST_PROXY, 0),
+    demo: lerDemo(env),
     relogio: () => new Date(),
   };
 }

@@ -5,17 +5,11 @@ import { Icon, Text } from 'react-native-paper';
 import { Tela, TituloTela } from '../../componentes/Tela';
 import { Campo, CampoSenha, BotaoPrincipal, BotaoTexto } from '../../componentes/Formulario';
 import { Logo } from '../../componentes/Logo';
+import { CartaoDemonstracao } from '../../componentes/CartaoDemonstracao';
 import { useSessao } from '../../contexto/Sessao';
 import { validarEntrada, semErros } from '../../servicos/validacao';
-import { cores, espaco, raio } from '../../tema/tokens';
+import { cores, espaco } from '../../tema/tokens';
 
-// Contas de demonstração do "npm run semear" (valores que o iniciar.bat grava no
-// backend/.env). Só aparecem em desenvolvimento e com EXPO_PUBLIC_MOSTRAR_DEMO=1.
-const MOSTRAR_DEMO = __DEV__ && process.env.EXPO_PUBLIC_MOSTRAR_DEMO === '1';
-const DEMO = [
-  { rotulo: 'Paciente', email: 'paciente@markaqui.demo', senha: 'Paciente2026' },
-  { rotulo: 'Clínica', email: 'gestor@markaqui.demo', senha: 'Gestor2026' },
-];
 
 export default function Entrar({ navigation, route }) {
   const { entrar, aviso, limparAviso } = useSessao();
@@ -97,28 +91,7 @@ export default function Entrar({ navigation, route }) {
         {!daClinica ? <BotaoTexto onPress={() => navigation.navigate('Cadastro')}>Criar conta</BotaoTexto> : null}
       </View>
 
-      {MOSTRAR_DEMO ? (
-        <View style={estilos.demo}>
-          <Text variant="labelLarge" style={estilos.tituloDemo}>
-            Contas de demonstração
-          </Text>
-          <View style={estilos.linhaDemo}>
-            {DEMO.map((conta) => (
-              <BotaoTexto
-                key={conta.email}
-                icon="account-arrow-right-outline"
-                onPress={() => {
-                  setEmail(conta.email);
-                  setSenha(conta.senha);
-                }}
-                accessibilityHint={`Preenche o login com a conta de demonstração ${conta.rotulo}`}
-              >
-                {conta.rotulo}
-              </BotaoTexto>
-            ))}
-          </View>
-        </View>
-      ) : null}
+      <CartaoDemonstracao />
     </Tela>
   );
 }
@@ -131,7 +104,4 @@ const estilos = StyleSheet.create({
   textoAviso: { color: cores.aviso, flex: 1 },
   textoErro: { color: cores.erro, flex: 1 },
   links: { flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap' },
-  demo: { borderWidth: 1, borderStyle: 'dashed', borderColor: cores.borda, borderRadius: raio.campo, padding: espaco.sm, gap: 4 },
-  tituloDemo: { color: cores.textoSecundario },
-  linhaDemo: { flexDirection: 'row', flexWrap: 'wrap', gap: espaco.xs },
 });

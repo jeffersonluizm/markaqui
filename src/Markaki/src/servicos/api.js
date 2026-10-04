@@ -28,6 +28,7 @@ const id = encodeURIComponent;
 
 export const api = {
   saude: () => http.get('/saude'),
+  demo: () => http.get('/demo'),
 
   auth: {
     entrar: (email, senha) => http.post('/auth/login', { email, senha }),
