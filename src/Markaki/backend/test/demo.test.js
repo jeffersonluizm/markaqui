@@ -182,9 +182,14 @@ test('banco vazio vira banco de demonstração; na próxima partida só atualiza
   assert.equal(amb.armazenamento.ehBancoDemo(), true);
   const consultas = amb.dados().agendamentos.length;
   assert.ok(consultas > 0);
-  amb.armazenamento.escritaSincrona((r) => r.medicos.inserir({ id: 'm-novo', nome: 'Dr. Novo Teste', especialidade: 'Pediatria' }));
+  amb.armazenamento.escritaSincrona((r) =>
+    r.medicos.inserir({ id: 'm-novo', nome: 'Dr. Novo Teste', especialidade: 'Pediatria' })
+  );
   iniciarDemonstracao(amb.armazenamento, config);
-  assert.ok(amb.dados().medicos.some((m) => m.id === 'm-novo'), 'não recriou na partida');
+  assert.ok(
+    amb.dados().medicos.some((m) => m.id === 'm-novo'),
+    'não recriou na partida'
+  );
 });
 
 test('semear não apaga banco com conta real, mesmo sem médicos', () => {
