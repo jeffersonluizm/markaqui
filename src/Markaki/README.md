@@ -132,9 +132,12 @@ sistema-integrado/
 | `POST /api/agendamentos` com `medico_id` diferente do médico do horário | 400 |
 | Agendar horário antigo sem médico | 400 |
 | `PUT /api/horarios/:id` com outro campo além de `disponivel`, `data`, `hora` | 400 |
+| `POST` ou `PUT` de horário com `disponivel` que não é booleano, ou `data`/`hora` que não são texto preenchido | 400 (`data` e `hora` são gravadas sem espaços nas pontas) |
 | `PUT` ou `DELETE` em horário agendado | 409 (cancele o agendamento primeiro) |
 | `DELETE /api/medicos/:id` com agendamentos | 409 ("cancele os agendamentos primeiro") |
 | `DELETE /api/medicos/:id` sem agendamentos | 200; os horários livres ou bloqueados do médico saem junto (`horarios_removidos`), porque sem o médico ninguém conseguiria agendá-los |
+
+As rotas que alteram dados passam por uma fila: uma requisição só lê e grava o `database.json` depois que a anterior terminou, e a gravação usa arquivo temporário + `rename`. Se o `database.json` estiver com JSON inválido, a API responde 500 e não sobrescreve o arquivo (arquivo inexistente vale como base vazia).
 
 Os ids novos são gerados com `crypto.randomUUID()` (antes era `Date.now()`, que repetia o id quando dois cadastros caíam no mesmo milissegundo).
 
