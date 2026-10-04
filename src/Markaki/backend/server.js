@@ -127,16 +127,34 @@ app.put('/api/medicos/:id', async (req, res) => {
 app.delete('/api/medicos/:id', async (req, res) => {
   try {
     const dados = await lerDados();
-    const medicosFiltrados = dados.medicos.filter(m => m.id !== req.params.id);
+    const id = req.params.id;
+    const medicosFiltrados = dados.medicos.filter(m => m.id !== id);
     
     if (dados.medicos.length === medicosFiltrados.length) {
       return res.status(404).json({ erro: 'Médico não encontrado' });
     }
+
+    // Com consulta marcada o médico não sai: os agendamentos ficariam órfãos.
+    const agendamentosDoMedico = dados.agendamentos.filter(a => a.medico_id === id);
+    if (agendamentosDoMedico.length > 0) {
+      return res.status(409).json({
+        erro: `Este médico tem ${agendamentosDoMedico.length} agendamento(s). Cancele os agendamentos primeiro.`
+      });
+    }
+
+    // Sem agendamentos, os horários que sobram do médico são livres ou bloqueados.
+    // Eles saem junto: sem o médico ninguém poderia agendá-los.
+    const horariosRestantes = dados.horarios.filter(h => h.medico_id !== id);
+    const horariosRemovidos = dados.horarios.length - horariosRestantes.length;
     
     dados.medicos = medicosFiltrados;
+    dados.horarios = horariosRestantes;
     await salvarDados(dados);
     
-    res.json({ mensagem: 'Médico removido com sucesso' });
+    res.json({
+      mensagem: 'Médico removido com sucesso',
+      horarios_removidos: horariosRemovidos
+    });
   } catch (error) {
     res.status(500).json({ erro: 'Erro ao remover médico' });
   }

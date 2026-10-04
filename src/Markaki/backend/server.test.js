@@ -174,3 +174,38 @@ test('cancelar agendamento libera o horário e mantém o médico dele', async ()
   assert.equal(horario.medico_id, 'm1');
   assert.equal(horario.medico_nome, 'Dra. Ana');
 });
+
+// ============================================
+// EXCLUIR MÉDICO
+// ============================================
+
+test('DELETE /api/medicos/:id com agendamento responde 409 e não remove nada', async () => {
+  gravarDados({
+    medicos: medicosBase,
+    horarios: [{ ...horarioLivre('h1', medicosBase[0]), disponivel: false, paciente_nome: 'Maria' }],
+    agendamentos: [{ id: 'a1', horario_id: 'h1', medico_id: 'm1', paciente_nome: 'Maria', status: 'agendado' }],
+  });
+  const res = await request(app).delete('/api/medicos/m1');
+  assert.equal(res.status, 409);
+  assert.match(res.body.erro, /cancele os agendamentos primeiro/i);
+  const dados = lerDados();
+  assert.equal(dados.medicos.length, 2);
+  assert.equal(dados.horarios.length, 1);
+});
+
+test('DELETE /api/medicos/:id sem agendamento remove o médico e os horários livres dele', async () => {
+  gravarDados({
+    medicos: medicosBase,
+    horarios: [
+      horarioLivre('h1', medicosBase[0]),
+      { ...horarioLivre('h2', medicosBase[0]), disponivel: false },
+      horarioLivre('h3', medicosBase[1]),
+    ],
+  });
+  const res = await request(app).delete('/api/medicos/m1');
+  assert.equal(res.status, 200);
+  assert.equal(res.body.horarios_removidos, 2);
+  const dados = lerDados();
+  assert.deepEqual(dados.medicos.map((m) => m.id), ['m2']);
+  assert.deepEqual(dados.horarios.map((h) => h.id), ['h3']);
+});
