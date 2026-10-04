@@ -49,6 +49,9 @@ Também: boas-vindas e escolha de perfil, recuperar senha (honesta: explica o ca
   <img src="docs/img/app/22-abrir-horarios.png" width="180" alt="Abrir vários horários de uma vez">
   <img src="docs/img/app/24-editar-medico.png" width="180" alt="Editar médico">
   <img src="docs/img/app/04-recuperar-senha.png" width="180" alt="Recuperar senha">
+  <img src="docs/img/app/29-acordando-servidor.png" width="180" alt="Acordando o servidor de demonstração">
+  <img src="docs/img/app/12-historico.png" width="180" alt="Histórico com consulta cancelada e realizada">
+  <img src="docs/img/app/31-desktop-painel.png" width="560" alt="Painel da clínica no navegador do computador">
   <img src="docs/img/app/28-sem-conexao.png" width="180" alt="Estado sem conexão com o servidor">
 </p>
 <p>Prints reais tirados do app rodando no navegador (Expo web) com os dados de demonstração.</p>
