@@ -5,8 +5,9 @@ cd /d "%~dp0"
 
 set "APP=%~dp0src\Markaki"
 set "API=%~dp0src\Markaki\backend"
-set "API_PORT=3000"
-set "EXPO_PORT=8081"
+rem Portas (podem ser trocadas antes de chamar: set API_PORT=3100).
+if not defined API_PORT set "API_PORT=3000"
+if not defined EXPO_PORT set "EXPO_PORT=8081"
 
 echo ============================================
 echo   Markaqui - preparando a demonstracao local
