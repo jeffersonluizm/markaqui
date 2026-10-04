@@ -298,11 +298,10 @@ const cenarios = {
         const r = await medirVazao(
           srv,
           {
-            url: BASE,
+            url: `${BASE}/api/auth/login`,
             connections: conexoes,
             duration: 10,
             method: 'POST',
-            path: '/api/auth/login',
             headers: { 'content-type': 'application/json' },
             body: corpo,
           },
@@ -349,11 +348,11 @@ const cenarios = {
       const envio = await medirVazao(
         srv,
         {
-          url: BASE,
+          // O autocannon ignora `path` fora de `requests`: o caminho vai na URL.
+          url: `${BASE}/api/medicos`,
           connections: 10,
           duration: 5,
           method: 'POST',
-          path: '/api/medicos',
           headers: { ...srv.cab.gestor, 'content-type': 'application/json' },
           body: corpo,
         },
