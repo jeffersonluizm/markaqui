@@ -113,3 +113,64 @@ test('GET /api/horarios?medico_id= devolve só os horários do médico', async (
   const todos = await request(app).get('/api/horarios');
   assert.equal(todos.body.length, 3);
 });
+
+// ============================================
+// AGENDAMENTO USA O MÉDICO DO HORÁRIO
+// ============================================
+
+function horarioLivre(id, medico) {
+  return {
+    id,
+    data: '2025-11-25',
+    hora: '09:00 - 10:00',
+    disponivel: true,
+    paciente_nome: '',
+    medico_id: medico ? medico.id : null,
+    medico_nome: medico ? medico.nome : '',
+  };
+}
+
+test('agendar com médico diferente do médico do horário responde 400', async () => {
+  gravarDados({ medicos: medicosBase, horarios: [horarioLivre('h1', medicosBase[0])] });
+  const res = await request(app)
+    .post('/api/agendamentos')
+    .send({ horario_id: 'h1', medico_id: 'm2', paciente_nome: 'Maria' });
+  assert.equal(res.status, 400);
+  const dados = lerDados();
+  assert.equal(dados.agendamentos.length, 0);
+  assert.equal(dados.horarios[0].disponivel, true);
+});
+
+test('agendar sem informar médico usa o médico do horário', async () => {
+  gravarDados({ medicos: medicosBase, horarios: [horarioLivre('h1', medicosBase[0])] });
+  const res = await request(app)
+    .post('/api/agendamentos')
+    .send({ horario_id: 'h1', paciente_nome: 'Maria' });
+  assert.equal(res.status, 201);
+  assert.equal(res.body.medico_id, 'm1');
+  assert.equal(res.body.medico_nome, 'Dra. Ana');
+  assert.equal(lerDados().horarios[0].paciente_nome, 'Maria');
+});
+
+test('horário antigo sem médico não pode ser agendado (400)', async () => {
+  gravarDados({ medicos: medicosBase, horarios: [horarioLivre('h1', null)] });
+  const res = await request(app)
+    .post('/api/agendamentos')
+    .send({ horario_id: 'h1', medico_id: 'm1', paciente_nome: 'Maria' });
+  assert.equal(res.status, 400);
+  assert.equal(lerDados().agendamentos.length, 0);
+});
+
+test('cancelar agendamento libera o horário e mantém o médico dele', async () => {
+  gravarDados({ medicos: medicosBase, horarios: [horarioLivre('h1', medicosBase[0])] });
+  const criado = await request(app)
+    .post('/api/agendamentos')
+    .send({ horario_id: 'h1', medico_id: 'm1', paciente_nome: 'Maria' });
+  const res = await request(app).delete(`/api/agendamentos/${criado.body.id}`);
+  assert.equal(res.status, 200);
+  const [horario] = lerDados().horarios;
+  assert.equal(horario.disponivel, true);
+  assert.equal(horario.paciente_nome, '');
+  assert.equal(horario.medico_id, 'm1');
+  assert.equal(horario.medico_nome, 'Dra. Ana');
+});

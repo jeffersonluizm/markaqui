@@ -284,9 +284,9 @@ app.post('/api/agendamentos', async (req, res) => {
   try {
     const { horario_id, medico_id, paciente_nome } = req.body;
     
-    if (!horario_id || !medico_id || !paciente_nome) {
+    if (!horario_id || !paciente_nome) {
       return res.status(400).json({ 
-        erro: 'Horário, médico e nome do paciente são obrigatórios' 
+        erro: 'Horário e nome do paciente são obrigatórios' 
       });
     }
     
@@ -302,8 +302,21 @@ app.post('/api/agendamentos', async (req, res) => {
       return res.status(400).json({ erro: 'Horário não está disponível' });
     }
     
-    // Verificar se o médico existe
-    const medico = dados.medicos.find(m => m.id === medico_id);
+    // O médico da consulta é o dono do horário. Horário antigo sem médico
+    // (cadastrado antes da agenda por médico) não pode ser agendado.
+    if (!horario.medico_id) {
+      return res.status(400).json({
+        erro: 'Este horário não tem médico. Cadastre o horário na agenda de um médico.'
+      });
+    }
+
+    if (medico_id && medico_id !== horario.medico_id) {
+      return res.status(400).json({
+        erro: 'O horário escolhido não pertence a este médico'
+      });
+    }
+
+    const medico = dados.medicos.find(m => m.id === horario.medico_id);
     if (!medico) {
       return res.status(404).json({ erro: 'Médico não encontrado' });
     }
@@ -312,7 +325,7 @@ app.post('/api/agendamentos', async (req, res) => {
     const novoAgendamento = {
       id: gerarId(),
       horario_id,
-      medico_id,
+      medico_id: medico.id,
       medico_nome: medico.nome,
       medico_especialidade: medico.especialidade,
       paciente_nome,
@@ -326,8 +339,6 @@ app.post('/api/agendamentos', async (req, res) => {
     const horarioIndex = dados.horarios.findIndex(h => h.id === horario_id);
     dados.horarios[horarioIndex].disponivel = false;
     dados.horarios[horarioIndex].paciente_nome = paciente_nome;
-    dados.horarios[horarioIndex].medico_id = medico_id;
-    dados.horarios[horarioIndex].medico_nome = medico.nome;
     
     dados.agendamentos.push(novoAgendamento);
     await salvarDados(dados);
@@ -349,13 +360,11 @@ app.delete('/api/agendamentos/:id', async (req, res) => {
       return res.status(404).json({ erro: 'Agendamento não encontrado' });
     }
     
-    // Liberar o horário
+    // Liberar o horário (ele continua na agenda do mesmo médico)
     const horarioIndex = dados.horarios.findIndex(h => h.id === agendamento.horario_id);
     if (horarioIndex !== -1) {
       dados.horarios[horarioIndex].disponivel = true;
       dados.horarios[horarioIndex].paciente_nome = '';
-      dados.horarios[horarioIndex].medico_id = null;
-      dados.horarios[horarioIndex].medico_nome = '';
     }
     
     // Remover agendamento
