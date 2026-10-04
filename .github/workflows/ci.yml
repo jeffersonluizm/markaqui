@@ -1,0 +1,47 @@
+# Integração contínua: lint, formatação, testes e build web do app e da API.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  api:
+    name: API (lint, formato, testes)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/Markaki/backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: src/Markaki/backend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run formato
+      - run: npm test
+
+  app:
+    name: App (lint, formato, testes, build web)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/Markaki
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: src/Markaki/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run formato
+      - run: npm test
+      - run: npx expo export --platform web
+        env:
+          EXPO_PUBLIC_API_URL: https://exemplo.invalid/api

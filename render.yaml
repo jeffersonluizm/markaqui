@@ -1,0 +1,32 @@
+# Blueprint do Render para a API de demonstração do Markaqui (plano gratuito).
+# Render: New > Blueprint > este repositório. Depois, preencha CORS_ORIGENS com o
+# endereço do app na Vercel. Passo a passo em docs/deploy.md.
+services:
+  - type: web
+    name: markaqui-api
+    runtime: node
+    plan: free
+    rootDir: src/Markaki/backend
+    buildCommand: npm ci --omit=dev
+    startCommand: node server.js
+    healthCheckPath: /api/saude
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: HOST
+        value: 0.0.0.0
+      - key: JWT_SECRET
+        generateValue: true
+      # Banco de demonstração descartável: o disco do plano gratuito é efêmero e o
+      # cenário é recriado a cada partida e a cada 6 horas.
+      - key: DB_FILE
+        value: /tmp/markaqui.db
+      - key: DEMO_ENABLED
+        value: "true"
+      - key: DEMO_RESET_MINUTOS
+        value: "360"
+      - key: TRUST_PROXY
+        value: "1"
+      - key: CORS_ORIGENS
+        sync: false

@@ -1,0 +1,69 @@
+# Publicar a demonstração (Render + Vercel, plano gratuito)
+
+A API vai para o **Render** e o app, como site estático (Expo web), para a **Vercel**. Os arquivos já estão no repositório: [`render.yaml`](../render.yaml) e [`src/Markaki/vercel.json`](../src/Markaki/vercel.json). A decisão está no [ADR 0005](adr/0005-hospedagem.md).
+
+Tempo estimado: 15 minutos. Custo: zero.
+
+## 1. Publicar o repositório no GitHub
+
+1. Crie um repositório vazio no GitHub (por exemplo `markaqui`), sem README.
+2. Na pasta do projeto:
+   ```bash
+   git remote add origin https://github.com/SEU-USUARIO/markaqui.git
+   git push -u origin main
+   ```
+3. Confira a aba **Actions**: o workflow `CI` roda lint, formatação, testes e o build web.
+
+## 2. API no Render
+
+1. Em [render.com](https://render.com), entre com o GitHub e escolha **New > Blueprint**.
+2. Selecione o repositório. O Render lê o `render.yaml` e cria o serviço `markaqui-api` (plano Free).
+3. Ele pede o valor de **`CORS_ORIGENS`**. Na primeira vez, deixe `https://markaqui.vercel.app` (ou o nome que a Vercel der no passo 3) e ajuste depois.
+4. Aguarde o deploy e anote a URL, por exemplo `https://markaqui-api.onrender.com`.
+
+Variáveis que o blueprint já define:
+
+| Variável | Valor | Para quê |
+|---|---|---|
+| `NODE_VERSION` | `22` | Versão do Node |
+| `HOST` | `0.0.0.0` | Aceitar conexões do proxy do Render |
+| `JWT_SECRET` | gerado pelo Render | Segredo dos tokens (nunca vai para o Git) |
+| `DB_FILE` | `/tmp/markaqui.db` | Banco **só de demonstração**, efêmero |
+| `DEMO_ENABLED` | `true` | Contas "Entrar como paciente / clínica" e `GET /api/demo` |
+| `DEMO_RESET_MINUTOS` | `360` | Recria médicos, agenda e consultas a cada 6 horas |
+| `TRUST_PROXY` | `1` | Limite de tentativas por visitante (atrás do proxy) |
+| `CORS_ORIGENS` | URL do app na Vercel | Só o app publicado chama a API pelo navegador |
+
+As senhas das contas de demonstração são geradas a cada partida (não há senha no código). Para fixá-las, crie `DEMO_PACIENTE_SENHA` e `DEMO_GESTOR_SENHA` no painel do Render.
+
+**Conferir:** abra `https://SUA-API.onrender.com/api/saude` (deve responder `{"status":"ok"}`) e `https://SUA-API.onrender.com/api/demo` (lista as duas contas).
+
+## 3. App web na Vercel
+
+1. Em [vercel.com](https://vercel.com), **Add New > Project** e importe o repositório.
+2. **Root Directory:** `src/Markaki`. O `vercel.json` já define instalação, build (`npx expo export --platform web`), pasta `dist`, rotas da SPA e cabeçalhos de segurança.
+3. Em **Environment Variables**, crie `EXPO_PUBLIC_API_URL` = `https://SUA-API.onrender.com/api`.
+4. **Deploy.** Anote a URL (por exemplo `https://markaqui.vercel.app`).
+5. Volte ao Render e confira se `CORS_ORIGENS` é exatamente essa URL (sem barra no fim). Se mudou, salve: o serviço reinicia.
+
+**Conferir:**
+- Abra a URL da Vercel. Na primeira visita depois de um tempo parado, aparece "Acordando o servidor de demonstração" por até um minuto (o plano gratuito do Render dorme sem uso).
+- Na tela inicial, **Explore a demonstração > Entrar como paciente**: agende uma consulta. Saia e **Entrar como clínica**: veja o painel e a agenda.
+- Recarregue uma página interna (ex.: `/app/consultas`): deve abrir normalmente.
+- Compartilhe o link no WhatsApp ou LinkedIn: a prévia usa `public/og-image.png`. O LinkedIn exige endereço absoluto: troque `content="/og-image.png"` em `src/Markaki/public/index.html` pela URL completa (`https://markaqui.vercel.app/og-image.png`) e publique de novo.
+
+## 4. Abrir no celular
+
+- **Navegador do celular:** basta abrir a URL da Vercel.
+- **Expo Go (app nativo):** instale o Expo Go, rode `npx expo start` em `src/Markaki` com `EXPO_PUBLIC_API_URL` apontando para a API do Render no `.env` e leia o QR code. Não precisa de rede local, porque a API está na internet.
+
+## 5. Atualizar os links do README
+
+Troque os marcadores `https://markaqui.vercel.app` e `https://markaqui-api.onrender.com` no [README](../README.md) pelas URLs reais.
+
+## Segurança da demonstração
+
+- O banco hospedado é exclusivo da demo e descartável: nunca aponte `DB_FILE` para dados reais com `DEMO_ENABLED=true`.
+- Contas demo não trocam senha nem perfil; qualquer outra bagunça some no próximo reset.
+- HTTPS é feito pelo Render e pela Vercel. A API envia os cabeçalhos do `helmet`; o site, os do `vercel.json`.
+- Para uma instalação real: `DEMO_ENABLED=false`, banco em disco persistente e gestor criado com `npm run criar-gestor`.
