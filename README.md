@@ -50,9 +50,11 @@ A aplicação fica em [`src/Markaki`](src/Markaki/README.md): um app Expo (React
 
 Dê dois cliques em `iniciar.bat`, na raiz do repositório. Ele:
 
-1. cria `src/Markaki/.env` a partir do `.env.example`, se ainda não existir;
+1. se ainda não existir, cria `src/Markaki/.env` com o IP deste computador na rede (`EXPO_PUBLIC_API_URL=http://SEU_IP:3000/api`) e **pausa** para você conferir. Se não conseguir descobrir o IP, o `.env` fica com `localhost`;
 2. abre uma janela com a API (`http://localhost:3000/api`);
 3. abre outra janela com o Expo; escaneie o QR code com o Expo Go ou tecle `a` para o emulador Android.
+
+**Importante para o celular físico:** no celular, `localhost` é o próprio celular, então ele só alcança a API pelo IP do computador na mesma rede Wi-Fi. Na pausa do passo 1, confira se o IP gravado é o que aparece em `ipconfig` (linha IPv4); se o `.env` ficou com `localhost`, troque pelo IP antes de continuar. No emulador Android o endereço é `http://10.0.2.2:3000/api`. Se você mudar de rede, edite o `.env` e reinicie o Expo.
 
 Na primeira execução cada janela roda `npm install` antes de subir. Para parar, feche as duas janelas.
 
