@@ -153,7 +153,40 @@ function resetarDemonstracao(armazenamento, config, agora = new Date()) {
   bloqueado.bloqueado = true;
 
   armazenamento.substituirTudo({ usuarios, medicos, horarios: todosHorarios, agendamentos });
+  armazenamento.marcarComoDemo();
   prepararDemonstracao(armazenamento, config);
 }
 
-module.exports = { MEDICOS, dadosDeDemonstracao, proximosDiasUteis, prepararDemonstracao, resetarDemonstracao };
+// Só um banco totalmente vazio (ou já marcado como de demonstração) recebe o cenário.
+function podeSemear(armazenamento) {
+  if (armazenamento.ehBancoDemo()) return true;
+  const { usuarios, medicos } = armazenamento.exportarTudo();
+  return usuarios.length === 0 && medicos.length === 0;
+}
+
+// Partida com DEMO_ENABLED=true. Banco vazio vira banco de demonstração; banco já
+// marcado só recebe as senhas desta partida; banco com dados reais faz a API parar,
+// para nunca publicar uma senha de gestor nem apagar dados reais.
+function iniciarDemonstracao(armazenamento, config) {
+  if (!config.demo.ativo) return;
+  if (armazenamento.ehBancoDemo()) {
+    prepararDemonstracao(armazenamento, config);
+  } else if (podeSemear(armazenamento)) {
+    resetarDemonstracao(armazenamento, config);
+  } else {
+    throw new Error(
+      'DEMO_ENABLED=true só funciona com um banco de demonstração (vazio ou criado pelo modo demo). ' +
+        'Este banco tem dados reais: desligue o modo demo ou aponte DB_FILE para outro arquivo.'
+    );
+  }
+}
+
+module.exports = {
+  MEDICOS,
+  dadosDeDemonstracao,
+  proximosDiasUteis,
+  prepararDemonstracao,
+  resetarDemonstracao,
+  podeSemear,
+  iniciarDemonstracao,
+};

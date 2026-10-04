@@ -5,16 +5,24 @@
 //      npm run semear -- --recriar (apaga tudo e recria)
 const { lerConfig } = require('../src/config');
 const { criarArmazenamentoSqlite } = require('../src/infra/sqlite/armazenamento');
-const { dadosDeDemonstracao, proximosDiasUteis, resetarDemonstracao } = require('../src/services/demonstracao');
+const {
+  dadosDeDemonstracao,
+  proximosDiasUteis,
+  resetarDemonstracao,
+  podeSemear,
+} = require('../src/services/demonstracao');
 
 function principal() {
   const config = lerConfig();
   const recriar = process.argv.includes('--recriar');
   const armazenamento = criarArmazenamentoSqlite(config.arquivoBanco);
   try {
-    if (armazenamento.exportarTudo().medicos.length > 0 && !recriar) {
+    const jaTemCenario = armazenamento.ehBancoDemo() && armazenamento.exportarTudo().medicos.length > 0;
+    if (!recriar && (jaTemCenario || !podeSemear(armazenamento))) {
       console.log(
-        `O banco ${config.arquivoBanco} já tem dados. Use "npm run semear -- --recriar" para apagar e recriar.`
+        jaTemCenario
+          ? `O banco ${config.arquivoBanco} já tem o cenário de demonstração.`
+          : `O banco ${config.arquivoBanco} tem dados reais e não foi alterado. Para apagar tudo: npm run semear -- --recriar`
       );
       return;
     }

@@ -60,6 +60,8 @@ const MIGRACOES = [
   `ALTER TABLE usuarios ADD COLUMN versao_token INTEGER NOT NULL DEFAULT 0;`,
   // 3: contas do modo demonstração (protegidas: não trocam senha nem perfil).
   `ALTER TABLE usuarios ADD COLUMN demo INTEGER NOT NULL DEFAULT 0;`,
+  // 4: marcas do banco (ex.: banco_demo = este banco é só de demonstração).
+  `CREATE TABLE meta (chave TEXT PRIMARY KEY, valor TEXT NOT NULL);`,
 ];
 
 function migrar(db) {

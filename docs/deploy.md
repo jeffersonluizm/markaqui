@@ -31,7 +31,7 @@ Variáveis que o blueprint já define:
 | `DB_FILE` | `/tmp/markaqui.db` | Banco **só de demonstração**, efêmero |
 | `DEMO_ENABLED` | `true` | Contas "Entrar como paciente / clínica" e `GET /api/demo` |
 | `DEMO_RESET_MINUTOS` | `360` | Recria médicos, agenda e consultas a cada 6 horas |
-| `TRUST_PROXY` | `1` | Limite de tentativas por visitante (atrás do proxy) |
+| `TRUST_PROXY` | `1` | Limite de tentativas por visitante (atrás do proxy). Só use com um proxy na frente: sem ele, o cliente forjaria `X-Forwarded-For` |
 | `CORS_ORIGENS` | URL do app na Vercel | Só o app publicado chama a API pelo navegador |
 
 As senhas das contas de demonstração são geradas a cada partida (não há senha no código). Para fixá-las, crie `DEMO_PACIENTE_SENHA` e `DEMO_GESTOR_SENHA` no painel do Render.
@@ -62,6 +62,10 @@ As senhas das contas de demonstração são geradas a cada partida (não há sen
 Troque os marcadores `https://markaqui.vercel.app` e `https://markaqui-api.onrender.com` no [README](../README.md) pelas URLs reais.
 
 ## Segurança da demonstração
+
+- A API só liga o modo demonstração num banco vazio ou criado pelo próprio modo demo (marcado como banco de demonstração). Num banco com dados reais ela se recusa a subir: nunca publica a senha de um gestor real nem apaga dados.
+- A senha do gestor demo é pública por definição: qualquer visitante pode remover médicos ou cadastrar textos até o próximo reset (6 h). Cadastros de visitantes também ficam visíveis para quem entra como clínica.
+- O app web na Vercel envia uma Content-Security-Policy que só permite chamar a API do Render (`connect-src https://*.onrender.com`). Se a API ficar em outro domínio, ajuste o `vercel.json`.
 
 - O banco hospedado é exclusivo da demo e descartável: nunca aponte `DB_FILE` para dados reais com `DEMO_ENABLED=true`.
 - Contas demo não trocam senha nem perfil; qualquer outra bagunça some no próximo reset.

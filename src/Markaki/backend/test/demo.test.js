@@ -160,3 +160,41 @@ test('atrás de proxy (Render), TRUST_PROXY faz o limite de tentativas valer por
   assert.equal(lerConfig(BASE).trustProxy, 0);
   assert.equal(lerConfig({ ...BASE, TRUST_PROXY: '1' }).trustProxy, 1);
 });
+
+test('modo demonstração recusa banco com dados reais (não publica senha de gestor nem apaga nada)', () => {
+  const { iniciarDemonstracao } = require('../src/services/demonstracao');
+  const amb = criarAmbiente();
+  ambientes.push(amb);
+  amb.semear(); // usuários reais (gestor e pacientes) e médicos
+  const config = lerConfig({ ...BASE, DEMO_ENABLED: 'true', BCRYPT_CUSTO: '4' });
+  assert.throws(() => iniciarDemonstracao(amb.armazenamento, config), /banco de demonstração/);
+  assert.equal(amb.dados().usuarios.filter((u) => u.demo).length, 0);
+  assert.equal(amb.dados().medicos.length, 2);
+});
+
+test('banco vazio vira banco de demonstração; na próxima partida só atualiza as contas', () => {
+  const { iniciarDemonstracao } = require('../src/services/demonstracao');
+  const amb = criarAmbiente();
+  ambientes.push(amb);
+  amb.semear({ usuarios: [], medicos: [] });
+  const config = lerConfig({ ...BASE, DEMO_ENABLED: 'true', BCRYPT_CUSTO: '4' });
+  iniciarDemonstracao(amb.armazenamento, config);
+  assert.equal(amb.armazenamento.ehBancoDemo(), true);
+  const consultas = amb.dados().agendamentos.length;
+  assert.ok(consultas > 0);
+  amb.armazenamento.escritaSincrona((r) => r.medicos.inserir({ id: 'm-novo', nome: 'Dr. Novo Teste', especialidade: 'Pediatria' }));
+  iniciarDemonstracao(amb.armazenamento, config);
+  assert.ok(amb.dados().medicos.some((m) => m.id === 'm-novo'), 'não recriou na partida');
+});
+
+test('semear não apaga banco com conta real, mesmo sem médicos', () => {
+  const { podeSemear } = require('../src/services/demonstracao');
+  const amb = criarAmbiente();
+  ambientes.push(amb);
+  amb.semear({ medicos: [] });
+  assert.equal(podeSemear(amb.armazenamento), false);
+  const vazio = criarAmbiente();
+  ambientes.push(vazio);
+  vazio.semear({ usuarios: [], medicos: [] });
+  assert.equal(podeSemear(vazio.armazenamento), true);
+});

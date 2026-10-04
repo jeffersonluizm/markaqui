@@ -8,6 +8,9 @@ set "API=%~dp0src\Markaki\backend"
 rem Portas (podem ser trocadas antes de chamar: set API_PORT=3100).
 if not defined API_PORT set "API_PORT=3000"
 if not defined EXPO_PORT set "EXPO_PORT=8081"
+rem Celular na mesma rede: rode "set LAN=1" antes (a API fica visivel na rede local).
+set "API_HOST=127.0.0.1"
+if "%LAN%"=="1" set "API_HOST=0.0.0.0"
 
 echo ============================================
 echo   Markaqui - preparando a demonstracao local
@@ -50,8 +53,8 @@ if not exist "%API%\.env" (
     > "%API%\.env" echo # Criado pelo iniciar.bat. Nao vai para o Git. Modelo: .env.example
     >> "%API%\.env" echo JWT_SECRET=!JWT!
     >> "%API%\.env" echo PORT=%API_PORT%
-    >> "%API%\.env" echo # 0.0.0.0 deixa o celular na mesma rede alcancar a API; ela fica visivel na rede local.
-    >> "%API%\.env" echo HOST=0.0.0.0
+    >> "%API%\.env" echo # So esta maquina. Para o celular na mesma rede, o iniciar.bat com LAN=1 usa 0.0.0.0.
+    >> "%API%\.env" echo HOST=127.0.0.1
     >> "%API%\.env" echo CORS_ORIGENS=http://localhost:%EXPO_PORT%
     >> "%API%\.env" echo DEMO_ENABLED=true
     echo [ok] Criado src\Markaki\backend\.env com um segredo aleatorio.
@@ -72,7 +75,7 @@ popd
 rem 6. API numa janela propria e espera ela responder.
 netstat -ano | findstr /R /C:":%API_PORT% .*LISTENING" > nul
 if errorlevel 1 (
-    start "Markaqui - API" /D "%API%" cmd /k "title Markaqui API && npm start"
+    start "Markaqui - API" /D "%API%" cmd /k "title Markaqui API && set HOST=%API_HOST%&& npm start"
 ) else (
     echo [aviso] Ja existe algo na porta %API_PORT%; usando a API que esta rodando.
 )
@@ -101,9 +104,10 @@ echo   Na tela inicial, use "Explore a demonstracao" e entre como
 echo   paciente ou como clinica com um clique.
 echo.
 echo   API: http://localhost:%API_PORT%/api/saude
-echo   Celular: leia o QR code da janela "Markaqui - App" com o Expo Go.
-echo     No celular, troque localhost em src\Markaki\.env pelo IP deste
-echo     computador (ipconfig, linha IPv4) e reinicie o Expo.
+echo   Celular: feche as janelas, rode "set LAN=1" e o iniciar.bat de novo;
+echo     troque localhost em src\Markaki\.env pelo IP deste computador
+echo     (ipconfig, linha IPv4) e leia o QR code com o Expo Go.
+echo     Com LAN=1 a API e as contas demo ficam visiveis na rede local.
 echo   Para parar: feche as janelas "Markaqui - API" e "Markaqui - App".
 echo ============================================
 echo.

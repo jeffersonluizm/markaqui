@@ -49,6 +49,13 @@ function criarArmazenamentoSqlite(arquivo) {
         agendamentos.forEach((a) => r.agendamentos.inserir(a));
       });
     },
+    // Banco exclusivo de demonstração: só ele aceita o modo demo e os resets.
+    marcarComoDemo() {
+      db.prepare("INSERT OR REPLACE INTO meta (chave, valor) VALUES ('banco_demo', '1')").run();
+    },
+    ehBancoDemo() {
+      return Boolean(db.prepare("SELECT 1 FROM meta WHERE chave = 'banco_demo'").get());
+    },
     exportarTudo() {
       return {
         usuarios: repos.usuarios.listar(),

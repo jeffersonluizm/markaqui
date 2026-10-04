@@ -4,7 +4,7 @@
 const { lerConfig } = require('./src/config');
 const { criarApp } = require('./src/app');
 const { criarArmazenamentoSqlite } = require('./src/infra/sqlite/armazenamento');
-const { prepararDemonstracao, resetarDemonstracao } = require('./src/services/demonstracao');
+const { iniciarDemonstracao, resetarDemonstracao } = require('./src/services/demonstracao');
 
 function iniciar(env = process.env) {
   const config = lerConfig(env);
@@ -16,10 +16,9 @@ function iniciar(env = process.env) {
 // Modo demonstração: banco vazio (ex.: disco efêmero do Render) recebe o cenário de
 // exemplo; as contas demo sempre recebem as senhas desta partida; e, com
 // DEMO_RESET_MINUTOS, o cenário volta ao original de tempos em tempos.
-function iniciarDemonstracao(armazenamento, config) {
+function ligarDemonstracao(armazenamento, config) {
   if (!config.demo.ativo) return;
-  if (armazenamento.exportarTudo().medicos.length === 0) resetarDemonstracao(armazenamento, config);
-  else prepararDemonstracao(armazenamento, config);
+  iniciarDemonstracao(armazenamento, config);
   if (config.demo.resetMinutos > 0) {
     setInterval(
       () => {
@@ -43,7 +42,7 @@ function iniciarDemonstracao(armazenamento, config) {
 if (require.main === module) {
   try {
     const { app, armazenamento, config } = iniciar();
-    iniciarDemonstracao(armazenamento, config);
+    ligarDemonstracao(armazenamento, config);
     app.listen(config.porta, config.host, () => {
       console.log(`API do Markaqui em http://${config.host}:${config.porta}/api`);
     });
