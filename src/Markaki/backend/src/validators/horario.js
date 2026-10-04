@@ -7,11 +7,13 @@ const CAMPOS_EDITAVEIS_HORARIO = ['disponivel', 'data', 'hora'];
 // Valida os campos editáveis presentes no corpo e devolve data e hora sem espaços
 // nas pontas, para a checagem de duplicado não ser driblada.
 function validarCamposHorario(corpo) {
-  if ('disponivel' in corpo && typeof corpo.disponivel !== 'boolean') {
-    throw requisicaoInvalida('disponivel deve ser true ou false');
-  }
   const valores = {};
-  if ('disponivel' in corpo) valores.disponivel = corpo.disponivel;
+  if ('disponivel' in corpo) {
+    if (typeof corpo.disponivel !== 'boolean') {
+      throw requisicaoInvalida('disponivel deve ser true ou false');
+    }
+    valores.disponivel = corpo.disponivel;
+  }
   for (const campo of ['data', 'hora']) {
     if (!(campo in corpo)) continue;
     if (typeof corpo[campo] !== 'string' || !corpo[campo].trim()) {

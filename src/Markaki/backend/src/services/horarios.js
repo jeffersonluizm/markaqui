@@ -1,7 +1,7 @@
-// Regras da agenda: cada horário pertence a um médico.
+// Regras da agenda: cada horário pertence a um médico. Os dados chegam validados
+// (validators/horario.js).
 const { gerarId } = require('../infra/ids');
 const { naoEncontrado, requisicaoInvalida, conflito } = require('../erros');
-const { validarEdicaoHorario } = require('../validators/horario');
 
 const MSG_DUPLICADO = 'Este médico já tem um horário cadastrado nessa data e hora';
 const MSG_AGENDADO = 'Este horário está agendado. Cancele o agendamento primeiro.';
@@ -14,17 +14,12 @@ function estaAgendado(r, horario) {
   );
 }
 
-function listar(r, medicoId) {
-  return r.horarios.listar(medicoId);
-}
-
 function buscar(r, id) {
   const horario = r.horarios.buscar(id);
   if (!horario) throw naoEncontrado('Horário não encontrado');
   return horario;
 }
 
-// `novo` já validado por validarNovoHorario.
 function cadastrar(r, novo) {
   const medico = r.medicos.buscar(novo.medico_id);
   if (!medico) throw requisicaoInvalida('Médico não encontrado');
@@ -44,12 +39,10 @@ function cadastrar(r, novo) {
   });
 }
 
-function atualizar(r, id, corpo) {
+// Paciente e médico só mudam pelo agendamento; um horário agendado só é liberado
+// cancelando o agendamento.
+function atualizar(r, id, valores) {
   const horario = buscar(r, id);
-  const valores = validarEdicaoHorario(corpo);
-
-  // Paciente e médico só mudam pelo agendamento; um horário agendado só é
-  // liberado cancelando o agendamento.
   if (estaAgendado(r, horario)) throw conflito(MSG_AGENDADO);
 
   const atualizado = { ...horario, ...valores };
@@ -73,4 +66,4 @@ function remover(r, id) {
   return { mensagem: 'Horário removido com sucesso' };
 }
 
-module.exports = { listar, buscar, cadastrar, atualizar, remover };
+module.exports = { buscar, cadastrar, atualizar, remover };

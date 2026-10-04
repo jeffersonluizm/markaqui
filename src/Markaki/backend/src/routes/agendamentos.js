@@ -1,26 +1,21 @@
 const express = require('express');
 const agendamentos = require('../services/agendamentos');
-const { responder } = require('../middlewares/erros');
+const { validarNovoAgendamento } = require('../validators/agendamento');
+const { criarManipuladores } = require('../middlewares/erros');
 
 function rotasAgendamentos(armazenamento) {
+  const { ler, gravar } = criarManipuladores(armazenamento);
   const rotas = express.Router();
 
-  rotas.get('/', responder('Erro ao buscar agendamentos', async () => ({
-    corpo: await armazenamento.leitura((r) => agendamentos.listar(r)),
-  })));
-
-  rotas.post('/', responder('Erro ao criar agendamento', async (req) => {
-    const corpo = req.body || {};
-    agendamentos.validarNovo(corpo);
-    return {
-      status: 201,
-      corpo: await armazenamento.escrita((r) => agendamentos.agendar(r, corpo)),
-    };
+  rotas.get('/', ler('Erro ao buscar agendamentos', (r) => r.agendamentos.listar()));
+  rotas.post('/', gravar('Erro ao criar agendamento', (r, dados) => agendamentos.agendar(r, dados), {
+    status: 201,
+    validar: validarNovoAgendamento,
   }));
-
-  rotas.delete('/:id', responder('Erro ao cancelar agendamento', async (req) => ({
-    corpo: await armazenamento.escrita((r) => agendamentos.cancelar(r, req.params.id)),
-  })));
+  rotas.delete('/:id', gravar(
+    'Erro ao cancelar agendamento',
+    (r, _, req) => agendamentos.cancelar(r, req.params.id)
+  ));
 
   return rotas;
 }

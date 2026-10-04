@@ -1,23 +1,14 @@
-// Regras de médicos. Recebem os repositórios (r) de uma leitura ou escrita.
+// Regras de médicos. Recebem os repositórios (r) de uma leitura ou escrita e dados
+// já validados (validators/medico.js).
 const { gerarId } = require('../infra/ids');
-const { naoEncontrado, requisicaoInvalida, conflito } = require('../erros');
+const { naoEncontrado, conflito } = require('../erros');
 
 const IMAGEM_PADRAO = 'https://via.placeholder.com/80';
-
-function listar(r) {
-  return r.medicos.listar();
-}
 
 function buscar(r, id) {
   const medico = r.medicos.buscar(id);
   if (!medico) throw naoEncontrado('Médico não encontrado');
   return medico;
-}
-
-function validarNovo({ nome, especialidade }) {
-  if (!nome || !especialidade) {
-    throw requisicaoInvalida('Nome e especialidade são obrigatórios');
-  }
 }
 
 function cadastrar(r, { nome, especialidade, imagem }) {
@@ -53,4 +44,4 @@ function remover(r, id) {
   return { mensagem: 'Médico removido com sucesso', horarios_removidos: horariosRemovidos };
 }
 
-module.exports = { listar, buscar, validarNovo, cadastrar, atualizar, remover };
+module.exports = { buscar, cadastrar, atualizar, remover };

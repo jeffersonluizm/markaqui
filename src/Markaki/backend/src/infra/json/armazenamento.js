@@ -43,11 +43,15 @@ function criarArmazenamentoJson(arquivo) {
     async leitura(operacao) {
       return operacao(criarRepositorios(await lerDados()));
     },
-    // A operação recebe os repositórios; se lançar erro, nada é gravado.
+    // A operação recebe os repositórios e precisa ser síncrona (como uma transação):
+    // se lançar erro, nada é gravado.
     escrita(operacao) {
       return comTrava(async () => {
         const dados = await lerDados();
         const resultado = operacao(criarRepositorios(dados));
+        if (resultado && typeof resultado.then === 'function') {
+          throw new Error('A operação de escrita precisa ser síncrona');
+        }
         await salvarDados(dados);
         return resultado;
       });
