@@ -4,10 +4,10 @@
   "description": "API do Markaqui: agendamento de consultas em clínica médica",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "semear": "node scripts/semear.js",
-    "dev": "nodemon server.js",
-    "test": "node --test server.test.js",
+    "start": "node --env-file-if-exists=.env server.js",
+    "semear": "node --env-file-if-exists=.env scripts/semear.js",
+    "dev": "node --watch --env-file-if-exists=.env server.js",
+    "test": "node --test \"test/*.test.js\"",
     "carga": "node carga/executar.js"
   },
   "keywords": [
@@ -17,16 +17,19 @@
     "medicos",
     "agendamentos"
   ],
-  "author": "Bruno",
+  "author": "Equipe Markaqui (PUC Minas, ADS)",
   "license": "MIT",
   "dependencies": {
+    "bcryptjs": "^3.0.3",
     "better-sqlite3": "^13.0.3",
     "cors": "^2.8.5",
-    "express": "^4.18.2"
+    "express": "^4.18.2",
+    "express-rate-limit": "^8.7.0",
+    "helmet": "^8.3.0",
+    "jsonwebtoken": "^9.0.3"
   },
   "devDependencies": {
     "autocannon": "^8.0.0",
-    "nodemon": "^3.0.1",
     "supertest": "^7.3.1"
   }
 }

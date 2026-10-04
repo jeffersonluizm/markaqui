@@ -1,47 +1,39 @@
-// Regras de médicos. Recebem os repositórios (r) de uma leitura ou escrita e dados
-// já validados (validators/medico.js).
+// Regras de médicos. Recebem os repositórios (r), dados já validados e o contexto
+// da requisição (ctx: usuário e "agora").
 const { gerarId } = require('../infra/ids');
 const { naoEncontrado, conflito } = require('../erros');
-
-const IMAGEM_PADRAO = 'https://via.placeholder.com/80';
+const { momentoLocal } = require('../dominio/tempo');
 
 function buscar(r, id) {
   const medico = r.medicos.buscar(id);
-  if (!medico) throw naoEncontrado('Médico não encontrado');
+  if (!medico) throw naoEncontrado('Médico não encontrado.');
   return medico;
 }
 
-function cadastrar(r, { nome, especialidade, imagem }) {
-  return r.medicos.inserir({
-    id: gerarId(),
-    nome,
-    especialidade,
-    imagem: imagem || IMAGEM_PADRAO,
-  });
+function cadastrar(r, { nome, especialidade }) {
+  return r.medicos.inserir({ id: gerarId(), nome, especialidade });
 }
 
-function atualizar(r, id, { nome, especialidade, imagem }) {
-  const atual = buscar(r, id);
-  return r.medicos.atualizar(id, {
-    nome: nome || atual.nome,
-    especialidade: especialidade || atual.especialidade,
-    imagem: imagem || atual.imagem,
-  });
-}
-
-// Com consulta marcada o médico não sai: os agendamentos ficariam órfãos. Sem
-// agendamentos, os horários que sobram (livres ou bloqueados) saem junto.
-function remover(r, id) {
+// O nome novo vale para a agenda e para as consultas ativas; o histórico de
+// consultas canceladas ou realizadas guarda o nome da época.
+function atualizar(r, id, campos) {
   buscar(r, id);
-  const agendamentos = r.agendamentos.contarDoMedico(id);
-  if (agendamentos > 0) {
-    throw conflito(
-      `Este médico tem ${agendamentos} agendamento(s). Cancele os agendamentos primeiro.`
-    );
+  const medico = r.medicos.atualizar(id, campos);
+  r.agendamentos.renomearMedicoNosAtivos(id, medico);
+  return medico;
+}
+
+// Com consulta futura marcada o médico não sai. Sem ela, a agenda dele sai junto
+// e o histórico de consultas continua (com o nome copiado no agendamento).
+function remover(r, id, ctx) {
+  buscar(r, id);
+  const futuras = r.agendamentos.contarFuturosDoMedico(id, momentoLocal(ctx.agora));
+  if (futuras > 0) {
+    throw conflito(`Este médico tem ${futuras} consulta(s) marcada(s). Cancele as consultas primeiro.`);
   }
   const horariosRemovidos = r.horarios.removerDoMedico(id);
   r.medicos.remover(id);
-  return { mensagem: 'Médico removido com sucesso', horarios_removidos: horariosRemovidos };
+  return { mensagem: 'Médico removido.', horarios_removidos: horariosRemovidos };
 }
 
 module.exports = { buscar, cadastrar, atualizar, remover };

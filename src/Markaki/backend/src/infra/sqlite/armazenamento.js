@@ -1,6 +1,6 @@
 // Armazenamento em SQLite. Cada escrita é uma transação IMMEDIATE: a regra de
 // negócio (ex.: "o horário está livre?") e a gravação acontecem juntas, e um erro
-// no meio desfaz tudo. Substitui a fila global e a regravação do arquivo JSON.
+// no meio desfaz tudo.
 const fs = require('fs');
 const path = require('path');
 const Database = require('better-sqlite3');
@@ -34,11 +34,12 @@ function criarArmazenamentoSqlite(arquivo) {
       return transacao(operacao);
     },
 
-    // Troca todo o conteúdo pelo documento no formato do antigo database.json
-    // ({ medicos, horarios, agendamentos }). Usado na migração e nos testes.
-    substituirTudo({ medicos = [], horarios = [], agendamentos = [] }) {
+    // Troca todo o conteúdo do banco pelo documento dado. Usado pelos testes, pela
+    // carga e pelo script de dados de demonstração.
+    substituirTudo({ usuarios = [], medicos = [], horarios = [], agendamentos = [] }) {
       transacao((r) => {
-        db.exec('DELETE FROM agendamentos; DELETE FROM horarios; DELETE FROM medicos;');
+        db.exec('DELETE FROM agendamentos; DELETE FROM horarios; DELETE FROM medicos; DELETE FROM usuarios;');
+        usuarios.forEach((u) => r.usuarios.inserir(u));
         medicos.forEach((m) => r.medicos.inserir(m));
         horarios.forEach((h) => r.horarios.inserir(h));
         agendamentos.forEach((a) => r.agendamentos.inserir(a));
@@ -46,12 +47,10 @@ function criarArmazenamentoSqlite(arquivo) {
     },
     exportarTudo() {
       return {
+        usuarios: repos.usuarios.listar(),
         medicos: repos.medicos.listar(),
-        horarios: db
-          .prepare('SELECT id FROM horarios ORDER BY rowid')
-          .all()
-          .map(({ id }) => repos.horarios.buscar(id)),
-        agendamentos: repos.agendamentos.listar(),
+        horarios: repos.horarios.listarBrutos(),
+        agendamentos: repos.agendamentos.listarBrutos(),
       };
     },
     fechar() {

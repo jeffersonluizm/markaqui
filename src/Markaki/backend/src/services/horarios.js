@@ -1,69 +1,66 @@
-// Regras da agenda: cada horário pertence a um médico. Os dados chegam validados
-// (validators/horario.js).
+// Regras da agenda: cada horário pertence a um médico; só o gestor altera.
 const { gerarId } = require('../infra/ids');
 const { naoEncontrado, requisicaoInvalida, conflito } = require('../erros');
+const { ehFuturo, momentoLocal } = require('../dominio/tempo');
+const { horarioPara } = require('./apresentacao');
 
-const MSG_DUPLICADO = 'Este médico já tem um horário cadastrado nessa data e hora';
-const MSG_AGENDADO = 'Este horário está agendado. Cancele o agendamento primeiro.';
-
-// Agendado = tem agendamento apontando para ele (ou, em dado antigo, tem paciente).
-function estaAgendado(r, horario) {
-  return (
-    r.agendamentos.existeParaHorario(horario.id) ||
-    (!horario.disponivel && Boolean(horario.paciente_nome))
-  );
-}
+const MSG_DUPLICADO = 'Este médico já tem um horário nessa data e hora.';
+const MSG_AGENDADO = 'Este horário tem consulta marcada. Cancele a consulta primeiro.';
+const MSG_PASSADO = 'Escolha uma data e hora no futuro.';
 
 function buscar(r, id) {
   const horario = r.horarios.buscar(id);
-  if (!horario) throw naoEncontrado('Horário não encontrado');
+  if (!horario) throw naoEncontrado('Horário não encontrado.');
   return horario;
 }
 
-function cadastrar(r, novo) {
-  const medico = r.medicos.buscar(novo.medico_id);
-  if (!medico) throw requisicaoInvalida('Médico não encontrado');
-
-  // Dois médicos podem ter o mesmo horário; o mesmo médico, não.
-  if (r.horarios.existeIgual({ medicoId: medico.id, data: novo.data, hora: novo.hora })) {
-    throw conflito(MSG_DUPLICADO);
-  }
-  return r.horarios.inserir({
-    id: gerarId(),
-    data: novo.data,
-    hora: novo.hora,
-    disponivel: novo.disponivel !== undefined ? novo.disponivel : true,
-    paciente_nome: '',
-    medico_id: medico.id,
-    medico_nome: medico.nome,
-  });
+// Paciente vê só horários livres e futuros; gestor vê a agenda completa.
+function listar(r, medicoId, ctx) {
+  const lista = ctx.usuario.papel === 'gestor'
+    ? r.horarios.listar(medicoId)
+    : r.horarios.listarLivres(medicoId, momentoLocal(ctx.agora));
+  return lista.map((h) => horarioPara(ctx.usuario, h));
 }
 
-// Paciente e médico só mudam pelo agendamento; um horário agendado só é liberado
-// cancelando o agendamento.
-function atualizar(r, id, valores) {
+function detalhar(r, id, ctx) {
   const horario = buscar(r, id);
-  if (estaAgendado(r, horario)) throw conflito(MSG_AGENDADO);
+  if (ctx.usuario.papel !== 'gestor' && !horario.disponivel) throw naoEncontrado('Horário não encontrado.');
+  return horarioPara(ctx.usuario, horario);
+}
 
-  const atualizado = { ...horario, ...valores };
-  const repetido =
-    Boolean(atualizado.medico_id) &&
-    r.horarios.existeIgual({
-      medicoId: atualizado.medico_id,
-      data: atualizado.data,
-      hora: atualizado.hora,
-      excetoId: horario.id,
-    });
-  if (repetido) throw conflito(MSG_DUPLICADO);
+function cadastrar(r, novo, ctx) {
+  if (!r.medicos.buscar(novo.medico_id)) throw requisicaoInvalida('Médico não encontrado.');
+  if (!ehFuturo(novo.data, novo.hora, ctx.agora)) throw requisicaoInvalida(MSG_PASSADO);
+  // Dois médicos podem ter o mesmo horário; o mesmo médico, não.
+  if (r.horarios.existeIgual({ medicoId: novo.medico_id, data: novo.data, hora: novo.hora })) {
+    throw conflito(MSG_DUPLICADO);
+  }
+  return horarioPara(ctx.usuario, r.horarios.inserir({ id: gerarId(), ...novo }));
+}
 
-  return r.horarios.atualizar(id, valores);
+// Bloquear, desbloquear ou mudar data e hora. Horário com consulta marcada só é
+// liberado cancelando a consulta.
+function atualizar(r, id, campos, ctx) {
+  const horario = buscar(r, id);
+  if (horario.agendado) throw conflito(MSG_AGENDADO);
+
+  const data = campos.data ?? horario.data;
+  const hora = campos.hora ?? horario.hora;
+  const mudouMomento = data !== horario.data || hora !== horario.hora;
+  if (mudouMomento) {
+    if (!ehFuturo(data, hora, ctx.agora)) throw requisicaoInvalida(MSG_PASSADO);
+    if (r.horarios.existeIgual({ medicoId: horario.medico_id, data, hora, excetoId: id })) {
+      throw conflito(MSG_DUPLICADO);
+    }
+  }
+  return horarioPara(ctx.usuario, r.horarios.atualizar(id, campos));
 }
 
 function remover(r, id) {
   const horario = buscar(r, id);
-  if (estaAgendado(r, horario)) throw conflito(MSG_AGENDADO);
+  if (horario.agendado) throw conflito(MSG_AGENDADO);
   r.horarios.remover(id);
-  return { mensagem: 'Horário removido com sucesso' };
+  return { mensagem: 'Horário removido.' };
 }
 
-module.exports = { buscar, cadastrar, atualizar, remover };
+module.exports = { buscar, listar, detalhar, cadastrar, atualizar, remover };

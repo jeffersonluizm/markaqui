@@ -1,77 +1,133 @@
 // Repositórios sobre o SQLite (better-sqlite3, síncrono). As consultas são
-// preparadas uma vez por conexão. O nome do médico do horário vem por JOIN, então
-// renomear o médico já aparece na agenda dele.
+// preparadas uma vez por conexão. O estado do horário (livre, bloqueado ou
+// agendado) é calculado na consulta, a partir do agendamento ativo: não há
+// coluna "disponivel" para ficar fora de sincronia.
 
 const SELECT_HORARIO = `
-  SELECT h.id, h.data, h.hora, h.disponivel, h.paciente_nome, h.medico_id,
-         COALESCE(m.nome, '') AS medico_nome
-  FROM horarios h LEFT JOIN medicos m ON m.id = h.medico_id`;
+  SELECT h.id, h.medico_id, m.nome AS medico_nome, m.especialidade AS medico_especialidade,
+         h.data, h.hora, h.bloqueado, a.id AS agendamento_id, a.paciente_id, a.paciente_nome
+  FROM horarios h
+  JOIN medicos m ON m.id = h.medico_id
+  LEFT JOIN agendamentos a ON a.horario_id = h.id AND a.status = 'agendado'`;
 
-const paraHorario = (linha) => linha && { ...linha, disponivel: Boolean(linha.disponivel) };
+// "Depois de agora" sem concatenar colunas, para o SQLite poder usar os índices.
+const DEPOIS_DE = '(h.data > @data OR (h.data = @data AND h.hora > @hora))';
+const LIVRE = 'h.bloqueado = 0 AND a.id IS NULL';
 
-// Converte valores de JS para o SQLite (booleanos viram 0/1).
-const paraBanco = (valor) => (typeof valor === 'boolean' ? Number(valor) : valor);
+function paraHorario(linha) {
+  if (!linha) return undefined;
+  const bloqueado = Boolean(linha.bloqueado);
+  const agendado = Boolean(linha.agendamento_id);
+  return { ...linha, bloqueado, agendado, disponivel: !bloqueado && !agendado };
+}
 
 // UPDATE só com as colunas permitidas (os nomes nunca vêm do cliente sem filtro).
 function atualizador(db, tabela, colunas) {
   const cache = new Map();
   return (id, campos) => {
-    const nomes = Object.keys(campos).filter((c) => colunas.includes(c) && campos[c] !== undefined);
+    const nomes = colunas.filter((c) => campos[c] !== undefined);
     if (nomes.length === 0) return 0;
     const chave = nomes.join(',');
     if (!cache.has(chave)) {
-      cache.set(
-        chave,
-        db.prepare(`UPDATE ${tabela} SET ${nomes.map((c) => `${c} = @${c}`).join(', ')} WHERE id = @id`)
-      );
+      const sets = nomes.map((c) => `${c} = @${c}`).join(', ');
+      cache.set(chave, db.prepare(`UPDATE ${tabela} SET ${sets} WHERE id = @id`));
     }
     const valores = { id };
-    for (const c of nomes) valores[c] = paraBanco(campos[c]);
+    for (const c of nomes) valores[c] = typeof campos[c] === 'boolean' ? Number(campos[c]) : campos[c];
     return cache.get(chave).run(valores).changes;
   };
 }
 
 function criarRepositorios(db) {
+  const p = (sql) => db.prepare(sql);
   const q = {
-    medicosListar: db.prepare('SELECT id, nome, especialidade, imagem FROM medicos ORDER BY rowid'),
-    medicoBuscar: db.prepare('SELECT id, nome, especialidade, imagem FROM medicos WHERE id = ?'),
-    medicoInserir: db.prepare(
-      'INSERT INTO medicos (id, nome, especialidade, imagem) VALUES (@id, @nome, @especialidade, @imagem)'
-    ),
-    medicoRemover: db.prepare('DELETE FROM medicos WHERE id = ?'),
+    usuarioPorId: p('SELECT * FROM usuarios WHERE id = ?'),
+    usuarioPorEmail: p('SELECT * FROM usuarios WHERE email = ?'),
+    usuarios: p('SELECT * FROM usuarios ORDER BY rowid'),
+    usuarioInserir: p(`
+      INSERT INTO usuarios (id, nome, email, telefone, senha_hash, papel, criado_em)
+      VALUES (@id, @nome, @email, @telefone, @senha_hash, @papel, @criado_em)`),
 
-    horariosListar: db.prepare(`${SELECT_HORARIO} ORDER BY h.data, h.hora, h.rowid`),
-    horariosDoMedico: db.prepare(`${SELECT_HORARIO} WHERE h.medico_id = ? ORDER BY h.data, h.hora`),
-    horarioBuscar: db.prepare(`${SELECT_HORARIO} WHERE h.id = ?`),
-    horarioInserir: db.prepare(`
-      INSERT INTO horarios (id, medico_id, data, hora, disponivel, paciente_nome)
-      VALUES (@id, @medico_id, @data, @hora, @disponivel, @paciente_nome)`),
-    horarioRemover: db.prepare('DELETE FROM horarios WHERE id = ?'),
-    horariosRemoverDoMedico: db.prepare('DELETE FROM horarios WHERE medico_id = ?'),
-    horarioIgual: db.prepare(`
+    medicos: p('SELECT id, nome, especialidade FROM medicos ORDER BY rowid'),
+    medicoPorId: p('SELECT id, nome, especialidade FROM medicos WHERE id = ?'),
+    medicoInserir: p('INSERT INTO medicos (id, nome, especialidade) VALUES (@id, @nome, @especialidade)'),
+    medicoRemover: p('DELETE FROM medicos WHERE id = ?'),
+    medicosContar: p('SELECT COUNT(*) AS n FROM medicos'),
+
+    horarios: p(`${SELECT_HORARIO} ORDER BY h.data, h.hora, m.nome`),
+    horariosDoMedico: p(`${SELECT_HORARIO} WHERE h.medico_id = ? ORDER BY h.data, h.hora`),
+    horariosLivres: p(`${SELECT_HORARIO} WHERE ${LIVRE} AND ${DEPOIS_DE} ORDER BY h.data, h.hora, m.nome`),
+    horariosLivresDoMedico: p(`${SELECT_HORARIO}
+      WHERE h.medico_id = @medicoId AND ${LIVRE} AND ${DEPOIS_DE} ORDER BY h.data, h.hora`),
+    horariosLivresContar: p(`
+      SELECT COUNT(*) AS n FROM horarios h
+      LEFT JOIN agendamentos a ON a.horario_id = h.id AND a.status = 'agendado'
+      WHERE ${LIVRE} AND ${DEPOIS_DE}`),
+    horarioPorId: p(`${SELECT_HORARIO} WHERE h.id = ?`),
+    horariosBrutos: p('SELECT id, medico_id, data, hora, bloqueado FROM horarios ORDER BY rowid'),
+    horarioInserir: p(`
+      INSERT INTO horarios (id, medico_id, data, hora, bloqueado)
+      VALUES (@id, @medico_id, @data, @hora, @bloqueado)`),
+    horarioRemover: p('DELETE FROM horarios WHERE id = ?'),
+    horariosRemoverDoMedico: p('DELETE FROM horarios WHERE medico_id = ?'),
+    horarioIgual: p(`
       SELECT 1 FROM horarios
       WHERE medico_id = @medicoId AND data = @data AND hora = @hora AND id <> @excetoId`),
 
-    agendamentosListar: db.prepare('SELECT * FROM agendamentos ORDER BY rowid'),
-    agendamentoBuscar: db.prepare('SELECT * FROM agendamentos WHERE id = ?'),
-    agendamentoInserir: db.prepare(`
-      INSERT INTO agendamentos (id, horario_id, medico_id, medico_nome, medico_especialidade,
-        paciente_nome, data, hora, status, criado_em)
-      VALUES (@id, @horario_id, @medico_id, @medico_nome, @medico_especialidade,
-        @paciente_nome, @data, @hora, @status, @criado_em)`),
-    agendamentoRemover: db.prepare('DELETE FROM agendamentos WHERE id = ?'),
-    agendamentosContarDoMedico: db.prepare('SELECT COUNT(*) AS n FROM agendamentos WHERE medico_id = ?'),
-    agendamentoDoHorario: db.prepare('SELECT 1 FROM agendamentos WHERE horario_id = ? LIMIT 1'),
+    agendamentos: p('SELECT * FROM agendamentos ORDER BY data, hora, criado_em'),
+    agendamentosDoPaciente: p('SELECT * FROM agendamentos WHERE paciente_id = ? ORDER BY data, hora, criado_em'),
+    agendamentosAtivosEntre: p(`
+      SELECT * FROM agendamentos
+      WHERE status = 'agendado' AND data BETWEEN @inicio AND @fim ORDER BY data, hora`),
+    agendamentoPorId: p('SELECT * FROM agendamentos WHERE id = ?'),
+    agendamentosBrutos: p('SELECT * FROM agendamentos ORDER BY rowid'),
+    agendamentoInserir: p(`
+      INSERT INTO agendamentos (id, horario_id, medico_id, paciente_id, medico_nome,
+        medico_especialidade, paciente_nome, data, hora, status, criado_em, cancelado_em, cancelado_por)
+      VALUES (@id, @horario_id, @medico_id, @paciente_id, @medico_nome, @medico_especialidade,
+        @paciente_nome, @data, @hora, @status, @criado_em, @cancelado_em, @cancelado_por)`),
+    agendamentoCancelar: p(`
+      UPDATE agendamentos SET status = 'cancelado', cancelado_em = @cancelado_em,
+        cancelado_por = @cancelado_por WHERE id = @id AND status = 'agendado'`),
+    pacienteOcupado: p(`
+      SELECT 1 FROM agendamentos
+      WHERE paciente_id = @pacienteId AND data = @data AND hora = @hora AND status = 'agendado'`),
+    futurosDoMedico: p(`
+      SELECT COUNT(*) AS n FROM agendamentos
+      WHERE medico_id = @medicoId AND status = 'agendado'
+        AND (data > @data OR (data = @data AND hora > @hora))`),
+    renomearMedicoNosAtivos: p(`
+      UPDATE agendamentos SET medico_nome = @nome, medico_especialidade = @especialidade
+      WHERE medico_id = @medicoId AND status = 'agendado'`),
+    renomearPacienteNosAtivos: p(`
+      UPDATE agendamentos SET paciente_nome = @nome
+      WHERE paciente_id = @pacienteId AND status = 'agendado'`),
   };
-  const atualizarMedico = atualizador(db, 'medicos', ['nome', 'especialidade', 'imagem']);
-  const atualizarHorario = atualizador(db, 'horarios', ['data', 'hora', 'disponivel', 'paciente_nome']);
+  const atualizarUsuario = atualizador(db, 'usuarios', ['nome', 'telefone', 'senha_hash']);
+  const atualizarMedico = atualizador(db, 'medicos', ['nome', 'especialidade']);
+  const atualizarHorario = atualizador(db, 'horarios', ['data', 'hora', 'bloqueado']);
+
+  const usuarios = {
+    buscar: (id) => q.usuarioPorId.get(id),
+    buscarPorEmail: (email) => q.usuarioPorEmail.get(email),
+    listar: () => q.usuarios.all(),
+    inserir(u) {
+      q.usuarioInserir.run({ telefone: '', criado_em: new Date().toISOString(), ...u });
+      return usuarios.buscar(u.id);
+    },
+    atualizar(id, campos) {
+      atualizarUsuario(id, campos);
+      return usuarios.buscar(id);
+    },
+  };
 
   const medicos = {
-    listar: () => q.medicosListar.all(),
-    buscar: (id) => q.medicoBuscar.get(id),
-    inserir(medico) {
-      q.medicoInserir.run({ imagem: '', ...medico });
-      return medicos.buscar(medico.id);
+    listar: () => q.medicos.all(),
+    buscar: (id) => q.medicoPorId.get(id),
+    contar: () => q.medicosContar.get().n,
+    inserir(m) {
+      q.medicoInserir.run({ id: m.id, nome: m.nome, especialidade: m.especialidade });
+      return medicos.buscar(m.id);
     },
     // Devolve o médico atualizado, ou undefined se o id não existe.
     atualizar(id, campos) {
@@ -82,19 +138,25 @@ function criarRepositorios(db) {
   };
 
   const horarios = {
-    listar: (medicoId) =>
-      (medicoId ? q.horariosDoMedico.all(medicoId) : q.horariosListar.all()).map(paraHorario),
-    buscar: (id) => paraHorario(q.horarioBuscar.get(id)),
-    inserir(horario) {
+    listar: (medicoId) => (medicoId ? q.horariosDoMedico.all(medicoId) : q.horarios.all()).map(paraHorario),
+    // Só os livres depois de `momento` ({ data, hora }).
+    listarLivres: (medicoId, momento) =>
+      (medicoId
+        ? q.horariosLivresDoMedico.all({ medicoId, ...momento })
+        : q.horariosLivres.all(momento)
+      ).map(paraHorario),
+    contarLivres: (momento) => q.horariosLivresContar.get(momento).n,
+    buscar: (id) => paraHorario(q.horarioPorId.get(id)),
+    listarBrutos: () => q.horariosBrutos.all().map((h) => ({ ...h, bloqueado: Boolean(h.bloqueado) })),
+    inserir(h) {
       q.horarioInserir.run({
-        id: horario.id,
-        medico_id: horario.medico_id ?? null,
-        data: horario.data,
-        hora: horario.hora,
-        disponivel: paraBanco(horario.disponivel ?? true),
-        paciente_nome: horario.paciente_nome || '',
+        id: h.id,
+        medico_id: h.medico_id,
+        data: h.data,
+        hora: h.hora,
+        bloqueado: Number(Boolean(h.bloqueado)),
       });
-      return horarios.buscar(horario.id);
+      return horarios.buscar(h.id);
     },
     atualizar(id, campos) {
       atualizarHorario(id, campos);
@@ -107,29 +169,36 @@ function criarRepositorios(db) {
   };
 
   const agendamentos = {
-    listar: () => q.agendamentosListar.all(),
-    buscar: (id) => q.agendamentoBuscar.get(id),
-    inserir(agendamento) {
+    listar: (pacienteId) =>
+      pacienteId ? q.agendamentosDoPaciente.all(pacienteId) : q.agendamentos.all(),
+    ativosEntre: (inicio, fim) => q.agendamentosAtivosEntre.all({ inicio, fim }),
+    buscar: (id) => q.agendamentoPorId.get(id),
+    listarBrutos: () => q.agendamentosBrutos.all(),
+    inserir(a) {
       q.agendamentoInserir.run({
         horario_id: null,
         medico_id: null,
-        medico_nome: '',
-        medico_especialidade: '',
-        paciente_nome: '',
-        data: '',
-        hora: '',
         status: 'agendado',
         criado_em: new Date().toISOString(),
-        ...agendamento,
+        cancelado_em: null,
+        cancelado_por: null,
+        ...a,
       });
-      return agendamentos.buscar(agendamento.id);
+      return agendamentos.buscar(a.id);
     },
-    remover: (id) => q.agendamentoRemover.run(id),
-    contarDoMedico: (medicoId) => q.agendamentosContarDoMedico.get(medicoId).n,
-    existeParaHorario: (horarioId) => Boolean(q.agendamentoDoHorario.get(horarioId)),
+    cancelar(id, { cancelado_em, cancelado_por }) {
+      q.agendamentoCancelar.run({ id, cancelado_em, cancelado_por });
+      return agendamentos.buscar(id);
+    },
+    pacienteOcupado: ({ pacienteId, data, hora }) =>
+      Boolean(q.pacienteOcupado.get({ pacienteId, data, hora })),
+    contarFuturosDoMedico: (medicoId, momento) => q.futurosDoMedico.get({ medicoId, ...momento }).n,
+    renomearMedicoNosAtivos: (medicoId, { nome, especialidade }) =>
+      q.renomearMedicoNosAtivos.run({ medicoId, nome, especialidade }),
+    renomearPacienteNosAtivos: (pacienteId, nome) => q.renomearPacienteNosAtivos.run({ pacienteId, nome }),
   };
 
-  return { medicos, horarios, agendamentos };
+  return { usuarios, medicos, horarios, agendamentos };
 }
 
 module.exports = { criarRepositorios };

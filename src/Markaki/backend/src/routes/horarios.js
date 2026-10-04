@@ -2,24 +2,27 @@ const express = require('express');
 const horarios = require('../services/horarios');
 const { validarNovoHorario, validarEdicaoHorario } = require('../validators/horario');
 const { criarManipuladores } = require('../middlewares/erros');
+const { exigirPapel } = require('../middlewares/autenticacao');
 
-function rotasHorarios(armazenamento) {
-  const { ler, gravar } = criarManipuladores(armazenamento);
+function rotasHorarios(armazenamento, config) {
+  const { ler, gravar } = criarManipuladores(armazenamento, config);
+  const gestor = exigirPapel('gestor');
   const rotas = express.Router();
 
-  // Todos os horários, ou só os de um médico com ?medico_id=
-  rotas.get('/', ler('Erro ao buscar horários', (r, req) => r.horarios.listar(req.query.medico_id)));
-  rotas.get('/:id', ler('Erro ao buscar horário', (r, req) => horarios.buscar(r, req.params.id)));
-  rotas.post('/', gravar('Erro ao cadastrar horário', (r, dados) => horarios.cadastrar(r, dados), {
+  // ?medico_id= filtra a agenda de um médico.
+  rotas.get('/', ler('Erro ao buscar horários.', (r, ctx) => {
+    const medicoId = typeof ctx.query.medico_id === 'string' ? ctx.query.medico_id : undefined;
+    return horarios.listar(r, medicoId, ctx);
+  }));
+  rotas.get('/:id', ler('Erro ao buscar horário.', (r, ctx) => horarios.detalhar(r, ctx.params.id, ctx)));
+  rotas.post('/', gestor, gravar('Erro ao cadastrar horário.', (r, dados, ctx) => horarios.cadastrar(r, dados, ctx), {
     status: 201,
     validar: validarNovoHorario,
   }));
-  rotas.put('/:id', gravar(
-    'Erro ao atualizar horário',
-    (r, dados, req) => horarios.atualizar(r, req.params.id, dados),
-    { validar: validarEdicaoHorario }
-  ));
-  rotas.delete('/:id', gravar('Erro ao remover horário', (r, _, req) => horarios.remover(r, req.params.id)));
+  rotas.put('/:id', gestor, gravar('Erro ao atualizar horário.',
+    (r, dados, ctx) => horarios.atualizar(r, ctx.params.id, dados, ctx), { validar: validarEdicaoHorario }));
+  rotas.delete('/:id', gestor, gravar('Erro ao remover horário.',
+    (r, _, ctx) => horarios.remover(r, ctx.params.id)));
 
   return rotas;
 }

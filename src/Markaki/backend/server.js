@@ -1,18 +1,28 @@
-// Ponto de entrada da API. A aplicação fica em src/ (rotas, serviços, validações e
-// armazenamento em camadas); aqui só se escolhe o armazenamento e sobe o servidor.
-const { config } = require('./src/config');
+// Ponto de entrada da API. A aplicação fica em src/ (rotas, middlewares, serviços,
+// validações e repositórios); aqui só se lê a configuração, abre o banco e sobe o
+// servidor. Rode com "npm start" (carrega o .env desta pasta).
+const { lerConfig } = require('./src/config');
 const { criarApp } = require('./src/app');
 const { criarArmazenamentoSqlite } = require('./src/infra/sqlite/armazenamento');
-const { gerarId } = require('./src/infra/ids');
 
-const armazenamento = criarArmazenamentoSqlite(config.arquivoBanco);
-const app = criarApp({ armazenamento });
-
-// Só sobe o servidor quando executado direto (node server.js); os testes importam o app.
-if (require.main === module) {
-  app.listen(config.porta, () => {
-    console.log(`Servidor rodando em http://localhost:${config.porta}/api`);
-  });
+function iniciar(env = process.env) {
+  const config = lerConfig(env);
+  const armazenamento = criarArmazenamentoSqlite(config.arquivoBanco);
+  const app = criarApp({ armazenamento, config });
+  return { app, armazenamento, config };
 }
 
-module.exports = { app, gerarId, armazenamento };
+if (require.main === module) {
+  try {
+    const { app, config } = iniciar();
+    // 0.0.0.0: o celular na mesma rede Wi-Fi precisa alcançar a API pelo IP da máquina.
+    app.listen(config.porta, '0.0.0.0', () => {
+      console.log(`API do Markaqui em http://localhost:${config.porta}/api`);
+    });
+  } catch (erro) {
+    console.error(erro.message);
+    process.exitCode = 1;
+  }
+}
+
+module.exports = { iniciar };

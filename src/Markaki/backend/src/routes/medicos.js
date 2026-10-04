@@ -2,23 +2,23 @@ const express = require('express');
 const medicos = require('../services/medicos');
 const { validarNovoMedico, validarEdicaoMedico } = require('../validators/medico');
 const { criarManipuladores } = require('../middlewares/erros');
+const { exigirPapel } = require('../middlewares/autenticacao');
 
-function rotasMedicos(armazenamento) {
-  const { ler, gravar } = criarManipuladores(armazenamento);
+function rotasMedicos(armazenamento, config) {
+  const { ler, gravar } = criarManipuladores(armazenamento, config);
+  const gestor = exigirPapel('gestor');
   const rotas = express.Router();
 
-  rotas.get('/', ler('Erro ao buscar médicos', (r) => r.medicos.listar()));
-  rotas.get('/:id', ler('Erro ao buscar médico', (r, req) => medicos.buscar(r, req.params.id)));
-  rotas.post('/', gravar('Erro ao cadastrar médico', (r, dados) => medicos.cadastrar(r, dados), {
+  rotas.get('/', ler('Erro ao buscar médicos.', (r) => r.medicos.listar()));
+  rotas.get('/:id', ler('Erro ao buscar médico.', (r, ctx) => medicos.buscar(r, ctx.params.id)));
+  rotas.post('/', gestor, gravar('Erro ao cadastrar médico.', (r, dados) => medicos.cadastrar(r, dados), {
     status: 201,
     validar: validarNovoMedico,
   }));
-  rotas.put('/:id', gravar(
-    'Erro ao atualizar médico',
-    (r, dados, req) => medicos.atualizar(r, req.params.id, dados),
-    { validar: validarEdicaoMedico }
-  ));
-  rotas.delete('/:id', gravar('Erro ao remover médico', (r, _, req) => medicos.remover(r, req.params.id)));
+  rotas.put('/:id', gestor, gravar('Erro ao atualizar médico.',
+    (r, dados, ctx) => medicos.atualizar(r, ctx.params.id, dados), { validar: validarEdicaoMedico }));
+  rotas.delete('/:id', gestor, gravar('Erro ao remover médico.',
+    (r, _, ctx) => medicos.remover(r, ctx.params.id, ctx)));
 
   return rotas;
 }
