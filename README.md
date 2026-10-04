@@ -39,7 +39,65 @@ Através de uma interface intuitiva, o aplicativo permite que clientes B2B visua
 
 ## Instruções de utilização
 
-Assim que a primeira versão do sistema estiver disponível, deverá complementar com as instruções de utilização. Descreva como instalar eventuais dependências e como executar a aplicação.
+A aplicação fica em [`src/Markaki`](src/Markaki/README.md): um app Expo (React Native) e uma API Node/Express em `src/Markaki/backend`, com os dados num arquivo JSON (`backend/database.json`). A pasta [`prototipos/`](prototipos/README.md) guarda as telas experimentais da equipe e não faz parte do app.
+
+### Pré-requisitos
+
+- [Node.js](https://nodejs.org/) LTS (inclui o `npm`)
+- Para ver o app: o aplicativo **Expo Go** no celular (mesma rede Wi-Fi do computador) ou um emulador Android
+
+### Jeito rápido (Windows)
+
+Dê dois cliques em `iniciar.bat`, na raiz do repositório. Ele:
+
+1. cria `src/Markaki/.env` a partir do `.env.example`, se ainda não existir;
+2. abre uma janela com a API (`http://localhost:3000/api`);
+3. abre outra janela com o Expo; escaneie o QR code com o Expo Go ou tecle `a` para o emulador Android.
+
+Na primeira execução cada janela roda `npm install` antes de subir. Para parar, feche as duas janelas.
+
+### Passo a passo (qualquer sistema)
+
+```bash
+# 1. API
+cd src/Markaki/backend
+npm install
+npm start                 # http://localhost:3000/api/medicos
+
+# 2. App (em outro terminal)
+cd src/Markaki
+npm install
+cp .env.example .env      # no Windows: copy .env.example .env
+npm start
+```
+
+### Endereço da API no app
+
+O app lê o endereço da API da variável `EXPO_PUBLIC_API_URL`, no arquivo `src/Markaki/.env` (fora do Git):
+
+| Onde o app roda | Valor |
+|---|---|
+| Navegador ou emulador iOS na mesma máquina | `http://localhost:3000/api` |
+| Emulador Android | `http://10.0.2.2:3000/api` |
+| Celular físico | `http://IP_DO_COMPUTADOR:3000/api` (veja o IP com `ipconfig`) |
+
+Depois de mudar o `.env`, reinicie o Expo.
+
+### Como usar
+
+1. **Médicos**: cadastre os médicos.
+2. **Horários**: cadastre os horários escolhendo o médico; cada médico tem a própria agenda (dois médicos podem ter o mesmo horário).
+3. **Agendar**: escolha o médico, um horário livre da agenda dele e informe o nome do paciente.
+4. **Agendamentos**: veja e cancele consultas. Um médico com consultas marcadas só pode ser excluído depois de cancelá-las.
+
+### Testes
+
+A partir da raiz do repositório:
+
+```bash
+npm test --prefix src/Markaki/backend   # rotas da API (usa um arquivo de dados temporário)
+npm test --prefix src/Markaki           # regras do app em services/
+```
 
 # Documentação
 
