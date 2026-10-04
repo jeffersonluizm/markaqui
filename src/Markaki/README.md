@@ -314,7 +314,7 @@ lsof -i :3000
 
 ### Frontend não conecta
 1. Backend está rodando?
-2. `API_URL` está correto?
+2. `EXPO_PUBLIC_API_URL` no `.env` está correto? (reinicie o Expo depois de mudar)
 3. Celular e PC na mesma rede? (dispositivo físico)
 4. Testou no navegador: `http://localhost:3000/api/medicos`?
 
