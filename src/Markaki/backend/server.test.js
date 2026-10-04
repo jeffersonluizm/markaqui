@@ -281,3 +281,18 @@ test('DELETE /api/horarios/:id não remove horário agendado (409)', async () =>
   assert.equal(res.status, 409);
   assert.equal(lerDados().horarios.length, 1);
 });
+
+// ============================================
+// DADOS ANTIGOS (horário sem médico)
+// ============================================
+
+test('horário antigo sem médico aparece na lista geral, fica fora do filtro e pode ser removido', async () => {
+  gravarDados({ medicos: medicosBase, horarios: [horarioLivre('h1', null)] });
+  const todos = await request(app).get('/api/horarios');
+  assert.deepEqual(todos.body.map((h) => h.id), ['h1']);
+  const doMedico = await request(app).get('/api/horarios').query({ medico_id: 'm1' });
+  assert.deepEqual(doMedico.body, []);
+  const res = await request(app).delete('/api/horarios/h1');
+  assert.equal(res.status, 200);
+  assert.equal(lerDados().horarios.length, 0);
+});
