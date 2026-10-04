@@ -17,6 +17,7 @@ import {
   buscarHorarios,
   agendarConsulta,
 } from '../services/api';
+import { horariosDisponiveisDoMedico } from '../services/horarios';
 
 export default function AgendarConsulta() {
   const [medicos, setMedicos] = useState([]);
@@ -35,12 +36,9 @@ export default function AgendarConsulta() {
   const carregarDados = async () => {
     try {
       setLoading(true);
-      const [medicosData, horariosData] = await Promise.all([
-        buscarMedicos(),
-        buscarHorarios(),
-      ]);
+      const medicosData = await buscarMedicos();
       setMedicos(medicosData);
-      setHorarios(horariosData);
+      setHorarios([]);
     } catch (error) {
       Alert.alert('Erro', 'Não foi possível carregar os dados');
     } finally {
@@ -48,7 +46,38 @@ export default function AgendarConsulta() {
     }
   };
 
-  const horariosDisponiveis = horarios.filter((h) => h.disponivel);
+  // Cada médico tem a própria agenda: ao escolher o médico, busca só os horários dele.
+  const carregarHorariosDoMedico = async (medicoId) => {
+    try {
+      setLoading(true);
+      setHorarios(await buscarHorarios(medicoId));
+    } catch (error) {
+      setHorarios([]);
+      Alert.alert('Erro', 'Não foi possível carregar os horários do médico');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const selecionarMedico = (medico) => {
+    if (medicoSelecionado?.id !== medico.id) {
+      setHorarioSelecionado(null);
+    }
+    setMedicoSelecionado(medico);
+    setMostrarMedicos(false);
+    carregarHorariosDoMedico(medico.id);
+  };
+
+  const horariosDisponiveis = horariosDisponiveisDoMedico(
+    horarios,
+    medicoSelecionado?.id
+  );
+
+  const textoBotaoHorario = !medicoSelecionado
+    ? 'Selecione o médico primeiro'
+    : horariosDisponiveis.length > 0
+    ? 'Selecionar Horário'
+    : 'Nenhum horário disponível para este médico';
 
   const confirmarAgendamento = async () => {
     if (!medicoSelecionado) {
@@ -120,10 +149,7 @@ export default function AgendarConsulta() {
         styles.medicoCard,
         medicoSelecionado?.id === item.id && styles.medicoSelecionado,
       ]}
-      onPress={() => {
-        setMedicoSelecionado(item);
-        setMostrarMedicos(false);
-      }}>
+      onPress={() => selecionarMedico(item)}>
       <Image source={{ uri: item.imagem }} style={styles.medicoImagem} />
       <View style={styles.medicoInfo}>
         <Text style={styles.medicoNome}>{item.nome}</Text>
@@ -214,10 +240,8 @@ export default function AgendarConsulta() {
                 onPress={() => setMostrarHorarios(true)}
                 style={styles.btnSelecionar}
                 icon="clock-outline"
-                disabled={horariosDisponiveis.length === 0}>
-                {horariosDisponiveis.length > 0
-                  ? 'Selecionar Horário'
-                  : 'Nenhum horário disponível'}
+                disabled={loading || horariosDisponiveis.length === 0}>
+                {textoBotaoHorario}
               </Button>
             )}
           </Card.Content>
@@ -278,7 +302,9 @@ export default function AgendarConsulta() {
         onRequestClose={() => setMostrarHorarios(false)}>
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitulo}>Selecione o Horário</Text>
+            <Text style={styles.modalTitulo}>
+              Horários de {medicoSelecionado?.nome}
+            </Text>
             <TouchableOpacity onPress={() => setMostrarHorarios(false)}>
               <Text style={styles.modalFechar}>✕</Text>
             </TouchableOpacity>
@@ -288,7 +314,9 @@ export default function AgendarConsulta() {
             keyExtractor={(item) => item.id}
             renderItem={renderHorario}
             ListEmptyComponent={
-              <Text style={styles.listaVazia}>Nenhum horário disponível</Text>
+              <Text style={styles.listaVazia}>
+                Nenhum horário disponível para este médico
+              </Text>
             }
           />
         </View>
