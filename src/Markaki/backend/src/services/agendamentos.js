@@ -2,9 +2,10 @@
 // do horário e cancelar não apaga (fica no histórico).
 const { gerarId } = require('../infra/ids');
 const { naoEncontrado, requisicaoInvalida, conflito } = require('../erros');
-const { ehFuturo } = require('../dominio/tempo');
+const { ehFuturo, momentoLocal } = require('../dominio/tempo');
 const { agendamentoCom } = require('./apresentacao');
 const horarios = require('./horarios');
+
 
 function agendar(r, { horario_id, medico_id }, ctx) {
   const horario = horarios.buscar(r, horario_id);
@@ -15,6 +16,11 @@ function agendar(r, { horario_id, medico_id }, ctx) {
   if (horario.bloqueado) throw conflito('Este horário não está disponível.');
   if (horario.agendado) throw conflito('Este horário acabou de ser reservado. Escolha outro.');
   const paciente = ctx.usuario;
+  // Uma conta não reserva a agenda inteira (padrão: 3 consultas futuras ativas).
+  const limite = ctx.config.limiteConsultasAtivas;
+  if (r.agendamentos.contarFuturosDoPaciente(paciente.id, momentoLocal(ctx.agora)) >= limite) {
+    throw conflito(`Você já tem ${limite} consultas marcadas. Cancele uma para agendar outra.`);
+  }
   if (r.agendamentos.pacienteOcupado({ pacienteId: paciente.id, data: horario.data, hora: horario.hora })) {
     throw conflito('Você já tem uma consulta neste dia e horário.');
   }

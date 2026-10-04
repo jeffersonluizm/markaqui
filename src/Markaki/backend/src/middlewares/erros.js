@@ -19,6 +19,7 @@ function responderErro(res, erro, mensagemPadrao) {
 // { usuario, agora, params, query }.
 function criarManipuladores(armazenamento, config) {
   const contexto = (req) => ({
+    config,
     usuario: req.usuario,
     agora: config.relogio(),
     params: req.params,

@@ -50,8 +50,11 @@ function criarServicoAuth(armazenamento, config) {
         throw requisicaoInvalida('A senha atual não confere.');
       }
       const senha_hash = await bcrypt.hash(novaSenha, config.bcryptCusto);
-      await armazenamento.escrita((r) => r.usuarios.atualizar(usuarioId, { senha_hash }));
-      return { mensagem: 'Senha alterada.' };
+      // Marca a troca: tokens emitidos antes dela (ex.: um token vazado) deixam de valer.
+      const atualizado = await armazenamento.escrita((r) =>
+        r.usuarios.atualizar(usuarioId, { senha_hash, senha_alterada_em: new Date().toISOString() })
+      );
+      return { mensagem: 'Senha alterada.', token: sessao(atualizado).token };
     },
   };
 }

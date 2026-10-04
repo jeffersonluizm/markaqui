@@ -15,9 +15,8 @@ function iniciar(env = process.env) {
 if (require.main === module) {
   try {
     const { app, config } = iniciar();
-    // 0.0.0.0: o celular na mesma rede Wi-Fi precisa alcançar a API pelo IP da máquina.
-    app.listen(config.porta, '0.0.0.0', () => {
-      console.log(`API do Markaqui em http://localhost:${config.porta}/api`);
+    app.listen(config.porta, config.host, () => {
+      console.log(`API do Markaqui em http://${config.host}:${config.porta}/api`);
     });
   } catch (erro) {
     console.error(erro.message);

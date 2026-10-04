@@ -9,8 +9,9 @@ import { useSessao } from '../../contexto/Sessao';
 import { validarEntrada, semErros } from '../../servicos/validacao';
 import { cores, espaco, raio } from '../../tema/tokens';
 
-// Contas de demonstração do "npm run semear" (valores do backend/.env.example).
-// Só aparecem em desenvolvimento.
+// Contas de demonstração do "npm run semear" (valores que o iniciar.bat grava no
+// backend/.env). Só aparecem em desenvolvimento e com EXPO_PUBLIC_MOSTRAR_DEMO=1.
+const MOSTRAR_DEMO = __DEV__ && process.env.EXPO_PUBLIC_MOSTRAR_DEMO === '1';
 const DEMO = [
   { rotulo: 'Paciente', email: 'paciente@markaqui.demo', senha: 'Paciente2026' },
   { rotulo: 'Clínica', email: 'gestor@markaqui.demo', senha: 'Gestor2026' },
@@ -96,7 +97,7 @@ export default function Entrar({ navigation, route }) {
         {!daClinica ? <BotaoTexto onPress={() => navigation.navigate('Cadastro')}>Criar conta</BotaoTexto> : null}
       </View>
 
-      {__DEV__ ? (
+      {MOSTRAR_DEMO ? (
         <View style={estilos.demo}>
           <Text variant="labelLarge" style={estilos.tituloDemo}>
             Contas de demonstração

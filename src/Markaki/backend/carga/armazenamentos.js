@@ -15,9 +15,10 @@ function planoDeDados(totalHorarios) {
   const horarios = [];
   for (let i = 0; i < totalHorarios; i++) {
     const medico = medicos[i % MEDICOS];
-    const k = Math.floor(i / MEDICOS);
-    const dia = new Date(Date.UTC(2030, 0, 1 + Math.floor(k / 20)));
-    const minutos = 7 * 60 + (k % 20) * 30;
+    // Cada horário num dia e hora diferentes (nenhuma paciente esbarra na regra de
+    // "duas consultas no mesmo momento" durante o S2).
+    const dia = new Date(Date.UTC(2030, 0, 1 + Math.floor(i / 20)));
+    const minutos = 7 * 60 + (i % 20) * 30;
     horarios.push({
       id: `h${i + 1}`,
       medico_id: medico.id,
@@ -88,6 +89,9 @@ const final = {
       // login, alto (o S6 mede o limitador padrão à parte).
       LIMITE_GLOBAL_POR_MINUTO: '0',
       LIMITE_AUTH_POR_MINUTO: '1000000',
+      // 20 pacientes disputam 200 horários no S2: o limite de 3 consultas por
+      // paciente sairia na frente da regra medida (um agendamento por horário).
+      LIMITE_CONSULTAS_ATIVAS: '1000',
     };
   },
   tamanhoDosDados(pasta) {

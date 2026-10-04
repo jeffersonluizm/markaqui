@@ -170,3 +170,19 @@ test('painel do gestor resume o dia e a semana; paciente não acessa (403)', asy
   assert.equal(res.body.medicos, 2);
   assert.deepEqual(res.body.agenda_de_hoje.map((a) => a.id), ['a1']);
 });
+
+test('paciente tem no máximo 3 consultas futuras ativas (evita reservar a agenda toda)', async () => {
+  amb.semear({
+    horarios: ['08:00', '09:00', '10:00', '11:00'].map((hora, i) => horario(`h${i}`, 'm1', { hora })),
+  });
+  for (let i = 0; i < 3; i++) {
+    assert.equal((await ana().post('/api/agendamentos').send({ horario_id: `h${i}` })).status, 201);
+  }
+  const quarta = await ana().post('/api/agendamentos').send({ horario_id: 'h3' });
+  assert.equal(quarta.status, 409);
+  assert.match(quarta.body.erro, /3 consultas/);
+  // Cancelando uma, abre espaço.
+  const [primeira] = (await ana().get('/api/agendamentos')).body;
+  await ana().patch(`/api/agendamentos/${primeira.id}/cancelar`);
+  assert.equal((await ana().post('/api/agendamentos').send({ horario_id: 'h3' })).status, 201);
+});

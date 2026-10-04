@@ -59,6 +59,7 @@ function criarAmbiente(opcoes = {}) {
     corsOrigens: ['http://localhost:8081'],
     limiteAuthMax: 1000,
     limiteGlobalMax: 0,
+    limiteConsultasAtivas: 3,
     relogio: () => AGORA,
     ...opcoes,
   };

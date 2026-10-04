@@ -2,11 +2,13 @@ import React, { useState } from 'react';
 import { Tela, TituloTela } from '../../componentes/Tela';
 import { CampoSenha, BotaoPrincipal } from '../../componentes/Formulario';
 import { useAvisos } from '../../contexto/Avisos';
+import { useSessao } from '../../contexto/Sessao';
 import { api } from '../../servicos/api';
 import { validarTrocaDeSenha, semErros } from '../../servicos/validacao';
 
 export default function TrocarSenha({ navigation }) {
   const { mostrar } = useAvisos();
+  const { renovarToken } = useSessao();
   const [form, setForm] = useState({ atual: '', nova: '', confirmacao: '' });
   const [erros, setErros] = useState({});
   const [enviando, setEnviando] = useState(false);
@@ -18,8 +20,9 @@ export default function TrocarSenha({ navigation }) {
     if (!semErros(encontrados)) return;
     setEnviando(true);
     try {
-      await api.auth.trocarSenha(form.atual, form.nova);
-      mostrar('Senha alterada.');
+      const { token } = await api.auth.trocarSenha(form.atual, form.nova);
+      await renovarToken(token);
+      mostrar('Senha alterada. As outras sessões foram encerradas.');
       navigation.goBack();
     } catch (erro) {
       if (erro.status === 400) setErros({ atual: erro.message });

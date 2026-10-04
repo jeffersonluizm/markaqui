@@ -180,3 +180,33 @@ test('rota inexistente responde 404 em JSON', async () => {
   assert.equal(res.status, 404);
   assert.ok(res.body.erro);
 });
+
+test('trocar a senha derruba as sessões antigas e devolve um token novo', async () => {
+  const antigo = amb.token(usuarios.ana);
+  // O token antigo precisa ser de um segundo anterior à troca.
+  await new Promise((r) => setTimeout(r, 1100));
+  const res = await request(amb.app).put('/api/auth/senha').set('Authorization', `Bearer ${antigo}`)
+    .send({ senha_atual: SENHA, nova_senha: 'NovaSenha9' });
+  assert.equal(res.status, 200);
+  assert.ok(res.body.token);
+  const comAntigo = await request(amb.app).get('/api/auth/eu').set('Authorization', `Bearer ${antigo}`);
+  assert.equal(comAntigo.status, 401);
+  assert.match(comAntigo.body.erro, /senha foi alterada/i);
+  const comNovo = await request(amb.app).get('/api/auth/eu').set('Authorization', `Bearer ${res.body.token}`);
+  assert.equal(comNovo.status, 200);
+});
+
+test('troca de senha também tem limite de tentativas (429)', async () => {
+  const limitado = criarAmbiente({ limiteAuthMax: 2 });
+  limitado.semear();
+  try {
+    const status = [];
+    for (let i = 0; i < 3; i++) {
+      const res = await limitado.como(usuarios.ana).put('/api/auth/senha').send({ senha_atual: 'Errada123', nova_senha: 'NovaSenha9' });
+      status.push(res.status);
+    }
+    assert.deepEqual(status, [400, 400, 429]);
+  } finally {
+    limitado.fechar();
+  }
+});

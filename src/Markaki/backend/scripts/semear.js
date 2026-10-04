@@ -4,6 +4,7 @@
 // Uso: npm run semear              (só semeia se o banco estiver vazio)
 //      npm run semear -- --recriar (apaga tudo e semeia de novo)
 // As contas de demonstração vêm do .env (DEMO_*; modelo em .env.example).
+const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const { caminhoBanco } = require('../src/config');
 const { criarArmazenamentoSqlite } = require('../src/infra/sqlite/armazenamento');
@@ -28,16 +29,21 @@ function proximosDiasUteis(quantidade, hoje = new Date()) {
   return dias;
 }
 
+// Sem senha definida no .env, gera uma aleatória (nunca uma senha conhecida).
+const senhaAleatoria = () => `${crypto.randomBytes(9).toString('base64url')}7a`;
+
 async function dadosDeDemonstracao({ env = process.env, custo = 10, hoje = new Date() } = {}) {
   const contas = [
-    { id: 'demo-gestor', nome: 'Gestão Clínica Markaqui', papel: 'gestor',
-      email: env.DEMO_GESTOR_EMAIL || 'gestor@markaqui.demo', senha: env.DEMO_GESTOR_SENHA || 'Gestor2026' },
-    { id: 'demo-paciente', nome: 'Marina Albuquerque', papel: 'paciente', telefone: '31988887777',
-      email: env.DEMO_PACIENTE_EMAIL || 'paciente@markaqui.demo', senha: env.DEMO_PACIENTE_SENHA || 'Paciente2026' },
+    { id: 'demo-gestor', nome: 'Gestão Clínica Markaqui', papel: 'gestor', chave: 'gestor',
+      email: env.DEMO_GESTOR_EMAIL || 'gestor@markaqui.demo', senha: env.DEMO_GESTOR_SENHA },
+    { id: 'demo-paciente', nome: 'Marina Albuquerque', papel: 'paciente', telefone: '31988887777', chave: 'paciente',
+      email: env.DEMO_PACIENTE_EMAIL || 'paciente@markaqui.demo', senha: env.DEMO_PACIENTE_SENHA },
   ];
   const usuarios = [];
-  for (const { senha, ...conta } of contas) {
-    usuarios.push({ telefone: '', ...conta, senha_hash: await bcrypt.hash(senha, custo) });
+  const senhasGeradas = {};
+  for (const { senha, chave, ...conta } of contas) {
+    const final = senha || (senhasGeradas[chave] = senhaAleatoria());
+    usuarios.push({ telefone: '', ...conta, senha_hash: await bcrypt.hash(final, custo) });
   }
   const horarios = [];
   for (const medico of MEDICOS) {
@@ -47,7 +53,7 @@ async function dadosDeDemonstracao({ env = process.env, custo = 10, hoje = new D
       }
     }
   }
-  return { usuarios, medicos: MEDICOS, horarios };
+  return { usuarios, medicos: MEDICOS, horarios, senhasGeradas };
 }
 
 async function principal() {
@@ -59,10 +65,13 @@ async function principal() {
       console.log(`O banco ${arquivo} já tem dados. Use "npm run semear -- --recriar" para apagar e semear de novo.`);
       return;
     }
-    const dados = await dadosDeDemonstracao();
+    const { senhasGeradas, ...dados } = await dadosDeDemonstracao();
     armazenamento.substituirTudo(dados);
     console.log(`Banco semeado em ${arquivo}: ${dados.medicos.length} médicos, ${dados.horarios.length} horários.`);
-    console.log('Contas de demonstração: veja DEMO_GESTOR_EMAIL e DEMO_PACIENTE_EMAIL no .env (ou o README).');
+    console.log('Contas de demonstração: e-mails em DEMO_GESTOR_EMAIL e DEMO_PACIENTE_EMAIL (.env).');
+    for (const [conta, senha] of Object.entries(senhasGeradas)) {
+      console.log(`Senha gerada para a conta ${conta} (defina DEMO_${conta.toUpperCase()}_SENHA no .env para fixar): ${senha}`);
+    }
   } finally {
     armazenamento.fechar();
   }

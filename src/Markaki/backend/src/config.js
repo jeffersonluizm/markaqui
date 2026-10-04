@@ -16,6 +16,9 @@ function lerConfig(env = process.env) {
   const numero = (valor, padrao) => (valor === undefined || valor === '' ? padrao : Number(valor));
   return {
     porta: numero(env.PORT, 3000),
+    // Só a própria máquina por padrão. Para o celular na mesma rede, HOST=0.0.0.0
+    // (o iniciar.bat faz isso), sabendo que a API fica visível para a rede local.
+    host: env.HOST || '127.0.0.1',
     arquivoBanco: caminhoBanco(env),
     jwtSegredo: segredo,
     jwtValidade: env.JWT_VALIDADE || '8h',
@@ -27,6 +30,8 @@ function lerConfig(env = process.env) {
     // Tentativas de login/cadastro por IP por minuto; e requisições por IP por minuto (0 desliga).
     limiteAuthMax: numero(env.LIMITE_AUTH_POR_MINUTO, 5),
     limiteGlobalMax: numero(env.LIMITE_GLOBAL_POR_MINUTO, 300),
+    // Consultas futuras ativas por paciente (uma conta não reserva a agenda toda).
+    limiteConsultasAtivas: numero(env.LIMITE_CONSULTAS_ATIVAS, 3),
     relogio: () => new Date(),
   };
 }

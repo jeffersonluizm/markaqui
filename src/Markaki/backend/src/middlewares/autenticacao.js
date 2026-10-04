@@ -21,6 +21,10 @@ function autenticar(armazenamento, config) {
       }
       const usuario = await armazenamento.leitura((r) => r.usuarios.buscar(conteudo.sub));
       if (!usuario) throw naoAutenticado();
+      // Token emitido antes da última troca de senha (iat em segundos).
+      if (usuario.senha_alterada_em && conteudo.iat < Math.floor(Date.parse(usuario.senha_alterada_em) / 1000)) {
+        throw naoAutenticado('Sua senha foi alterada. Entre novamente.');
+      }
       req.usuario = usuarioPublico(usuario);
       next();
     } catch (erro) {

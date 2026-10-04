@@ -92,6 +92,10 @@ function criarRepositorios(db) {
     pacienteOcupado: p(`
       SELECT 1 FROM agendamentos
       WHERE paciente_id = @pacienteId AND data = @data AND hora = @hora AND status = 'agendado'`),
+    futurosDoPaciente: p(`
+      SELECT COUNT(*) AS n FROM agendamentos
+      WHERE paciente_id = @pacienteId AND status = 'agendado'
+        AND (data > @data OR (data = @data AND hora > @hora))`),
     futurosDoMedico: p(`
       SELECT COUNT(*) AS n FROM agendamentos
       WHERE medico_id = @medicoId AND status = 'agendado'
@@ -103,7 +107,7 @@ function criarRepositorios(db) {
       UPDATE agendamentos SET paciente_nome = @nome
       WHERE paciente_id = @pacienteId AND status = 'agendado'`),
   };
-  const atualizarUsuario = atualizador(db, 'usuarios', ['nome', 'telefone', 'senha_hash']);
+  const atualizarUsuario = atualizador(db, 'usuarios', ['nome', 'telefone', 'senha_hash', 'senha_alterada_em']);
   const atualizarMedico = atualizador(db, 'medicos', ['nome', 'especialidade']);
   const atualizarHorario = atualizador(db, 'horarios', ['data', 'hora', 'bloqueado']);
 
@@ -192,6 +196,7 @@ function criarRepositorios(db) {
     },
     pacienteOcupado: ({ pacienteId, data, hora }) =>
       Boolean(q.pacienteOcupado.get({ pacienteId, data, hora })),
+    contarFuturosDoPaciente: (pacienteId, momento) => q.futurosDoPaciente.get({ pacienteId, ...momento }).n,
     contarFuturosDoMedico: (medicoId, momento) => q.futurosDoMedico.get({ medicoId, ...momento }).n,
     renomearMedicoNosAtivos: (medicoId, { nome, especialidade }) =>
       q.renomearMedicoNosAtivos.run({ medicoId, nome, especialidade }),

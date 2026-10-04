@@ -16,7 +16,7 @@ function rotasAuth(armazenamento, config, { limiteAuth, autenticar }) {
   rotas.get('/eu', autenticar, executar('Erro ao buscar o perfil.', 200, async (req) => req.usuario));
   rotas.put('/eu', autenticar, executar('Erro ao salvar o perfil.', 200,
     (req) => auth.atualizarPerfil(req.usuario.id, validarPerfil(req.body))));
-  rotas.put('/senha', autenticar, executar('Erro ao trocar a senha.', 200,
+  rotas.put('/senha', limiteAuth, autenticar, executar('Erro ao trocar a senha.', 200,
     (req) => auth.trocarSenha(req.usuario.id, validarTrocaDeSenha(req.body))));
 
   return rotas;

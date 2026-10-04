@@ -52,6 +52,11 @@ export function ProvedorSessao({ children }) {
       entrar: async (email, senha) => iniciarSessao(await api.auth.entrar(email, senha)),
       cadastrar: async (dados) => iniciarSessao(await api.auth.cadastrar(dados)),
       sair: () => encerrar(null),
+      // Depois de trocar a senha a API devolve um token novo (os antigos deixam de valer).
+      renovarToken: async (token) => {
+        sessaoHttp.definirToken(token);
+        await guardaToken.gravar(token);
+      },
       tentarDeNovo: restaurar,
       atualizarUsuario: (usuario) => setEstado((atual) => ({ ...atual, usuario })),
       limparAviso: () => setEstado((atual) => ({ ...atual, aviso: null })),
