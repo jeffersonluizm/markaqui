@@ -77,7 +77,7 @@ if errorlevel 1 (
     echo [aviso] Ja existe algo na porta %API_PORT%; usando a API que esta rodando.
 )
 echo [..] Esperando a API responder...
-powershell -NoProfile -Command "$fim=(Get-Date).AddSeconds(60); while((Get-Date) -lt $fim){ try { Invoke-RestMethod http://localhost:%API_PORT%/api/saude -TimeoutSec 2 | Out-Null; exit 0 } catch { Start-Sleep -Milliseconds 500 } }; exit 1"
+powershell -NoProfile -Command "$fim=(Get-Date).AddSeconds(60); while((Get-Date) -lt $fim){ try { Invoke-RestMethod http://127.0.0.1:%API_PORT%/api/saude -TimeoutSec 2 | Out-Null; exit 0 } catch { Start-Sleep -Milliseconds 500 } }; exit 1"
 if errorlevel 1 (
     echo [erro] A API nao respondeu em 60 s. Veja a janela "Markaqui - API".
     pause

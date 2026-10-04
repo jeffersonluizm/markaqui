@@ -25,7 +25,7 @@ function principal() {
     );
     console.log(
       config.demo.ativo
-        ? 'Modo demonstração ligado: o app mostra "Entrar como paciente / gestor".'
+        ? 'Modo demonstração ligado: o app mostra "Entrar como paciente / clínica".'
         : 'Modo demonstração desligado (DEMO_ENABLED=false): crie um gestor com "npm run criar-gestor".'
     );
   } finally {
