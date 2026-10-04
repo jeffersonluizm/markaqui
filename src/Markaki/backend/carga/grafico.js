@@ -72,26 +72,36 @@ const paineis = [
     unidade: 'requisições/s (S1 e S1b, 50 conexões)',
     categorias: [100, 1000, 10000].map((n) => ({ rotulo: `${n.toLocaleString('pt-BR')} horários`, n })),
     valor: (l, c) => (achar(l, c.n === 100 ? 'S1' : 'S1b', `${c.n} horários, 50 conexões`) || {}).rps,
-    x0: 60, y0: 70, largura: largPainel, altura: ALTURA - 80,
+    x0: 60,
+    y0: 70,
+    largura: largPainel,
+    altura: ALTURA - 80,
   }),
   painel({
     titulo: 'Escrita com 10.000 horários',
     unidade: 'escritas/s (S3) por conexões simultâneas',
     categorias: [1, 10, 50, 100].map((c) => ({ rotulo: `${c} con.`, c })),
     valor: (l, c) => (achar(l, 'S3', `10000 horários, ${c.c} conexões`) || {}).rps,
-    x0: 60 + largPainel + 60, y0: 70, largura: largPainel, altura: ALTURA - 80,
+    x0: 60 + largPainel + 60,
+    y0: 70,
+    largura: largPainel,
+    altura: ALTURA - 80,
   }),
   painel({
     titulo: 'Misto 90/10: latência p97,5',
     unidade: 'ms por conexões (S4, 10.000 horários; menor é melhor)',
     categorias: [10, 50, 100, 200, 300].map((c) => ({ rotulo: `${c}`, c })),
     valor: (l, c) => (achar(l, 'S4', `10.000 horários, ${c.c} conexões`) || {}).p975,
-    x0: 60 + 2 * (largPainel + 60), y0: 70, largura: largPainel, altura: ALTURA - 80,
+    x0: 60 + 2 * (largPainel + 60),
+    y0: 70,
+    largura: largPainel,
+    altura: ALTURA - 80,
   }),
 ];
 
 const legenda = SERIES.map(
-  (s, i) => `<rect class="${s.classe}" x="${60 + i * 190}" y="22" width="14" height="14" rx="3"/><text class="legenda" x="${80 + i * 190}" y="34">${s.nome}</text>`
+  (s, i) =>
+    `<rect class="${s.classe}" x="${60 + i * 190}" y="22" width="14" height="14" rx="3"/><text class="legenda" x="${80 + i * 190}" y="34">${s.nome}</text>`
 ).join('');
 
 const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${LARGURA} ${ALTURA}" width="${LARGURA}" height="${ALTURA}" role="img" aria-labelledby="t d" font-family="Inter, Segoe UI, Arial, sans-serif">

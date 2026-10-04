@@ -41,7 +41,14 @@ export class ErroGlobal extends React.Component {
 }
 
 const estilos = StyleSheet.create({
-  raiz: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: espaco.xl, gap: espaco.md, backgroundColor: cores.gelo },
+  raiz: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: espaco.xl,
+    gap: espaco.md,
+    backgroundColor: cores.gelo,
+  },
   titulo: { color: cores.marinhoEscuro, textAlign: 'center' },
   texto: { color: cores.textoSecundario, textAlign: 'center', maxWidth: 420 },
 });

@@ -10,7 +10,6 @@ import { useSessao } from '../../contexto/Sessao';
 import { validarEntrada, semErros } from '../../servicos/validacao';
 import { cores, espaco } from '../../tema/tokens';
 
-
 export default function Entrar({ navigation, route }) {
   const { entrar, aviso, limparAviso } = useSessao();
   const [email, setEmail] = useState('');

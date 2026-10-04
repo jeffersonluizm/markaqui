@@ -13,12 +13,20 @@ import { cores, espaco, fontes, raio } from '../../tema/tokens';
 
 export default function AgendamentoConcluido({ navigation, route }) {
   const consultaId = route.params?.consultaId;
-  const recurso = useRecurso(() => (consultaId ? api.agendamentos.buscar(consultaId) : Promise.resolve(null)), [consultaId]);
+  const recurso = useRecurso(
+    () => (consultaId ? api.agendamentos.buscar(consultaId) : Promise.resolve(null)),
+    [consultaId]
+  );
   const irPara = (aba) => navigation.navigate('Abas', { screen: aba });
   if (!consultaId) {
     return (
       <Tela>
-        <EstadoVazio icone="calendar-check" titulo="Nada para mostrar aqui" acao="Ver minhas consultas" aoAgir={() => irPara('Consultas')} />
+        <EstadoVazio
+          icone="calendar-check"
+          titulo="Nada para mostrar aqui"
+          acao="Ver minhas consultas"
+          aoAgir={() => irPara('Consultas')}
+        />
       </Tela>
     );
   }
@@ -51,8 +59,22 @@ export default function AgendamentoConcluido({ navigation, route }) {
 }
 
 const estilos = StyleSheet.create({
-  centro: { alignItems: 'center', gap: espaco.sm, marginTop: espaco.xl, backgroundColor: cores.superficie, borderRadius: raio.cartao, padding: espaco.lg },
-  selo: { width: 88, height: 88, borderRadius: 44, backgroundColor: cores.sucesso, alignItems: 'center', justifyContent: 'center' },
+  centro: {
+    alignItems: 'center',
+    gap: espaco.sm,
+    marginTop: espaco.xl,
+    backgroundColor: cores.superficie,
+    borderRadius: raio.cartao,
+    padding: espaco.lg,
+  },
+  selo: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: cores.sucesso,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   titulo: { fontFamily: fontes.negrito, fontSize: 26, color: cores.marinhoEscuro },
   texto: { color: cores.textoSecundario, textAlign: 'center' },
   quando: { color: cores.marinho, textAlign: 'center' },

@@ -15,7 +15,14 @@ export function Marca({ tamanho = 64 }) {
         <Path d="M232 368a80 80 0 0 1 80-80h400a80 80 0 0 1 80 80v52H232z" fill="#ffffff" />
         <Rect x="352" y="220" width="64" height="120" rx="32" fill={cores.gelo} />
         <Rect x="608" y="220" width="64" height="120" rx="32" fill={cores.gelo} />
-        <Path d="M372 610 478 708 668 500" fill="none" stroke={cores.gelo} strokeWidth="68" strokeLinecap="round" strokeLinejoin="round" />
+        <Path
+          d="M372 610 478 708 668 500"
+          fill="none"
+          stroke={cores.gelo}
+          strokeWidth="68"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
       </Svg>
     </View>
   );

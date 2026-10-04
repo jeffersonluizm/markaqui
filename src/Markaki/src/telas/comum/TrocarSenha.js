@@ -34,9 +34,27 @@ export default function TrocarSenha({ navigation }) {
   return (
     <Tela>
       <TituloTela titulo="Trocar senha" subtitulo="Use pelo menos 8 caracteres, com letras e números." />
-      <CampoSenha rotulo="Senha atual" value={form.atual} onChangeText={mudar('atual')} erro={erros.atual} autoComplete="current-password" />
-      <CampoSenha rotulo="Nova senha" value={form.nova} onChangeText={mudar('nova')} erro={erros.nova} autoComplete="new-password" />
-      <CampoSenha rotulo="Repita a nova senha" value={form.confirmacao} onChangeText={mudar('confirmacao')} erro={erros.confirmacao} autoComplete="new-password" />
+      <CampoSenha
+        rotulo="Senha atual"
+        value={form.atual}
+        onChangeText={mudar('atual')}
+        erro={erros.atual}
+        autoComplete="current-password"
+      />
+      <CampoSenha
+        rotulo="Nova senha"
+        value={form.nova}
+        onChangeText={mudar('nova')}
+        erro={erros.nova}
+        autoComplete="new-password"
+      />
+      <CampoSenha
+        rotulo="Repita a nova senha"
+        value={form.confirmacao}
+        onChangeText={mudar('confirmacao')}
+        erro={erros.confirmacao}
+        autoComplete="new-password"
+      />
       <BotaoPrincipal onPress={enviar} loading={enviando} disabled={enviando}>
         Salvar nova senha
       </BotaoPrincipal>

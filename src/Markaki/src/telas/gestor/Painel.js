@@ -43,17 +43,34 @@ export default function Painel({ navigation }) {
             </View>
             <TituloSecao>Agenda de hoje</TituloSecao>
             {painel.agenda_de_hoje.length === 0 ? (
-              <EstadoVazio icone="coffee-outline" titulo="Nenhuma consulta hoje" descricao="As consultas marcadas para hoje aparecem aqui." />
+              <EstadoVazio
+                icone="coffee-outline"
+                titulo="Nenhuma consulta hoje"
+                descricao="As consultas marcadas para hoje aparecem aqui."
+              />
             ) : (
               painel.agenda_de_hoje.map((c) => (
-                <CartaoConsulta key={c.id} consulta={c} mostrarPaciente aoTocar={() => navigation.navigate('DetalheConsulta', { id: c.id })} />
+                <CartaoConsulta
+                  key={c.id}
+                  consulta={c}
+                  mostrarPaciente
+                  aoTocar={() => navigation.navigate('DetalheConsulta', { id: c.id })}
+                />
               ))
             )}
             <View style={estilos.atalhos}>
-              <BotaoSecundario icon="calendar-plus" onPress={() => navigation.navigate('NovosHorarios', {})} style={estilos.atalho}>
+              <BotaoSecundario
+                icon="calendar-plus"
+                onPress={() => navigation.navigate('NovosHorarios', {})}
+                style={estilos.atalho}
+              >
                 Abrir horários
               </BotaoSecundario>
-              <BotaoSecundario icon="account-plus-outline" onPress={() => navigation.navigate('MedicoForm', {})} style={estilos.atalho}>
+              <BotaoSecundario
+                icon="account-plus-outline"
+                onPress={() => navigation.navigate('MedicoForm', {})}
+                style={estilos.atalho}
+              >
                 Novo médico
               </BotaoSecundario>
             </View>

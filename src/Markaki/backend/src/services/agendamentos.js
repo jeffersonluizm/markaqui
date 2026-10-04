@@ -6,7 +6,6 @@ const { ehFuturo, momentoLocal } = require('../dominio/tempo');
 const { agendamentoCom } = require('./apresentacao');
 const horarios = require('./horarios');
 
-
 function agendar(r, { horario_id, medico_id }, ctx) {
   const horario = horarios.buscar(r, horario_id);
   if (medico_id && medico_id !== horario.medico_id) {

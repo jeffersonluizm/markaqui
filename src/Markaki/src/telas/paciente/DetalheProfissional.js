@@ -58,7 +58,8 @@ export default function DetalheProfissional({ navigation, route }) {
                     Sem horários livres no momento
                   </Text>
                   <Text variant="bodyMedium" style={estilos.secundario}>
-                    A agenda deste médico está cheia. Veja outro profissional da mesma especialidade ou volte mais tarde.
+                    A agenda deste médico está cheia. Veja outro profissional da mesma especialidade ou volte mais
+                    tarde.
                   </Text>
                 </View>
               ) : (
@@ -101,7 +102,14 @@ export default function DetalheProfissional({ navigation, route }) {
 }
 
 const estilos = StyleSheet.create({
-  cabecalho: { flexDirection: 'row', gap: espaco.md, alignItems: 'center', backgroundColor: cores.superficie, padding: espaco.md, borderRadius: raio.cartao },
+  cabecalho: {
+    flexDirection: 'row',
+    gap: espaco.md,
+    alignItems: 'center',
+    backgroundColor: cores.superficie,
+    padding: espaco.md,
+    borderRadius: raio.cartao,
+  },
   expande: { flex: 1 },
   nome: { color: cores.marinhoEscuro },
   secundario: { color: cores.textoSecundario },

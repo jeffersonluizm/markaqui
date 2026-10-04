@@ -6,7 +6,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text } from 'react-native-paper';
 import { cores, espaco, fontes } from '../tema/tokens';
 
-export function Tela({ children, rolavel = true, fundo = cores.fundo, semCabecalho = false, atualizando, aoAtualizar, estilo }) {
+export function Tela({
+  children,
+  rolavel = true,
+  fundo = cores.fundo,
+  semCabecalho = false,
+  atualizando,
+  aoAtualizar,
+  estilo,
+}) {
   const conteudo = <View style={[estilos.coluna, estilo]}>{children}</View>;
   const corpo = rolavel ? (
     <ScrollView
@@ -14,7 +22,12 @@ export function Tela({ children, rolavel = true, fundo = cores.fundo, semCabecal
       keyboardShouldPersistTaps="handled"
       refreshControl={
         aoAtualizar ? (
-          <RefreshControl refreshing={Boolean(atualizando)} onRefresh={aoAtualizar} colors={[cores.marinho]} tintColor={cores.marinho} />
+          <RefreshControl
+            refreshing={Boolean(atualizando)}
+            onRefresh={aoAtualizar}
+            colors={[cores.marinho]}
+            tintColor={cores.marinho}
+          />
         ) : undefined
       }
     >
@@ -24,7 +37,10 @@ export function Tela({ children, rolavel = true, fundo = cores.fundo, semCabecal
     conteudo
   );
   return (
-    <SafeAreaView style={[estilos.raiz, { backgroundColor: fundo }]} edges={semCabecalho ? ['top', 'left', 'right'] : ['left', 'right']}>
+    <SafeAreaView
+      style={[estilos.raiz, { backgroundColor: fundo }]}
+      edges={semCabecalho ? ['top', 'left', 'right'] : ['left', 'right']}
+    >
       <KeyboardAvoidingView style={estilos.raiz} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         {corpo}
       </KeyboardAvoidingView>

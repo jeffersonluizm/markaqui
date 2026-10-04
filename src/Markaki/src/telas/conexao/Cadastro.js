@@ -39,7 +39,14 @@ export default function Cadastro({ navigation }) {
   return (
     <Tela>
       <TituloTela titulo="Criar conta de paciente" subtitulo="Leva menos de um minuto." />
-      <Campo rotulo="Nome completo" value={form.nome} onChangeText={mudar('nome')} erro={erros.nome} autoComplete="name" textContentType="name" />
+      <Campo
+        rotulo="Nome completo"
+        value={form.nome}
+        onChangeText={mudar('nome')}
+        erro={erros.nome}
+        autoComplete="name"
+        textContentType="name"
+      />
       <Campo
         rotulo="E-mail"
         value={form.email}
@@ -66,7 +73,13 @@ export default function Cadastro({ navigation }) {
         ajuda="Pelo menos 8 caracteres, com letras e números."
         autoComplete="new-password"
       />
-      <CampoSenha rotulo="Repita a senha" value={form.confirmacao} onChangeText={mudar('confirmacao')} erro={erros.confirmacao} autoComplete="new-password" />
+      <CampoSenha
+        rotulo="Repita a senha"
+        value={form.confirmacao}
+        onChangeText={mudar('confirmacao')}
+        erro={erros.confirmacao}
+        autoComplete="new-password"
+      />
 
       <View>
         <Pressable
@@ -109,5 +122,12 @@ const estilos = StyleSheet.create({
   textoAceite: { flex: 1, color: cores.texto },
   linkTermos: { alignSelf: 'flex-start' },
   erro: { color: cores.erro, flex: 1 },
-  faixaErro: { flexDirection: 'row', gap: espaco.xs, alignItems: 'center', padding: espaco.sm, borderRadius: 12, backgroundColor: cores.erroFundo },
+  faixaErro: {
+    flexDirection: 'row',
+    gap: espaco.xs,
+    alignItems: 'center',
+    padding: espaco.sm,
+    borderRadius: 12,
+    backgroundColor: cores.erroFundo,
+  },
 });

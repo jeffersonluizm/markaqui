@@ -8,7 +8,8 @@ export const semErros = (erros) => Object.keys(erros).length === 0;
 function tamanho(valor, min, max, rotulo) {
   const limpo = (valor || '').trim();
   if (!limpo) return `Informe ${rotulo}.`;
-  if (limpo.length < min) return `${rotulo[0].toUpperCase()}${rotulo.slice(1)} precisa de pelo menos ${min} caracteres.`;
+  if (limpo.length < min)
+    return `${rotulo[0].toUpperCase()}${rotulo.slice(1)} precisa de pelo menos ${min} caracteres.`;
   if (limpo.length > max) return `Use no máximo ${max} caracteres.`;
   return undefined;
 }

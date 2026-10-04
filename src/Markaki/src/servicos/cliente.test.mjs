@@ -82,7 +82,9 @@ test('demora acima do limite vira erro de conexão (timeout)', async () => {
     obterToken: () => null,
     timeoutMs: 20,
     fetch: (_, { signal }) =>
-      new Promise((_, rejeitar) => signal.addEventListener('abort', () => rejeitar(Object.assign(new Error('abortado'), { name: 'AbortError' })))),
+      new Promise((_, rejeitar) =>
+        signal.addEventListener('abort', () => rejeitar(Object.assign(new Error('abortado'), { name: 'AbortError' })))
+      ),
   });
   await assert.rejects(cliente.get('/saude'), (erro) => {
     assert.ok(ehErroDeConexao(erro));

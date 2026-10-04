@@ -60,12 +60,21 @@ function prepararDemonstracao(armazenamento, config) {
     contas.forEach((conta, i) => {
       const existente = r.usuarios.buscarPorEmail(conta.email);
       if (existente && !existente.demo) {
-        throw new Error(`O e-mail de demonstração ${conta.email} já pertence a uma conta real. Troque DEMO_${conta.papel.toUpperCase()}_EMAIL.`);
+        throw new Error(
+          `O e-mail de demonstração ${conta.email} já pertence a uma conta real. Troque DEMO_${conta.papel.toUpperCase()}_EMAIL.`
+        );
       }
       if (existente) {
         r.usuarios.atualizar(existente.id, { senha_hash: hashes[i], versao_token: (existente.versao_token || 0) + 1 });
       } else {
-        r.usuarios.inserir({ id: gerarId(), nome: conta.nome, email: conta.email, papel: conta.papel, senha_hash: hashes[i], demo: true });
+        r.usuarios.inserir({
+          id: gerarId(),
+          nome: conta.nome,
+          email: conta.email,
+          papel: conta.papel,
+          senha_hash: hashes[i],
+          demo: true,
+        });
       }
     });
   });
@@ -80,12 +89,30 @@ function resetarDemonstracao(armazenamento, config, agora = new Date()) {
   const contaPaciente = config.demo.contas.paciente;
 
   const usuarios = [
-    ...FICTICIAS.map((p) => ({ ...p, email: `${p.id}@exemplo.invalid`, papel: 'paciente', senha_hash: hashInutilizavel() })),
-    { id: 'demo-paciente', nome: contaPaciente.nome, email: contaPaciente.email, telefone: '31988887777', papel: 'paciente', senha_hash: hashInutilizavel(), demo: true },
+    ...FICTICIAS.map((p) => ({
+      ...p,
+      email: `${p.id}@exemplo.invalid`,
+      papel: 'paciente',
+      senha_hash: hashInutilizavel(),
+    })),
+    {
+      id: 'demo-paciente',
+      nome: contaPaciente.nome,
+      email: contaPaciente.email,
+      telefone: '31988887777',
+      papel: 'paciente',
+      senha_hash: hashInutilizavel(),
+      demo: true,
+    },
   ];
 
   // Um horário que já passou, para o histórico ter uma consulta realizada.
-  const passado = { id: `demo-medico-2-${ultimoDiaUtil}-10:00`, medico_id: 'demo-medico-2', data: ultimoDiaUtil, hora: '10:00' };
+  const passado = {
+    id: `demo-medico-2-${ultimoDiaUtil}-10:00`,
+    medico_id: 'demo-medico-2',
+    data: ultimoDiaUtil,
+    hora: '10:00',
+  };
   const todosHorarios = [...horarios, passado];
 
   const consulta = (pacienteId, medicoId, data, hora, extra = {}) => {
@@ -109,7 +136,11 @@ function resetarDemonstracao(armazenamento, config, agora = new Date()) {
   const agendamentos = [
     consulta('demo-paciente', 'demo-medico-1', dias[0], '09:00'),
     consulta('demo-paciente', 'demo-medico-3', dias[2], '14:00'),
-    consulta('demo-paciente', 'demo-medico-4', dias[1], '10:00', { status: 'cancelado', cancelado_em: agora.toISOString(), cancelado_por: 'paciente' }),
+    consulta('demo-paciente', 'demo-medico-4', dias[1], '10:00', {
+      status: 'cancelado',
+      cancelado_em: agora.toISOString(),
+      cancelado_por: 'paciente',
+    }),
     consulta('demo-paciente', 'demo-medico-2', ultimoDiaUtil, '10:00'),
     consulta('demo-ficticia-1', 'demo-medico-1', dias[0], '08:00'),
     consulta('demo-ficticia-2', 'demo-medico-1', dias[0], '10:00'),

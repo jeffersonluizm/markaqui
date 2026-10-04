@@ -16,9 +16,10 @@ function buscar(r, id) {
 
 // Paciente vê só horários livres e futuros; gestor vê a agenda completa.
 function listar(r, medicoId, ctx) {
-  const lista = ctx.usuario.papel === 'gestor'
-    ? r.horarios.listar(medicoId)
-    : r.horarios.listarLivres(medicoId, momentoLocal(ctx.agora));
+  const lista =
+    ctx.usuario.papel === 'gestor'
+      ? r.horarios.listar(medicoId)
+      : r.horarios.listarLivres(medicoId, momentoLocal(ctx.agora));
   return lista.map((h) => horarioPara(ctx.usuario, h));
 }
 

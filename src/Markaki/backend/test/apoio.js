@@ -73,7 +73,11 @@ function criarAmbiente(opcoes = {}) {
     // Substitui o banco inteiro; usuários padrão entram sempre.
     semear(dados = {}) {
       armazenamento.substituirTudo({
-        usuarios: Object.values(usuarios).map((u) => ({ ...u, senha_hash: HASH, criado_em: '2030-01-01T00:00:00.000Z' })),
+        usuarios: Object.values(usuarios).map((u) => ({
+          ...u,
+          senha_hash: HASH,
+          criado_em: '2030-01-01T00:00:00.000Z',
+        })),
         medicos: medicosBase,
         horarios: [],
         agendamentos: [],

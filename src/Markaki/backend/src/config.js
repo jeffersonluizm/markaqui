@@ -1,8 +1,7 @@
 const crypto = require('crypto');
 const path = require('path');
 
-const caminhoBanco = (env = process.env) =>
-  env.DB_FILE || path.join(__dirname, '..', 'dados', 'markaqui.db');
+const caminhoBanco = (env = process.env) => env.DB_FILE || path.join(__dirname, '..', 'dados', 'markaqui.db');
 
 // Senha forte aleatória (letras e números), usada quando o .env não define uma.
 const senhaAleatoria = () => `${crypto.randomBytes(15).toString('base64url')}a7`;
@@ -14,7 +13,12 @@ const senhaAleatoria = () => `${crypto.randomBytes(15).toString('base64url')}a7`
 function lerDemo(env) {
   const conta = (papel, nome, emailPadrao) => {
     const prefixo = `DEMO_${papel.toUpperCase()}`;
-    return { papel, nome, email: (env[`${prefixo}_EMAIL`] || emailPadrao).toLowerCase(), senha: env[`${prefixo}_SENHA`] || senhaAleatoria() };
+    return {
+      papel,
+      nome,
+      email: (env[`${prefixo}_EMAIL`] || emailPadrao).toLowerCase(),
+      senha: env[`${prefixo}_SENHA`] || senhaAleatoria(),
+    };
   };
   return {
     ativo: env.DEMO_ENABLED === 'true',

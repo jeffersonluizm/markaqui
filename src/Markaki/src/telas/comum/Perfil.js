@@ -38,7 +38,11 @@ export default function Perfil({ navigation }) {
   }
 
   async function pedirSaida() {
-    const ok = await confirmar({ titulo: 'Sair da conta?', mensagem: 'Você precisará entrar de novo para ver suas consultas.', confirmar: 'Sair' });
+    const ok = await confirmar({
+      titulo: 'Sair da conta?',
+      mensagem: 'Você precisará entrar de novo para ver suas consultas.',
+      confirmar: 'Sair',
+    });
     if (ok) sair();
   }
 
@@ -56,7 +60,12 @@ export default function Perfil({ navigation }) {
 
       {editando ? (
         <View style={estilos.cartao}>
-          <Campo rotulo="Nome completo" value={form.nome} onChangeText={(nome) => setForm({ ...form, nome })} erro={erros.nome} />
+          <Campo
+            rotulo="Nome completo"
+            value={form.nome}
+            onChangeText={(nome) => setForm({ ...form, nome })}
+            erro={erros.nome}
+          />
           <Campo
             rotulo="Celular com DDD"
             value={form.telefone}
@@ -79,7 +88,11 @@ export default function Perfil({ navigation }) {
         </View>
       ) : (
         <View style={estilos.cartao}>
-          <List.Item title="E-mail" description={usuario.email} left={(p) => <List.Icon {...p} icon="email-outline" color={cores.marinho} />} />
+          <List.Item
+            title="E-mail"
+            description={usuario.email}
+            left={(p) => <List.Icon {...p} icon="email-outline" color={cores.marinho} />}
+          />
           <List.Item
             title="Celular"
             description={usuario.telefone ? telefoneFormatado(usuario.telefone) : 'Não informado'}
@@ -99,14 +112,14 @@ export default function Perfil({ navigation }) {
 
       <View style={estilos.cartao}>
         {usuario.demo ? null : (
-        <List.Item
-          title="Trocar senha"
-          left={(p) => <List.Icon {...p} icon="lock-reset" color={cores.marinho} />}
-          right={(p) => <List.Icon {...p} icon="chevron-right" />}
-          onPress={() => navigation.navigate('TrocarSenha')}
-          accessibilityRole="button"
-          style={estilos.item}
-        />
+          <List.Item
+            title="Trocar senha"
+            left={(p) => <List.Icon {...p} icon="lock-reset" color={cores.marinho} />}
+            right={(p) => <List.Icon {...p} icon="chevron-right" />}
+            onPress={() => navigation.navigate('TrocarSenha')}
+            accessibilityRole="button"
+            style={estilos.item}
+          />
         )}
         <List.Item
           title="Sobre o Markaqui"
@@ -135,10 +148,23 @@ export default function Perfil({ navigation }) {
 }
 
 const estilos = StyleSheet.create({
-  cabecalho: { alignItems: 'center', gap: espaco.xxs, paddingVertical: espaco.md, backgroundColor: cores.gelo, borderRadius: raio.cartao },
+  cabecalho: {
+    alignItems: 'center',
+    gap: espaco.xxs,
+    paddingVertical: espaco.md,
+    backgroundColor: cores.gelo,
+    borderRadius: raio.cartao,
+  },
   nome: { color: cores.marinhoEscuro },
   secundario: { color: cores.textoSecundario },
-  cartao: { backgroundColor: cores.superficie, borderRadius: raio.cartao, borderWidth: 1, borderColor: cores.bordaSuave, padding: espaco.sm, gap: espaco.xs },
+  cartao: {
+    backgroundColor: cores.superficie,
+    borderRadius: raio.cartao,
+    borderWidth: 1,
+    borderColor: cores.bordaSuave,
+    padding: espaco.sm,
+    gap: espaco.xs,
+  },
   item: { minHeight: 56 },
   sair: { borderColor: cores.erro },
 });

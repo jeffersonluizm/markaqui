@@ -21,7 +21,10 @@ test('gestor cadastra horário na agenda do médico', async () => {
 test('paciente não mexe na agenda (403)', async () => {
   amb.semear({ horarios: [horario('h1')] });
   const ana = amb.como(usuarios.ana);
-  assert.equal((await ana.post('/api/horarios').send({ medico_id: 'm1', data: '2030-02-01', hora: '10:00' })).status, 403);
+  assert.equal(
+    (await ana.post('/api/horarios').send({ medico_id: 'm1', data: '2030-02-01', hora: '10:00' })).status,
+    403
+  );
   assert.equal((await ana.put('/api/horarios/h1').send({ bloqueado: true })).status, 403);
   assert.equal((await ana.delete('/api/horarios/h1')).status, 403);
 });
@@ -54,9 +57,30 @@ test('horário no passado é recusado (400)', async () => {
 
 test('o mesmo médico não repete horário (409), mas dois médicos podem', async () => {
   const corpo = { data: '2030-02-01', hora: '09:00' };
-  assert.equal((await gestor().post('/api/horarios').send({ ...corpo, medico_id: 'm1' })).status, 201);
-  assert.equal((await gestor().post('/api/horarios').send({ ...corpo, medico_id: 'm2' })).status, 201);
-  assert.equal((await gestor().post('/api/horarios').send({ ...corpo, medico_id: 'm1', hora: ' 09:00 ' })).status, 409);
+  assert.equal(
+    (
+      await gestor()
+        .post('/api/horarios')
+        .send({ ...corpo, medico_id: 'm1' })
+    ).status,
+    201
+  );
+  assert.equal(
+    (
+      await gestor()
+        .post('/api/horarios')
+        .send({ ...corpo, medico_id: 'm2' })
+    ).status,
+    201
+  );
+  assert.equal(
+    (
+      await gestor()
+        .post('/api/horarios')
+        .send({ ...corpo, medico_id: 'm1', hora: ' 09:00 ' })
+    ).status,
+    409
+  );
 });
 
 test('lista filtra por médico e vem ordenada por data e hora', async () => {
@@ -69,7 +93,10 @@ test('lista filtra por médico e vem ordenada por data e hora', async () => {
     ],
   });
   const res = await gestor().get('/api/horarios').query({ medico_id: 'm1' });
-  assert.deepEqual(res.body.map((h) => h.id), ['h0', 'h1', 'h3']);
+  assert.deepEqual(
+    res.body.map((h) => h.id),
+    ['h0', 'h1', 'h3']
+  );
 });
 
 test('paciente vê só horários livres e futuros, sem nome de outra paciente', async () => {
@@ -84,14 +111,21 @@ test('paciente vê só horários livres e futuros, sem nome de outra paciente', 
   });
   const res = await amb.como(usuarios.ana).get('/api/horarios');
   assert.equal(res.status, 200);
-  assert.deepEqual(res.body.map((h) => h.id), ['livre']);
+  assert.deepEqual(
+    res.body.map((h) => h.id),
+    ['livre']
+  );
   assert.equal(res.body[0].paciente_nome, undefined);
   assert.equal(res.body[0].bloqueado, undefined);
 });
 
 test('gestor vê o estado de cada horário e quem agendou', async () => {
   amb.semear({
-    horarios: [horario('livre'), horario('ocupado', 'm1', { hora: '10:00' }), horario('bloqueado', 'm1', { hora: '11:00', bloqueado: true })],
+    horarios: [
+      horario('livre'),
+      horario('ocupado', 'm1', { hora: '10:00' }),
+      horario('bloqueado', 'm1', { hora: '11:00', bloqueado: true }),
+    ],
     agendamentos: [agendamento('a1', 'ocupado', 'u-bia', { hora: '10:00' })],
   });
   const res = await gestor().get('/api/horarios');
@@ -136,7 +170,13 @@ test('edição aceita só bloqueado, data e hora (400) e não repete horário (4
 test('remover horário livre; o histórico cancelado dele continua', async () => {
   amb.semear({
     horarios: [horario('h1')],
-    agendamentos: [agendamento('a1', 'h1', 'u-ana', { status: 'cancelado', cancelado_em: '2030-01-06T10:00:00.000Z', cancelado_por: 'paciente' })],
+    agendamentos: [
+      agendamento('a1', 'h1', 'u-ana', {
+        status: 'cancelado',
+        cancelado_em: '2030-01-06T10:00:00.000Z',
+        cancelado_por: 'paciente',
+      }),
+    ],
   });
   const res = await gestor().delete('/api/horarios/h1');
   assert.equal(res.status, 200);

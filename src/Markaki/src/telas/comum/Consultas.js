@@ -35,12 +35,20 @@ export default function Consultas({ navigation }) {
               <EstadoVazio
                 icone="calendar-blank-outline"
                 titulo="Nenhuma consulta marcada"
-                descricao={daClinica ? 'Quando um paciente agendar, a consulta aparece aqui.' : 'Escolha um médico e um horário livre para agendar.'}
+                descricao={
+                  daClinica
+                    ? 'Quando um paciente agendar, a consulta aparece aqui.'
+                    : 'Escolha um médico e um horário livre para agendar.'
+                }
                 acao={daClinica ? undefined : 'Agendar consulta'}
                 aoAgir={() => navigation.navigate('Profissionais')}
               />
             ) : (
-              <EstadoVazio icone="history" titulo="Histórico vazio" descricao="Consultas canceladas e realizadas aparecem aqui." />
+              <EstadoVazio
+                icone="history"
+                titulo="Histórico vazio"
+                descricao="Consultas canceladas e realizadas aparecem aqui."
+              />
             );
           }
           return lista.map((consulta) => (

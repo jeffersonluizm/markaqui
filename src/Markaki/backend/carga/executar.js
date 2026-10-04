@@ -193,23 +193,25 @@ const cenarios = {
       const horarios = await respH.json();
       const livresComAgendamento = horarios.filter((h) => h.disponivel && porHorario.has(h.id)).length;
 
-      return [{
-        cenario: 'S2',
-        variante: `${HORARIOS} horários x ${POR_HORARIO} pedidos (${EM_VOO} em voo)`,
-        rps: Math.round(fila.length / duracaoS),
-        p50: Math.round(percentil(latencias, 50)),
-        p95: Math.round(percentil(latencias, 95)),
-        p975: Math.round(percentil(latencias, 97.5)),
-        p99: Math.round(percentil(latencias, 99)),
-        total: fila.length,
-        status,
-        aceitos: status[201] || 0,
-        ativos: ativos.length,
-        duplicados,
-        livresComAgendamento,
-        cpuPct: Math.round(uso.cpuPct),
-        picoRssMb: Math.round(uso.picoRssMb),
-      }];
+      return [
+        {
+          cenario: 'S2',
+          variante: `${HORARIOS} horários x ${POR_HORARIO} pedidos (${EM_VOO} em voo)`,
+          rps: Math.round(fila.length / duracaoS),
+          p50: Math.round(percentil(latencias, 50)),
+          p95: Math.round(percentil(latencias, 95)),
+          p975: Math.round(percentil(latencias, 97.5)),
+          p99: Math.round(percentil(latencias, 99)),
+          total: fila.length,
+          status,
+          aceitos: status[201] || 0,
+          ativos: ativos.length,
+          duplicados,
+          livresComAgendamento,
+          cpuPct: Math.round(uso.cpuPct),
+          picoRssMb: Math.round(uso.picoRssMb),
+        },
+      ];
     } finally {
       await derrubar(srv);
     }
@@ -270,7 +272,13 @@ const cenarios = {
       ]);
       const uso = await pedirAoServidor(srv.filho, 'medir', 'medida');
       return [
-        { cenario: 'S5', variante: '1.000 horários, 50 leitores', ...resumir(leitores), cpuPct: Math.round(uso.cpuPct), picoRssMb: Math.round(uso.picoRssMb) },
+        {
+          cenario: 'S5',
+          variante: '1.000 horários, 50 leitores',
+          ...resumir(leitores),
+          cpuPct: Math.round(uso.cpuPct),
+          picoRssMb: Math.round(uso.picoRssMb),
+        },
         { cenario: 'S5', variante: '1.000 horários, 50 escritores', ...resumir(escritores) },
       ];
     } finally {
@@ -289,8 +297,15 @@ const cenarios = {
       for (const conexoes of [1, 10, 50]) {
         const r = await medirVazao(
           srv,
-          { url: BASE, connections: conexoes, duration: 10, method: 'POST', path: '/api/auth/login',
-            headers: { 'content-type': 'application/json' }, body: corpo },
+          {
+            url: BASE,
+            connections: conexoes,
+            duration: 10,
+            method: 'POST',
+            path: '/api/auth/login',
+            headers: { 'content-type': 'application/json' },
+            body: corpo,
+          },
           { aquecer: conexoes === 1 }
         );
         linhas.push({ cenario: 'S6', variante: `login (bcrypt custo 10), ${conexoes} conexões`, ...r });
@@ -309,7 +324,11 @@ const cenarios = {
         });
         status.push(resp.status);
       }
-      linhas.push({ cenario: 'S6', variante: 'limitador padrão: 8 logins errados seguidos', sequencia: status.join(' ') });
+      linhas.push({
+        cenario: 'S6',
+        variante: 'limitador padrão: 8 logins errados seguidos',
+        sequencia: status.join(' '),
+      });
     } finally {
       await derrubar(limitado);
     }
@@ -320,7 +339,12 @@ const cenarios = {
   async S7(adaptador) {
     const srv = await subirServidor(adaptador, 1000);
     try {
-      const antes = await medirVazao(srv, { url: BASE, connections: 50, duration: 5, requests: [pedidoDeLeitura(srv)] });
+      const antes = await medirVazao(srv, {
+        url: BASE,
+        connections: 50,
+        duration: 5,
+        requests: [pedidoDeLeitura(srv)],
+      });
       const corpo = JSON.stringify({ nome: 'x'.repeat(90 * 1024), especialidade: 'Clínica Geral' });
       const envio = await medirVazao(
         srv,
@@ -336,10 +360,20 @@ const cenarios = {
         { aquecer: false }
       );
       const tamanhoMb = adaptador.tamanhoDosDados(srv.pasta) / 1048576;
-      const depois = await medirVazao(srv, { url: BASE, connections: 50, duration: 5, requests: [pedidoDeLeitura(srv)] });
+      const depois = await medirVazao(srv, {
+        url: BASE,
+        connections: 50,
+        duration: 5,
+        requests: [pedidoDeLeitura(srv)],
+      });
       return [
         { cenario: 'S7', variante: 'leitura antes dos corpos grandes', ...antes },
-        { cenario: 'S7', variante: 'POST /api/medicos com 90 KB, 10 conexões', ...envio, arquivoMb: Number(tamanhoMb.toFixed(1)) },
+        {
+          cenario: 'S7',
+          variante: 'POST /api/medicos com 90 KB, 10 conexões',
+          ...envio,
+          arquivoMb: Number(tamanhoMb.toFixed(1)),
+        },
         { cenario: 'S7', variante: 'leitura depois dos corpos grandes', ...depois },
       ];
     } finally {
@@ -389,15 +423,19 @@ async function principal() {
     fs.mkdirSync(path.dirname(saida), { recursive: true });
     fs.writeFileSync(
       saida,
-      JSON.stringify({
-        armazenamento: nome,
-        data: new Date().toISOString(),
-        node: process.version,
-        cpu: os.cpus()[0].model,
-        nucleos: os.cpus().length,
-        memoriaGb: Math.round(os.totalmem() / 1073741824),
-        linhas,
-      }, null, 2) + '\n'
+      JSON.stringify(
+        {
+          armazenamento: nome,
+          data: new Date().toISOString(),
+          node: process.version,
+          cpu: os.cpus()[0].model,
+          nucleos: os.cpus().length,
+          memoriaGb: Math.round(os.totalmem() / 1073741824),
+          linhas,
+        },
+        null,
+        2
+      ) + '\n'
     );
     console.log(`Resumo gravado em ${saida}`);
   }

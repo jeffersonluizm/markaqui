@@ -54,7 +54,12 @@ export default function ConfirmarAgendamento({ navigation, route }) {
   if (!horarioId) {
     return (
       <Tela>
-        <EstadoVazio icone="calendar-question" titulo="Nenhum horário escolhido" acao="Escolher um horário" aoAgir={escolherOutro} />
+        <EstadoVazio
+          icone="calendar-question"
+          titulo="Nenhum horário escolhido"
+          acao="Escolher um horário"
+          aoAgir={escolherOutro}
+        />
       </Tela>
     );
   }
@@ -81,7 +86,10 @@ export default function ConfirmarAgendamento({ navigation, route }) {
             <BotaoPrincipal onPress={() => confirmar(horario)} loading={enviando} disabled={enviando} icon="check">
               Confirmar agendamento
             </BotaoPrincipal>
-            <BotaoTexto onPress={() => (navigation.canGoBack() ? navigation.goBack() : escolherOutro())} disabled={enviando}>
+            <BotaoTexto
+              onPress={() => (navigation.canGoBack() ? navigation.goBack() : escolherOutro())}
+              disabled={enviando}
+            >
               Escolher outro horário
             </BotaoTexto>
           </>
@@ -92,11 +100,25 @@ export default function ConfirmarAgendamento({ navigation, route }) {
 }
 
 const estilos = StyleSheet.create({
-  cartao: { backgroundColor: cores.superficie, borderRadius: raio.cartao, borderWidth: 1, borderColor: cores.bordaSuave, padding: espaco.md, gap: espaco.md },
+  cartao: {
+    backgroundColor: cores.superficie,
+    borderRadius: raio.cartao,
+    borderWidth: 1,
+    borderColor: cores.bordaSuave,
+    padding: espaco.md,
+    gap: espaco.md,
+  },
   linha: { flexDirection: 'row', gap: espaco.sm, alignItems: 'center' },
   expande: { flex: 1 },
   rotulo: { color: cores.textoSecundario },
   valor: { color: cores.marinhoEscuro },
-  nota: { flexDirection: 'row', gap: espaco.xs, alignItems: 'center', backgroundColor: cores.gelo, padding: espaco.sm, borderRadius: 12 },
+  nota: {
+    flexDirection: 'row',
+    gap: espaco.xs,
+    alignItems: 'center',
+    backgroundColor: cores.gelo,
+    padding: espaco.sm,
+    borderRadius: 12,
+  },
   textoNota: { flex: 1, color: cores.marinhoEscuro },
 });

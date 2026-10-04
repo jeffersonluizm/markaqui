@@ -9,8 +9,18 @@ import { BotaoPrincipal } from '../../componentes/Formulario';
 import { cores, espaco, raio } from '../../tema/tokens';
 
 const PERFIS = [
-  { valor: 'paciente', icone: 'account-heart-outline', titulo: 'Sou paciente', texto: 'Quero agendar e acompanhar minhas consultas.' },
-  { valor: 'clinica', icone: 'hospital-building', titulo: 'Sou da clínica', texto: 'Quero administrar médicos, agenda e consultas.' },
+  {
+    valor: 'paciente',
+    icone: 'account-heart-outline',
+    titulo: 'Sou paciente',
+    texto: 'Quero agendar e acompanhar minhas consultas.',
+  },
+  {
+    valor: 'clinica',
+    icone: 'hospital-building',
+    titulo: 'Sou da clínica',
+    texto: 'Quero administrar médicos, agenda e consultas.',
+  },
 ];
 
 export default function EscolhaPerfil({ navigation }) {
@@ -75,7 +85,14 @@ const estilos = StyleSheet.create({
     minHeight: 96,
   },
   cartaoAtivo: { backgroundColor: cores.selecionado, borderColor: cores.marinhoEscuro, borderWidth: 3 },
-  icone: { width: 60, height: 60, borderRadius: 16, backgroundColor: cores.gelo, alignItems: 'center', justifyContent: 'center' },
+  icone: {
+    width: 60,
+    height: 60,
+    borderRadius: 16,
+    backgroundColor: cores.gelo,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   iconeAtivo: { backgroundColor: cores.marinho },
   texto: { flex: 1, gap: 2 },
   titulo: { color: cores.marinhoEscuro },

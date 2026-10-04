@@ -46,7 +46,7 @@ export function ProvedorSessao({ children }) {
       // 401 já encerrou a sessão (com o motivo certo) pelo aviso do cliente HTTP.
       if (erro.status !== 401) setEstado({ ...INICIAL, carregando: false, erroInicial: erro });
     }
-  }, [encerrar]);
+  }, []);
 
   useEffect(() => {
     sessaoHttp.aoPerderSessao((mensagem) => encerrar(mensagem));

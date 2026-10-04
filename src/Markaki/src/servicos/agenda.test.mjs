@@ -8,10 +8,13 @@ test('agruparPorDia mantém a ordem e junta os horários do mesmo dia', () => {
     { id: 'b', data: '2030-02-01', hora: '10:00' },
     { id: 'c', data: '2030-02-03', hora: '08:00' },
   ]);
-  assert.deepEqual(grupos.map((g) => [g.data, g.horarios.map((h) => h.id)]), [
-    ['2030-02-01', ['a', 'b']],
-    ['2030-02-03', ['c']],
-  ]);
+  assert.deepEqual(
+    grupos.map((g) => [g.data, g.horarios.map((h) => h.id)]),
+    [
+      ['2030-02-01', ['a', 'b']],
+      ['2030-02-03', ['c']],
+    ]
+  );
 });
 
 test('separarConsultas: próximas em ordem crescente, histórico do mais recente', () => {
@@ -21,8 +24,14 @@ test('separarConsultas: próximas em ordem crescente, histórico do mais recente
     { id: '3', data: '2030-01-20', hora: '08:00', situacao: 'agendado' },
     { id: '4', data: '2030-01-25', hora: '08:00', situacao: 'cancelado' },
   ]);
-  assert.deepEqual(proximas.map((c) => c.id), ['3', '2']);
-  assert.deepEqual(historico.map((c) => c.id), ['4', '1']);
+  assert.deepEqual(
+    proximas.map((c) => c.id),
+    ['3', '2']
+  );
+  assert.deepEqual(
+    historico.map((c) => c.id),
+    ['4', '1']
+  );
 });
 
 test('proximosDias devolve datas AAAA-MM-DD a partir de amanhã', () => {

@@ -21,16 +21,23 @@ function iniciarDemonstracao(armazenamento, config) {
   if (armazenamento.exportarTudo().medicos.length === 0) resetarDemonstracao(armazenamento, config);
   else prepararDemonstracao(armazenamento, config);
   if (config.demo.resetMinutos > 0) {
-    setInterval(() => {
-      try {
-        resetarDemonstracao(armazenamento, config);
-        console.log('[demo] dados de demonstração recriados');
-      } catch (erro) {
-        console.error('[demo] falha ao recriar os dados:', erro.message);
-      }
-    }, config.demo.resetMinutos * 60 * 1000);
+    setInterval(
+      () => {
+        try {
+          resetarDemonstracao(armazenamento, config);
+          console.log('[demo] dados de demonstração recriados');
+        } catch (erro) {
+          console.error('[demo] falha ao recriar os dados:', erro.message);
+        }
+      },
+      config.demo.resetMinutos * 60 * 1000
+    );
   }
-  console.log(`[demo] modo demonstração ligado (${Object.values(config.demo.contas).map((c) => c.email).join(', ')})`);
+  console.log(
+    `[demo] modo demonstração ligado (${Object.values(config.demo.contas)
+      .map((c) => c.email)
+      .join(', ')})`
+  );
 }
 
 if (require.main === module) {

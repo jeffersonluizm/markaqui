@@ -3,7 +3,13 @@
 // "acordando o servidor de demonstração" em vez de um erro.
 const pausaPadrao = (ms) => new Promise((r) => setTimeout(r, ms));
 
-export async function aguardarServidor({ verificar, aoDemorar = () => {}, esperar = pausaPadrao, tentativas = 9, intervaloMs = 3000 }) {
+export async function aguardarServidor({
+  verificar,
+  aoDemorar = () => {},
+  esperar = pausaPadrao,
+  tentativas = 9,
+  intervaloMs = 3000,
+}) {
   let avisou = false;
   let ultimoErro;
   for (let i = 0; i < tentativas; i++) {

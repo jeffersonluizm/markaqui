@@ -32,13 +32,19 @@ test('cadastro cria paciente, devolve token e nunca devolve o hash da senha', as
 });
 
 test('cadastro ignora papel enviado no corpo: ninguém vira gestor sozinho', async () => {
-  const res = await amb.como(null).post('/api/auth/cadastro').send({ ...cadastroValido, papel: 'gestor' });
+  const res = await amb
+    .como(null)
+    .post('/api/auth/cadastro')
+    .send({ ...cadastroValido, papel: 'gestor' });
   assert.equal(res.status, 201);
   assert.equal(res.body.usuario.papel, 'paciente');
 });
 
 test('cadastro recusa e-mail repetido (409), sem diferenciar maiúsculas', async () => {
-  const res = await amb.como(null).post('/api/auth/cadastro').send({ ...cadastroValido, email: 'ANA@teste.dev' });
+  const res = await amb
+    .como(null)
+    .post('/api/auth/cadastro')
+    .send({ ...cadastroValido, email: 'ANA@teste.dev' });
   assert.equal(res.status, 409);
 });
 
@@ -53,7 +59,10 @@ test('cadastro valida nome, e-mail, senha forte e aceite dos termos (400)', asyn
     { telefone: '123' },
   ];
   for (const caso of casos) {
-    const res = await amb.como(null).post('/api/auth/cadastro').send({ ...cadastroValido, ...caso });
+    const res = await amb
+      .como(null)
+      .post('/api/auth/cadastro')
+      .send({ ...cadastroValido, ...caso });
     assert.equal(res.status, 400, JSON.stringify(caso));
     assert.ok(res.body.erro);
   }
@@ -101,7 +110,9 @@ test('token de usuário que não existe mais responde 401', async () => {
 });
 
 test('o papel vem do banco, não do token', async () => {
-  const res = await amb.como({ ...usuarios.ana, papel: 'gestor' }).post('/api/medicos')
+  const res = await amb
+    .como({ ...usuarios.ana, papel: 'gestor' })
+    .post('/api/medicos')
     .send({ nome: 'Dr. Intruso', especialidade: 'Clínica Geral' });
   assert.equal(res.status, 403);
 });
@@ -114,8 +125,7 @@ test('GET /api/auth/eu devolve o perfil sem o hash', async () => {
 });
 
 test('PUT /api/auth/eu altera nome e telefone, mas não e-mail nem papel', async () => {
-  const res = await amb.como(usuarios.ana).put('/api/auth/eu')
-    .send({ nome: 'Ana Paula', telefone: '11977776666' });
+  const res = await amb.como(usuarios.ana).put('/api/auth/eu').send({ nome: 'Ana Paula', telefone: '11977776666' });
   assert.equal(res.status, 200);
   assert.equal(res.body.nome, 'Ana Paula');
   const recusado = await amb.como(usuarios.ana).put('/api/auth/eu').send({ papel: 'gestor' });
@@ -123,10 +133,14 @@ test('PUT /api/auth/eu altera nome e telefone, mas não e-mail nem papel', async
 });
 
 test('trocar senha exige a senha atual e passa a valer a nova', async () => {
-  const errada = await amb.como(usuarios.ana).put('/api/auth/senha')
+  const errada = await amb
+    .como(usuarios.ana)
+    .put('/api/auth/senha')
     .send({ senha_atual: 'Errada123', nova_senha: 'NovaSenha9' });
   assert.equal(errada.status, 400);
-  const certa = await amb.como(usuarios.ana).put('/api/auth/senha')
+  const certa = await amb
+    .como(usuarios.ana)
+    .put('/api/auth/senha')
     .send({ senha_atual: SENHA, nova_senha: 'NovaSenha9' });
   assert.equal(certa.status, 200);
   const login = await amb.como(null).post('/api/auth/login').send({ email: 'ana@teste.dev', senha: 'NovaSenha9' });
@@ -139,7 +153,9 @@ test('login e cadastro têm limite de tentativas por IP (429)', async () => {
   try {
     const status = [];
     for (let i = 0; i < 7; i++) {
-      const res = await request(limitado.app).post('/api/auth/login').send({ email: 'ana@teste.dev', senha: 'Errada123' });
+      const res = await request(limitado.app)
+        .post('/api/auth/login')
+        .send({ email: 'ana@teste.dev', senha: 'Errada123' });
       status.push(res.status);
     }
     assert.deepEqual(status, [401, 401, 401, 401, 401, 429, 429]);
@@ -149,14 +165,19 @@ test('login e cadastro têm limite de tentativas por IP (429)', async () => {
 });
 
 test('corpo acima de 10 KB responde 413', async () => {
-  const res = await amb.como(usuarios.gestor).post('/api/medicos')
+  const res = await amb
+    .como(usuarios.gestor)
+    .post('/api/medicos')
     .send({ nome: 'x'.repeat(11 * 1024), especialidade: 'Clínica Geral' });
   assert.equal(res.status, 413);
 });
 
 test('JSON inválido responde 400 em JSON', async () => {
-  const res = await amb.como(usuarios.gestor).post('/api/medicos')
-    .set('Content-Type', 'application/json').send('{ quebrado');
+  const res = await amb
+    .como(usuarios.gestor)
+    .post('/api/medicos')
+    .set('Content-Type', 'application/json')
+    .send('{ quebrado');
   assert.equal(res.status, 400);
   assert.ok(res.body.erro);
 });
@@ -184,7 +205,9 @@ test('rota inexistente responde 404 em JSON', async () => {
 test('trocar a senha derruba as sessões antigas e devolve um token novo', async () => {
   // Emitido no mesmo segundo da troca: a versão do token, não o horário, decide.
   const antigo = amb.token(usuarios.ana);
-  const res = await request(amb.app).put('/api/auth/senha').set('Authorization', `Bearer ${antigo}`)
+  const res = await request(amb.app)
+    .put('/api/auth/senha')
+    .set('Authorization', `Bearer ${antigo}`)
     .send({ senha_atual: SENHA, nova_senha: 'NovaSenha9' });
   assert.equal(res.status, 200);
   assert.ok(res.body.token);
@@ -201,7 +224,10 @@ test('troca de senha também tem limite de tentativas (429)', async () => {
   try {
     const status = [];
     for (let i = 0; i < 3; i++) {
-      const res = await limitado.como(usuarios.ana).put('/api/auth/senha').send({ senha_atual: 'Errada123', nova_senha: 'NovaSenha9' });
+      const res = await limitado
+        .como(usuarios.ana)
+        .put('/api/auth/senha')
+        .send({ senha_atual: 'Errada123', nova_senha: 'NovaSenha9' });
       status.push(res.status);
     }
     assert.deepEqual(status, [400, 400, 429]);

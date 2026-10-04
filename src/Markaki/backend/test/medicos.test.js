@@ -11,7 +11,10 @@ test('paciente e gestor listam os médicos', async () => {
   for (const u of [usuarios.ana, usuarios.gestor]) {
     const res = await amb.como(u).get('/api/medicos');
     assert.equal(res.status, 200);
-    assert.deepEqual(res.body.map((m) => m.id), ['m1', 'm2']);
+    assert.deepEqual(
+      res.body.map((m) => m.id),
+      ['m1', 'm2']
+    );
   }
 });
 
@@ -29,7 +32,9 @@ test('paciente não cadastra, edita nem remove médico (403)', async () => {
 });
 
 test('gestor cadastra médico com nome e especialidade sem espaços nas pontas', async () => {
-  const res = await amb.como(usuarios.gestor).post('/api/medicos')
+  const res = await amb
+    .como(usuarios.gestor)
+    .post('/api/medicos')
     .send({ nome: '  Dra. Nova  ', especialidade: ' Pediatria ' });
   assert.equal(res.status, 201);
   assert.equal(res.body.nome, 'Dra. Nova');
@@ -56,7 +61,12 @@ test('editar médico muda o nome também na agenda e nas consultas ativas, não 
     horarios: [horario('h1'), horario('h2', 'm1', { hora: '10:00' })],
     agendamentos: [
       agendamento('a1', 'h1'),
-      agendamento('a2', 'h2', 'u-bia', { status: 'cancelado', hora: '10:00', cancelado_em: '2030-01-06T10:00:00.000Z', cancelado_por: 'paciente' }),
+      agendamento('a2', 'h2', 'u-bia', {
+        status: 'cancelado',
+        hora: '10:00',
+        cancelado_em: '2030-01-06T10:00:00.000Z',
+        cancelado_por: 'paciente',
+      }),
     ],
   });
   const res = await amb.como(usuarios.gestor).put('/api/medicos/m1').send({ nome: 'Dra. Ana Lima Prado' });
@@ -95,14 +105,26 @@ test('médico com consulta futura não pode ser removido (409)', async () => {
 test('remover médico apaga a agenda dele e mantém o histórico de consultas', async () => {
   amb.semear({
     horarios: [horario('h1'), horario('h2', 'm1', { hora: '10:00', bloqueado: true }), horario('h3', 'm2')],
-    agendamentos: [agendamento('a1', 'h1', 'u-ana', { status: 'cancelado', cancelado_em: '2030-01-06T10:00:00.000Z', cancelado_por: 'paciente' })],
+    agendamentos: [
+      agendamento('a1', 'h1', 'u-ana', {
+        status: 'cancelado',
+        cancelado_em: '2030-01-06T10:00:00.000Z',
+        cancelado_por: 'paciente',
+      }),
+    ],
   });
   const res = await amb.como(usuarios.gestor).delete('/api/medicos/m1');
   assert.equal(res.status, 200);
   assert.equal(res.body.horarios_removidos, 2);
   const dados = amb.dados();
-  assert.deepEqual(dados.medicos.map((m) => m.id), ['m2']);
-  assert.deepEqual(dados.horarios.map((h) => h.id), ['h3']);
+  assert.deepEqual(
+    dados.medicos.map((m) => m.id),
+    ['m2']
+  );
+  assert.deepEqual(
+    dados.horarios.map((h) => h.id),
+    ['h3']
+  );
   assert.equal(dados.agendamentos.length, 1);
   assert.equal(dados.agendamentos[0].medico_nome, 'Dra. Ana Lima');
 });

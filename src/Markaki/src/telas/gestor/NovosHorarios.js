@@ -34,7 +34,8 @@ export default function NovosHorarios({ navigation, route }) {
     [existentes.dados, dia]
   );
 
-  const alternar = (hora) => setHoras((atual) => (atual.includes(hora) ? atual.filter((h) => h !== hora) : [...atual, hora].sort()));
+  const alternar = (hora) =>
+    setHoras((atual) => (atual.includes(hora) ? atual.filter((h) => h !== hora) : [...atual, hora].sort()));
 
   async function salvar() {
     setSalvando(true);

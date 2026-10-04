@@ -16,8 +16,7 @@ function horarioParaGestor(h) {
   return resto;
 }
 
-const horarioPara = (usuario, h) =>
-  usuario.papel === 'gestor' ? horarioParaGestor(h) : horarioParaPaciente(h);
+const horarioPara = (usuario, h) => (usuario.papel === 'gestor' ? horarioParaGestor(h) : horarioParaPaciente(h));
 
 // Situação para a tela: agendado, cancelado ou realizado (agendado que já passou).
 function agendamentoCom(agora, a) {

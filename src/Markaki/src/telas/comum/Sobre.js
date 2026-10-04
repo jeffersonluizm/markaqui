@@ -74,16 +74,40 @@ export default function Sobre() {
       />
 
       <TituloSecao>Arquitetura</TituloSecao>
-      <View style={estilos.diagrama} accessible accessibilityLabel="Diagrama: app Expo chama a API Express por HTTP com token; a API passa por middlewares, rotas, serviços e repositórios até o banco SQLite.">
-        <Caixa icone="cellphone" titulo="App (Expo + React Native Paper)" detalhe="React Navigation por papel, token no armazenamento seguro" />
+      <View
+        style={estilos.diagrama}
+        accessible
+        accessibilityLabel="Diagrama: app Expo chama a API Express por HTTP com token; a API passa por middlewares, rotas, serviços e repositórios até o banco SQLite."
+      >
+        <Caixa
+          icone="cellphone"
+          titulo="App (Expo + React Native Paper)"
+          detalhe="React Navigation por papel, token no armazenamento seguro"
+        />
         <Seta rotulo="HTTP + JSON, token Bearer" />
-        <Caixa icone="shield-lock-outline" titulo="Middlewares" detalhe="helmet, CORS por lista, limite de 10 KB, 5 logins/min, autenticação e papel" />
+        <Caixa
+          icone="shield-lock-outline"
+          titulo="Middlewares"
+          detalhe="helmet, CORS por lista, limite de 10 KB, 5 logins/min, autenticação e papel"
+        />
         <Seta rotulo="" />
-        <Caixa icone="routes" titulo="Rotas e validações" detalhe="Express Router; validators recusam o que não é do formato" />
+        <Caixa
+          icone="routes"
+          titulo="Rotas e validações"
+          detalhe="Express Router; validators recusam o que não é do formato"
+        />
         <Seta rotulo="" />
-        <Caixa icone="cog-outline" titulo="Serviços (regras)" detalhe="agenda por médico, nada no passado, cancelamento com histórico" />
+        <Caixa
+          icone="cog-outline"
+          titulo="Serviços (regras)"
+          detalhe="agenda por médico, nada no passado, cancelamento com histórico"
+        />
         <Seta rotulo="transação" />
-        <Caixa icone="database-outline" titulo="Repositórios + SQLite" detalhe="better-sqlite3, WAL, UNIQUE de um agendamento ativo por horário" />
+        <Caixa
+          icone="database-outline"
+          titulo="Repositórios + SQLite"
+          detalhe="better-sqlite3, WAL, UNIQUE de um agendamento ativo por horário"
+        />
       </View>
 
       <TituloSecao>Decisões técnicas</TituloSecao>
@@ -114,11 +138,13 @@ export default function Sobre() {
 
       <TituloSecao>Equipe</TituloSecao>
       <Paragrafo>
-        Projeto do 3º semestre de Análise e Desenvolvimento de Sistemas (PUC Minas): Jefferson Luiz Mendonça da Silva, Levi Alves de Oliveira Neto,
-        Bruno Pereira Figueiredo, Kauã Eduardo Silva, William Leal Rocha Viana e Welder Fernandes de Morais. Orientação: Will Ricardo dos Santos Machado.
+        Projeto do 3º semestre de Análise e Desenvolvimento de Sistemas (PUC Minas): Jefferson Luiz Mendonça da Silva,
+        Levi Alves de Oliveira Neto, Bruno Pereira Figueiredo, Kauã Eduardo Silva, William Leal Rocha Viana e Welder
+        Fernandes de Morais. Orientação: Will Ricardo dos Santos Machado.
       </Paragrafo>
       <Paragrafo>
-        Versão 2.0 (portfólio): mantida por Jefferson Luiz, autor do protótipo das telas institucionais, com login, papéis, SQLite, nova identidade e testes de carga.
+        Versão 2.0 (portfólio): mantida por Jefferson Luiz, autor do protótipo das telas institucionais, com login,
+        papéis, SQLite, nova identidade e testes de carga.
       </Paragrafo>
     </Tela>
   );
@@ -130,7 +156,16 @@ const estilos = StyleSheet.create({
   topico: { flexDirection: 'row', alignItems: 'flex-start' },
   textoTopico: { flex: 1, color: cores.textoSecundario, lineHeight: 22 },
   diagrama: { backgroundColor: cores.gelo, borderRadius: raio.cartao, padding: espaco.md, gap: 2 },
-  caixa: { flexDirection: 'row', gap: espaco.sm, alignItems: 'center', backgroundColor: cores.superficie, borderRadius: 12, padding: espaco.sm, borderWidth: 1, borderColor: cores.geloForte },
+  caixa: {
+    flexDirection: 'row',
+    gap: espaco.sm,
+    alignItems: 'center',
+    backgroundColor: cores.superficie,
+    borderRadius: 12,
+    padding: espaco.sm,
+    borderWidth: 1,
+    borderColor: cores.geloForte,
+  },
   expande: { flex: 1 },
   tituloCaixa: { color: cores.marinhoEscuro, fontFamily: fontes.seminegrito },
   textoCaixa: { color: cores.textoSecundario },

@@ -78,9 +78,17 @@ export default function DetalheConsulta({ route }) {
             <View style={estilos.cartao}>
               <Item icone="calendar" rotulo="Dia" valor={dataPorExtenso(consulta.data)} />
               <Item icone="clock-outline" rotulo="Horário" valor={consulta.hora} />
-              <Item icone="doctor" rotulo="Médico" valor={`${consulta.medico_nome} (${consulta.medico_especialidade})`} />
+              <Item
+                icone="doctor"
+                rotulo="Médico"
+                valor={`${consulta.medico_nome} (${consulta.medico_especialidade})`}
+              />
               {daClinica ? <Item icone="account-outline" rotulo="Paciente" valor={consulta.paciente_nome} /> : null}
-              <Item icone="calendar-plus" rotulo="Agendada em" valor={new Date(consulta.criado_em).toLocaleString('pt-BR')} />
+              <Item
+                icone="calendar-plus"
+                rotulo="Agendada em"
+                valor={new Date(consulta.criado_em).toLocaleString('pt-BR')}
+              />
               {consulta.situacao === 'cancelado' ? (
                 <Item
                   icone="close-circle-outline"
@@ -116,7 +124,14 @@ export default function DetalheConsulta({ route }) {
 const estilos = StyleSheet.create({
   cabecalho: { flexDirection: 'row', alignItems: 'center', gap: espaco.md },
   expande: { flex: 1 },
-  cartao: { backgroundColor: cores.superficie, borderRadius: raio.cartao, borderWidth: 1, borderColor: cores.bordaSuave, padding: espaco.md, gap: espaco.md },
+  cartao: {
+    backgroundColor: cores.superficie,
+    borderRadius: raio.cartao,
+    borderWidth: 1,
+    borderColor: cores.bordaSuave,
+    padding: espaco.md,
+    gap: espaco.md,
+  },
   item: { flexDirection: 'row', gap: espaco.sm, alignItems: 'center' },
   rotulo: { color: cores.textoSecundario },
   valor: { color: cores.marinhoEscuro },

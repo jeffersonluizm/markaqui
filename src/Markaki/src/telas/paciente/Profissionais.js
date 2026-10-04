@@ -37,7 +37,11 @@ export default function Profissionais({ navigation, route }) {
       <ConteudoRemoto
         recurso={recurso}
         mensagemCarregando="Buscando médicos..."
-        vazio={{ icone: 'doctor', titulo: 'Nenhum médico cadastrado', descricao: 'A clínica ainda não publicou a agenda.' }}
+        vazio={{
+          icone: 'doctor',
+          titulo: 'Nenhum médico cadastrado',
+          descricao: 'A clínica ainda não publicou a agenda.',
+        }}
       >
         {(medicos) => {
           const termo = busca.trim().toLowerCase();
@@ -52,7 +56,10 @@ export default function Profissionais({ navigation, route }) {
                 rotulo="Filtrar por especialidade"
                 selecionada={filtro}
                 aoSelecionar={setFiltro}
-                opcoes={[{ valor: TODAS, rotulo: 'Todas' }, ...especialidades(medicos).map((e) => ({ valor: e, rotulo: e }))]}
+                opcoes={[
+                  { valor: TODAS, rotulo: 'Todas' },
+                  ...especialidades(medicos).map((e) => ({ valor: e, rotulo: e })),
+                ]}
               />
               {visiveis.length === 0 ? (
                 <EstadoVazio
@@ -67,7 +74,11 @@ export default function Profissionais({ navigation, route }) {
                 />
               ) : (
                 visiveis.map((medico) => (
-                  <CartaoMedico key={medico.id} medico={medico} aoTocar={() => navigation.navigate('DetalheProfissional', { id: medico.id })} />
+                  <CartaoMedico
+                    key={medico.id}
+                    medico={medico}
+                    aoTocar={() => navigation.navigate('DetalheProfissional', { id: medico.id })}
+                  />
                 ))
               )}
             </>
@@ -79,6 +90,11 @@ export default function Profissionais({ navigation, route }) {
 }
 
 const estilos = StyleSheet.create({
-  busca: { backgroundColor: cores.superficie, borderRadius: raio.pilula, borderWidth: 1, borderColor: cores.bordaSuave },
+  busca: {
+    backgroundColor: cores.superficie,
+    borderRadius: raio.pilula,
+    borderWidth: 1,
+    borderColor: cores.bordaSuave,
+  },
   textoBusca: { minHeight: 48 },
 });

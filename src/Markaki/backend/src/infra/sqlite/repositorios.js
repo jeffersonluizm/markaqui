@@ -150,10 +150,9 @@ function criarRepositorios(db) {
     listar: (medicoId) => (medicoId ? q.horariosDoMedico.all(medicoId) : q.horarios.all()).map(paraHorario),
     // Só os livres depois de `momento` ({ data, hora }).
     listarLivres: (medicoId, momento) =>
-      (medicoId
-        ? q.horariosLivresDoMedico.all({ medicoId, ...momento })
-        : q.horariosLivres.all(momento)
-      ).map(paraHorario),
+      (medicoId ? q.horariosLivresDoMedico.all({ medicoId, ...momento }) : q.horariosLivres.all(momento)).map(
+        paraHorario
+      ),
     contarLivres: (momento) => q.horariosLivresContar.get(momento).n,
     buscar: (id) => paraHorario(q.horarioPorId.get(id)),
     listarBrutos: () => q.horariosBrutos.all().map((h) => ({ ...h, bloqueado: Boolean(h.bloqueado) })),
@@ -178,8 +177,7 @@ function criarRepositorios(db) {
   };
 
   const agendamentos = {
-    listar: (pacienteId) =>
-      pacienteId ? q.agendamentosDoPaciente.all(pacienteId) : q.agendamentos.all(),
+    listar: (pacienteId) => (pacienteId ? q.agendamentosDoPaciente.all(pacienteId) : q.agendamentos.all()),
     ativosEntre: (inicio, fim) => q.agendamentosAtivosEntre.all({ inicio, fim }),
     buscar: (id) => q.agendamentoPorId.get(id),
     listarBrutos: () => q.agendamentosBrutos.all(),
@@ -199,8 +197,7 @@ function criarRepositorios(db) {
       q.agendamentoCancelar.run({ id, cancelado_em, cancelado_por });
       return agendamentos.buscar(id);
     },
-    pacienteOcupado: ({ pacienteId, data, hora }) =>
-      Boolean(q.pacienteOcupado.get({ pacienteId, data, hora })),
+    pacienteOcupado: ({ pacienteId, data, hora }) => Boolean(q.pacienteOcupado.get({ pacienteId, data, hora })),
     contarFuturosDoPaciente: (pacienteId, momento) => q.futurosDoPaciente.get({ pacienteId, ...momento }).n,
     contarFuturosDoMedico: (medicoId, momento) => q.futurosDoMedico.get({ medicoId, ...momento }).n,
     renomearMedicoNosAtivos: (medicoId, { nome, especialidade }, momento) =>

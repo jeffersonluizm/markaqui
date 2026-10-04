@@ -44,7 +44,12 @@ test('com DEMO_ENABLED e sem senha no .env, as senhas são geradas fortes e dife
 });
 
 test('senhas da demonstração vêm do .env quando definidas', () => {
-  const { contas } = lerConfig({ ...BASE, DEMO_ENABLED: 'true', DEMO_GESTOR_SENHA: 'GestorForte2026x', DEMO_PACIENTE_SENHA: 'PacienteForte2026x' }).demo;
+  const { contas } = lerConfig({
+    ...BASE,
+    DEMO_ENABLED: 'true',
+    DEMO_GESTOR_SENHA: 'GestorForte2026x',
+    DEMO_PACIENTE_SENHA: 'PacienteForte2026x',
+  }).demo;
   assert.equal(contas.gestor.senha, 'GestorForte2026x');
   assert.equal(contas.paciente.senha, 'PacienteForte2026x');
 });
@@ -70,7 +75,10 @@ test('prepararDemonstracao é idempotente e troca a senha quando o .env muda', a
   const usuarios = amb.dados().usuarios.filter((u) => u.demo);
   assert.equal(usuarios.length, 2);
   const email = config.demo.contas.gestor.email;
-  assert.equal((await request(amb.app).post('/api/auth/login').send({ email, senha: 'PrimeiraSenha2026' })).status, 401);
+  assert.equal(
+    (await request(amb.app).post('/api/auth/login').send({ email, senha: 'PrimeiraSenha2026' })).status,
+    401
+  );
   assert.equal((await request(amb.app).post('/api/auth/login').send({ email, senha: 'SegundaSenha2026' })).status, 200);
 });
 
@@ -78,8 +86,12 @@ test('contas de demonstração não trocam a senha (403)', async () => {
   const amb = ambienteDemo({ DEMO_ENABLED: 'true' });
   const { contas } = (await request(amb.app).get('/api/demo')).body;
   const paciente = contas.find((c) => c.papel === 'paciente');
-  const { token } = (await request(amb.app).post('/api/auth/login').send({ email: paciente.email, senha: paciente.senha })).body;
-  const res = await request(amb.app).put('/api/auth/senha').set('Authorization', `Bearer ${token}`)
+  const { token } = (
+    await request(amb.app).post('/api/auth/login').send({ email: paciente.email, senha: paciente.senha })
+  ).body;
+  const res = await request(amb.app)
+    .put('/api/auth/senha')
+    .set('Authorization', `Bearer ${token}`)
     .send({ senha_atual: paciente.senha, nova_senha: 'OutraSenha2026' });
   assert.equal(res.status, 403);
 });
@@ -96,11 +108,20 @@ test('criarGestor (script separado) cria gestor real com senha em hash e recusa 
   const amb = criarAmbiente();
   ambientes.push(amb);
   amb.semear({ usuarios: [] });
-  await assert.rejects(criarGestor(amb.armazenamento, { nome: 'Gestora Real', email: 'real@clinica.dev', senha: 'fraca' }, 4), /senha/i);
-  const gestor = await criarGestor(amb.armazenamento, { nome: 'Gestora Real', email: 'Real@Clinica.dev', senha: 'SenhaForte2026' }, 4);
+  await assert.rejects(
+    criarGestor(amb.armazenamento, { nome: 'Gestora Real', email: 'real@clinica.dev', senha: 'fraca' }, 4),
+    /senha/i
+  );
+  const gestor = await criarGestor(
+    amb.armazenamento,
+    { nome: 'Gestora Real', email: 'Real@Clinica.dev', senha: 'SenhaForte2026' },
+    4
+  );
   assert.equal(gestor.papel, 'gestor');
   assert.equal(gestor.senha_hash, undefined);
-  const login = await request(amb.app).post('/api/auth/login').send({ email: 'real@clinica.dev', senha: 'SenhaForte2026' });
+  const login = await request(amb.app)
+    .post('/api/auth/login')
+    .send({ email: 'real@clinica.dev', senha: 'SenhaForte2026' });
   assert.equal(login.status, 200);
   assert.equal(login.body.usuario.demo, false);
 });

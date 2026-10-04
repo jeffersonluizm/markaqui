@@ -57,7 +57,11 @@ function descreverErro(erro) {
   if (erro?.status === 404) {
     return { icone: 'file-question-outline', titulo: 'Não encontrado', descricao: erro.message };
   }
-  return { icone: 'alert-circle-outline', titulo: 'Algo deu errado', descricao: erro?.message || 'Tente de novo em instantes.' };
+  return {
+    icone: 'alert-circle-outline',
+    titulo: 'Algo deu errado',
+    descricao: erro?.message || 'Tente de novo em instantes.',
+  };
 }
 
 export function EstadoErro({ erro, aoTentarDeNovo }) {
@@ -74,7 +78,13 @@ export function EstadoErro({ erro, aoTentarDeNovo }) {
         {descricao}
       </Text>
       {aoTentarDeNovo ? (
-        <Button mode="contained" icon="refresh" onPress={aoTentarDeNovo} style={estilos.botao} contentStyle={estilos.conteudoBotao}>
+        <Button
+          mode="contained"
+          icon="refresh"
+          onPress={aoTentarDeNovo}
+          style={estilos.botao}
+          contentStyle={estilos.conteudoBotao}
+        >
           Tentar de novo
         </Button>
       ) : null}
@@ -123,6 +133,13 @@ const estilos = StyleSheet.create({
   texto: { color: cores.textoSecundario, textAlign: 'center', maxWidth: 420 },
   botao: { marginTop: espaco.sm, borderRadius: raio.pilula },
   conteudoBotao: { minHeight: ALVO_MINIMO, paddingHorizontal: espaco.sm },
-  faixa: { flexDirection: 'row', alignItems: 'center', gap: espaco.xs, backgroundColor: cores.avisoFundo, borderRadius: 12, paddingLeft: espaco.sm },
+  faixa: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espaco.xs,
+    backgroundColor: cores.avisoFundo,
+    borderRadius: 12,
+    paddingLeft: espaco.sm,
+  },
   textoFaixa: { flex: 1, color: cores.aviso },
 });

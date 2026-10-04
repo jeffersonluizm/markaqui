@@ -12,7 +12,10 @@
     "criar-gestor": "node --env-file-if-exists=.env scripts/criar-gestor.js",
     "dev": "node --watch --env-file-if-exists=.env server.js",
     "test": "node --test \"test/*.test.js\"",
-    "carga": "node carga/executar.js"
+    "carga": "node carga/executar.js",
+    "lint": "eslint .",
+    "formatar": "prettier --write .",
+    "formato": "prettier --check ."
   },
   "keywords": [
     "express",
@@ -33,7 +36,12 @@
     "jsonwebtoken": "^9.0.3"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.5",
     "autocannon": "^8.0.0",
+    "eslint": "^9.39.5",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.13.0",
+    "prettier": "^3.9.9",
     "supertest": "^7.3.1"
   }
 }

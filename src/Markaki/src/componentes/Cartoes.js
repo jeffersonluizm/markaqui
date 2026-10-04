@@ -74,7 +74,9 @@ export function ChipSituacao({ situacao }) {
 // `mostrarPaciente` para a visão da clínica.
 export function CartaoConsulta({ consulta, aoTocar, mostrarPaciente = false }) {
   const quem = mostrarPaciente ? consulta.paciente_nome : consulta.medico_nome;
-  const detalhe = mostrarPaciente ? `${consulta.medico_nome} · ${consulta.medico_especialidade}` : consulta.medico_especialidade;
+  const detalhe = mostrarPaciente
+    ? `${consulta.medico_nome} · ${consulta.medico_especialidade}`
+    : consulta.medico_especialidade;
   return (
     <Cartao
       aoTocar={aoTocar}
@@ -135,7 +137,14 @@ const estilos = StyleSheet.create({
   titulo: { color: cores.marinhoEscuro },
   secundario: { color: cores.textoSecundario },
   chipLinha: { flexDirection: 'row', marginTop: 4 },
-  chip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 4, borderRadius: raio.chip },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: raio.chip,
+  },
   chipAgendado: { backgroundColor: cores.gelo },
   chipRealizado: { backgroundColor: cores.sucessoFundo },
   chipCancelado: { backgroundColor: cores.erroFundo },

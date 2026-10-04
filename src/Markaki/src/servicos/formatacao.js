@@ -1,6 +1,19 @@
 // Formatação para a tela (pt-BR). As datas da agenda chegam como "AAAA-MM-DD".
 const DIAS = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
-const MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+const MESES = [
+  'janeiro',
+  'fevereiro',
+  'março',
+  'abril',
+  'maio',
+  'junho',
+  'julho',
+  'agosto',
+  'setembro',
+  'outubro',
+  'novembro',
+  'dezembro',
+];
 const TITULOS = new Set(['dr', 'dr.', 'dra', 'dra.', 'sr', 'sr.', 'sra', 'sra.']);
 const LIGACOES = new Set(['de', 'da', 'do', 'das', 'dos', 'e']);
 

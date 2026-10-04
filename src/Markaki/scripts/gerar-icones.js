@@ -25,7 +25,11 @@ function distanciaAoSegmento(x, y, [ax, ay], [bx, by]) {
   return Math.hypot(x - (ax + t * dx), y - (ay + t * dy));
 }
 
-const CHECK = [[372, 610], [478, 708], [668, 500]];
+const CHECK = [
+  [372, 610],
+  [478, 708],
+  [668, 500],
+];
 
 // Camadas de baixo para cima: [forma(x, y) => boolean, cor].
 function camadas({ fundo }) {
@@ -37,11 +41,16 @@ function camadas({ fundo }) {
       !dentroRetanguloArredondado(x, y, [288, 344, 736, 752], 32),
     BRANCO,
   ]);
-  lista.push([(x, y) => dentroRetanguloArredondado(x, y, [232, 288, 792, 420], 80) || (y >= 380 && y <= 420 && x >= 232 && x <= 792), BRANCO]);
+  lista.push([
+    (x, y) =>
+      dentroRetanguloArredondado(x, y, [232, 288, 792, 420], 80) || (y >= 380 && y <= 420 && x >= 232 && x <= 792),
+    BRANCO,
+  ]);
   lista.push([(x, y) => dentroRetanguloArredondado(x, y, [352, 220, 416, 340], 32), GELO]);
   lista.push([(x, y) => dentroRetanguloArredondado(x, y, [608, 220, 672, 340], 32), GELO]);
   lista.push([
-    (x, y) => distanciaAoSegmento(x, y, CHECK[0], CHECK[1]) <= 34 || distanciaAoSegmento(x, y, CHECK[1], CHECK[2]) <= 34,
+    (x, y) =>
+      distanciaAoSegmento(x, y, CHECK[0], CHECK[1]) <= 34 || distanciaAoSegmento(x, y, CHECK[1], CHECK[2]) <= 34,
     GELO,
   ]);
   return lista;
@@ -54,7 +63,10 @@ function rasterizar(lado, { fundo = true, escala = 1, corDeFundo = null } = {}) 
   const AMOSTRAS = 4;
   for (let py = 0; py < lado; py++) {
     for (let px = 0; px < lado; px++) {
-      let r = 0, g = 0, b = 0, a = 0;
+      let r = 0,
+        g = 0,
+        b = 0,
+        a = 0;
       for (let sy = 0; sy < AMOSTRAS; sy++) {
         for (let sx = 0; sx < AMOSTRAS; sx++) {
           const u = ((px + (sx + 0.5) / AMOSTRAS) / lado - 0.5) / escala + 0.5;
@@ -62,7 +74,10 @@ function rasterizar(lado, { fundo = true, escala = 1, corDeFundo = null } = {}) 
           let cor = corDeFundo;
           for (const [dentro, c] of formas) if (dentro(u * 1024, v * 1024)) cor = c;
           if (cor) {
-            r += cor[0]; g += cor[1]; b += cor[2]; a += cor[3];
+            r += cor[0];
+            g += cor[1];
+            b += cor[2];
+            a += cor[3];
           }
         }
       }
@@ -112,6 +127,42 @@ function png(lado, pixels) {
   ]);
 }
 
+// Imagem de compartilhamento (Open Graph, 1200 x 630): fundo azul-gelo com o logo.
+function imagemCompartilhamento(largura, altura, ladoLogo) {
+  const logo = rasterizar(ladoLogo);
+  const pixels = Buffer.alloc(largura * altura * 4);
+  for (let i = 0; i < largura * altura; i++) pixels.set(GELO, i * 4);
+  const x0 = Math.round((largura - ladoLogo) / 2);
+  const y0 = Math.round((altura - ladoLogo) / 2);
+  for (let y = 0; y < ladoLogo; y++) {
+    for (let x = 0; x < ladoLogo; x++) {
+      const o = (y * ladoLogo + x) * 4;
+      const a = logo[o + 3] / 255;
+      const d = ((y0 + y) * largura + (x0 + x)) * 4;
+      for (let c = 0; c < 3; c++) pixels[d + c] = Math.round(logo[o + c] * a + pixels[d + c] * (1 - a));
+    }
+  }
+  return pixels;
+}
+
+// PNG retangular (o png() abaixo é quadrado).
+function pngRetangular(largura, altura, pixels) {
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(largura, 0);
+  ihdr.writeUInt32BE(altura, 4);
+  ihdr[8] = 8;
+  ihdr[9] = 6;
+  const linhas = Buffer.alloc(altura * (largura * 4 + 1));
+  for (let y = 0; y < altura; y++)
+    pixels.copy(linhas, y * (largura * 4 + 1) + 1, y * largura * 4, (y + 1) * largura * 4);
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    bloco('IHDR', ihdr),
+    bloco('IDAT', zlib.deflateSync(linhas, { level: 9 })),
+    bloco('IEND', Buffer.alloc(0)),
+  ]);
+}
+
 const pasta = path.join(__dirname, '..', 'assets');
 fs.mkdirSync(pasta, { recursive: true });
 const saidas = {
@@ -126,3 +177,12 @@ for (const [nome, [lado, opcoes]] of Object.entries(saidas)) {
   fs.writeFileSync(path.join(pasta, nome), png(lado, rasterizar(lado, opcoes)));
   console.log(`assets/${nome} (${lado}x${lado})`);
 }
+
+// Imagem de compartilhamento do link (LinkedIn, WhatsApp), servida pelo app web.
+const pastaPublica = path.join(__dirname, '..', 'public');
+fs.mkdirSync(pastaPublica, { recursive: true });
+fs.writeFileSync(
+  path.join(pastaPublica, 'og-image.png'),
+  pngRetangular(1200, 630, imagemCompartilhamento(1200, 630, 360))
+);
+console.log('public/og-image.png (1200x630)');

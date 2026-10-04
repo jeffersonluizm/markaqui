@@ -2,14 +2,28 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { validarCadastro, validarEntrada, validarNovaSenha, validarMedico, semErros } from './validacao.js';
 
-const valido = { nome: 'Carla Souza', email: 'carla@teste.dev', telefone: '', senha: 'Senha123', confirmacao: 'Senha123', aceite: true };
+const valido = {
+  nome: 'Carla Souza',
+  email: 'carla@teste.dev',
+  telefone: '',
+  senha: 'Senha123',
+  confirmacao: 'Senha123',
+  aceite: true,
+};
 
 test('cadastro válido não tem erros', () => {
   assert.ok(semErros(validarCadastro(valido)));
 });
 
 test('cadastro aponta o erro de cada campo com mensagem para a pessoa', () => {
-  const erros = validarCadastro({ nome: 'C', email: 'carla', telefone: '123', senha: 'abc', confirmacao: 'xyz', aceite: false });
+  const erros = validarCadastro({
+    nome: 'C',
+    email: 'carla',
+    telefone: '123',
+    senha: 'abc',
+    confirmacao: 'xyz',
+    aceite: false,
+  });
   assert.match(erros.nome, /3 caracteres/);
   assert.match(erros.email, /e-mail válido/);
   assert.match(erros.telefone, /DDD/);

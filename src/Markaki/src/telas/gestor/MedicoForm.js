@@ -62,7 +62,8 @@ export default function MedicoForm({ navigation, route }) {
   async function remover() {
     const ok = await confirmar({
       titulo: `Remover ${form.nome}?`,
-      mensagem: 'A agenda dele sai junto. O histórico de consultas continua. Médico com consulta marcada não pode ser removido.',
+      mensagem:
+        'A agenda dele sai junto. O histórico de consultas continua. Médico com consulta marcada não pode ser removido.',
       confirmar: 'Remover médico',
       destrutivo: true,
     });
@@ -81,7 +82,13 @@ export default function MedicoForm({ navigation, route }) {
 
   return (
     <Tela>
-      <Campo rotulo="Nome completo" value={form.nome} onChangeText={(nome) => setForm({ ...form, nome })} erro={erros.nome} placeholder="Ex.: Dra. Helena Duarte" />
+      <Campo
+        rotulo="Nome completo"
+        value={form.nome}
+        onChangeText={(nome) => setForm({ ...form, nome })}
+        erro={erros.nome}
+        placeholder="Ex.: Dra. Helena Duarte"
+      />
       <Campo
         rotulo="Especialidade"
         value={form.especialidade}
@@ -108,7 +115,12 @@ export default function MedicoForm({ navigation, route }) {
       {id ? (
         <View style={estilos.perigo}>
           <TituloSecao>Zona de remoção</TituloSecao>
-          <BotaoSecundario icon="trash-can-outline" onPress={remover} textColor={cores.erro} style={estilos.botaoRemover}>
+          <BotaoSecundario
+            icon="trash-can-outline"
+            onPress={remover}
+            textColor={cores.erro}
+            style={estilos.botaoRemover}
+          >
             Remover médico
           </BotaoSecundario>
         </View>
@@ -119,6 +131,12 @@ export default function MedicoForm({ navigation, route }) {
 
 const estilos = StyleSheet.create({
   rotulo: { color: cores.textoSecundario },
-  perigo: { marginTop: espaco.lg, padding: espaco.md, borderRadius: raio.cartao, backgroundColor: cores.erroFundo, gap: espaco.sm },
+  perigo: {
+    marginTop: espaco.lg,
+    padding: espaco.md,
+    borderRadius: raio.cartao,
+    backgroundColor: cores.erroFundo,
+    gap: espaco.sm,
+  },
   botaoRemover: { borderColor: cores.erro, backgroundColor: cores.superficie },
 });

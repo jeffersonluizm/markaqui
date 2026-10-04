@@ -12,7 +12,13 @@ function erroDeConexao(mensagem) {
 
 export const ehErroDeConexao = (erro) => Boolean(erro && erro.conexao);
 
-export function criarCliente({ baseUrl, obterToken, aoPerderSessao = () => {}, timeoutMs = TIMEOUT_PADRAO_MS, fetch = globalThis.fetch }) {
+export function criarCliente({
+  baseUrl,
+  obterToken,
+  aoPerderSessao = () => {},
+  timeoutMs = TIMEOUT_PADRAO_MS,
+  fetch = globalThis.fetch,
+}) {
   async function requisitar(metodo, caminho, dados) {
     const token = obterToken();
     const headers = { Accept: 'application/json' };

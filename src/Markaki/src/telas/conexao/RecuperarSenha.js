@@ -47,11 +47,25 @@ export default function RecuperarSenha({ navigation }) {
 }
 
 const estilos = StyleSheet.create({
-  aviso: { flexDirection: 'row', gap: espaco.sm, padding: espaco.md, backgroundColor: cores.avisoFundo, borderRadius: raio.cartao, alignItems: 'center' },
+  aviso: {
+    flexDirection: 'row',
+    gap: espaco.sm,
+    padding: espaco.md,
+    backgroundColor: cores.avisoFundo,
+    borderRadius: raio.cartao,
+    alignItems: 'center',
+  },
   textoAviso: { flex: 1, color: cores.aviso },
   subtitulo: { color: cores.marinhoEscuro },
   passo: { flexDirection: 'row', gap: espaco.sm, alignItems: 'center' },
-  numero: { width: 32, height: 32, borderRadius: 16, backgroundColor: cores.marinho, alignItems: 'center', justifyContent: 'center' },
+  numero: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: cores.marinho,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   textoNumero: { color: '#ffffff', fontWeight: '700' },
   textoPasso: { flex: 1, color: cores.texto },
   nota: { color: cores.textoSecundario },

@@ -108,7 +108,11 @@ const final = {
     const usuarios = [
       { id: 'carga-gestor', nome: 'Gestor Carga', email: 'gestor@carga.dev', papel: 'gestor', senha_hash: hash },
       ...Array.from({ length: PACIENTES }, (_, i) => ({
-        id: `carga-paciente-${i}`, nome: `Paciente Carga ${i}`, email: `paciente${i}@carga.dev`, papel: 'paciente', senha_hash: hash,
+        id: `carga-paciente-${i}`,
+        nome: `Paciente Carga ${i}`,
+        email: `paciente${i}@carga.dev`,
+        papel: 'paciente',
+        senha_hash: hash,
       })),
     ];
     const armazenamento = criarArmazenamentoSqlite(path.join(pasta, 'markaqui.db'));

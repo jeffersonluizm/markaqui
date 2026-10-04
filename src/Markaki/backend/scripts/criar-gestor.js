@@ -12,7 +12,9 @@ const { usuarioPublico } = require('../src/services/apresentacao');
 
 async function criarGestor(armazenamento, { nome, email, senha }, custo = 10) {
   senhaNova({ senha }, 'senha');
-  const emailNormal = String(email || '').trim().toLowerCase();
+  const emailNormal = String(email || '')
+    .trim()
+    .toLowerCase();
   if (!nome || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailNormal)) throw new Error('Informe --nome e um --email válido.');
   const senha_hash = await bcrypt.hash(senha, custo);
   const usuario = await armazenamento.escrita((r) => {
@@ -33,7 +35,11 @@ async function principal() {
   const senha = process.env.CRIAR_GESTOR_SENHA || `${crypto.randomBytes(12).toString('base64url')}9k`;
   const armazenamento = criarArmazenamentoSqlite(config.arquivoBanco);
   try {
-    const gestor = await criarGestor(armazenamento, { nome: argumento('nome'), email: argumento('email'), senha }, config.bcryptCusto);
+    const gestor = await criarGestor(
+      armazenamento,
+      { nome: argumento('nome'), email: argumento('email'), senha },
+      config.bcryptCusto
+    );
     console.log(`Gestor criado: ${gestor.nome} <${gestor.email}>.`);
     if (geradaAgora) console.log(`Senha gerada (guarde agora, ela não é mostrada de novo): ${senha}`);
   } finally {

@@ -1,0 +1,9 @@
+node_modules
+dist
+.expo
+backend/node_modules
+backend/dados
+package-lock.json
+backend/package-lock.json
+assets
+*.md

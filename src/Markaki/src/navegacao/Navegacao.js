@@ -63,10 +63,26 @@ const icone = (ativo, inativo = `${ativo}-outline`) =>
 function AbasPaciente() {
   return (
     <Abas.Navigator screenOptions={opcoesAbas}>
-      <Abas.Screen name="Inicio" component={Inicio} options={{ title: 'Início', headerShown: false, tabBarIcon: icone('home') }} />
-      <Abas.Screen name="Profissionais" component={Profissionais} options={{ title: 'Médicos', tabBarIcon: icone('account-search') }} />
-      <Abas.Screen name="Consultas" component={Consultas} options={{ title: 'Consultas', tabBarIcon: icone('calendar-check') }} />
-      <Abas.Screen name="Perfil" component={Perfil} options={{ title: 'Perfil', tabBarIcon: icone('account-circle') }} />
+      <Abas.Screen
+        name="Inicio"
+        component={Inicio}
+        options={{ title: 'Início', headerShown: false, tabBarIcon: icone('home') }}
+      />
+      <Abas.Screen
+        name="Profissionais"
+        component={Profissionais}
+        options={{ title: 'Médicos', tabBarIcon: icone('account-search') }}
+      />
+      <Abas.Screen
+        name="Consultas"
+        component={Consultas}
+        options={{ title: 'Consultas', tabBarIcon: icone('calendar-check') }}
+      />
+      <Abas.Screen
+        name="Perfil"
+        component={Perfil}
+        options={{ title: 'Perfil', tabBarIcon: icone('account-circle') }}
+      />
     </Abas.Navigator>
   );
 }
@@ -74,11 +90,31 @@ function AbasPaciente() {
 function AbasGestor() {
   return (
     <Abas.Navigator screenOptions={opcoesAbas}>
-      <Abas.Screen name="Painel" component={Painel} options={{ title: 'Painel', headerShown: false, tabBarIcon: icone('view-dashboard') }} />
-      <Abas.Screen name="Agenda" component={Agenda} options={{ title: 'Agenda', tabBarIcon: icone('calendar-month') }} />
-      <Abas.Screen name="Medicos" component={Medicos} options={{ title: 'Médicos', tabBarIcon: icone('stethoscope', 'stethoscope') }} />
-      <Abas.Screen name="Consultas" component={Consultas} options={{ title: 'Consultas', tabBarIcon: icone('calendar-check') }} />
-      <Abas.Screen name="Perfil" component={Perfil} options={{ title: 'Perfil', tabBarIcon: icone('account-circle') }} />
+      <Abas.Screen
+        name="Painel"
+        component={Painel}
+        options={{ title: 'Painel', headerShown: false, tabBarIcon: icone('view-dashboard') }}
+      />
+      <Abas.Screen
+        name="Agenda"
+        component={Agenda}
+        options={{ title: 'Agenda', tabBarIcon: icone('calendar-month') }}
+      />
+      <Abas.Screen
+        name="Medicos"
+        component={Medicos}
+        options={{ title: 'Médicos', tabBarIcon: icone('stethoscope', 'stethoscope') }}
+      />
+      <Abas.Screen
+        name="Consultas"
+        component={Consultas}
+        options={{ title: 'Consultas', tabBarIcon: icone('calendar-check') }}
+      />
+      <Abas.Screen
+        name="Perfil"
+        component={Perfil}
+        options={{ title: 'Perfil', tabBarIcon: icone('account-circle') }}
+      />
     </Abas.Navigator>
   );
 }
@@ -101,7 +137,11 @@ export default function Navegacao() {
     return (
       <Pilha.Navigator screenOptions={opcoesCabecalho}>
         <Pilha.Screen name="BoasVindas" component={BoasVindas} options={{ headerShown: false, title: 'Markaqui' }} />
-        <Pilha.Screen name="EscolhaPerfil" component={EscolhaPerfil} options={{ title: '', headerStyle: { backgroundColor: cores.gelo } }} />
+        <Pilha.Screen
+          name="EscolhaPerfil"
+          component={EscolhaPerfil}
+          options={{ title: '', headerStyle: { backgroundColor: cores.gelo } }}
+        />
         <Pilha.Screen name="Entrar" component={Entrar} options={{ title: 'Entrar' }} />
         <Pilha.Screen name="Cadastro" component={Cadastro} options={{ title: 'Criar conta' }} />
         <Pilha.Screen name="RecuperarSenha" component={RecuperarSenha} options={{ title: 'Recuperar senha' }} />
@@ -126,9 +166,17 @@ export default function Navegacao() {
   return (
     <Pilha.Navigator screenOptions={opcoesCabecalho}>
       <Pilha.Screen name="Abas" component={AbasPaciente} options={{ headerShown: false, title: 'Markaqui' }} />
-      <Pilha.Screen name="DetalheProfissional" component={DetalheProfissional} options={{ title: 'Agenda do médico' }} />
+      <Pilha.Screen
+        name="DetalheProfissional"
+        component={DetalheProfissional}
+        options={{ title: 'Agenda do médico' }}
+      />
       <Pilha.Screen name="ConfirmarAgendamento" component={ConfirmarAgendamento} options={{ title: 'Confirmar' }} />
-      <Pilha.Screen name="AgendamentoConcluido" component={AgendamentoConcluido} options={{ headerShown: false, title: 'Agendado' }} />
+      <Pilha.Screen
+        name="AgendamentoConcluido"
+        component={AgendamentoConcluido}
+        options={{ headerShown: false, title: 'Agendado' }}
+      />
       {telasComuns}
     </Pilha.Navigator>
   );

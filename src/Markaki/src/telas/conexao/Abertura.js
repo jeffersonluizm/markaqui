@@ -29,7 +29,8 @@ export default function Abertura() {
                 Acordando o servidor de demonstração
               </Text>
               <Text variant="bodyMedium" style={estilos.textoAcordando}>
-                A demonstração fica numa hospedagem gratuita que dorme quando ninguém usa. Leva até um minuto na primeira visita.
+                A demonstração fica numa hospedagem gratuita que dorme quando ninguém usa. Leva até um minuto na
+                primeira visita.
               </Text>
             </View>
           ) : null}
@@ -40,7 +41,14 @@ export default function Abertura() {
 }
 
 const estilos = StyleSheet.create({
-  raiz: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: espaco.md, backgroundColor: cores.gelo, padding: espaco.lg },
+  raiz: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: espaco.md,
+    backgroundColor: cores.gelo,
+    padding: espaco.lg,
+  },
   nome: { fontFamily: fontes.negrito, fontSize: 32, color: cores.marinhoEscuro, letterSpacing: -0.5 },
   erro: { maxWidth: 480, width: '100%' },
   acordando: { maxWidth: 420, alignItems: 'center', gap: espaco.xs },

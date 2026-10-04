@@ -21,7 +21,12 @@ export const Campo = forwardRef(function Campo({ rotulo, erro, ajuda, style, ...
         {...props}
       />
       {erro || ajuda ? (
-        <HelperText type={erro ? 'error' : 'info'} visible accessibilityLiveRegion="polite" role={erro ? 'alert' : undefined}>
+        <HelperText
+          type={erro ? 'error' : 'info'}
+          visible
+          accessibilityLiveRegion="polite"
+          role={erro ? 'alert' : undefined}
+        >
           {erro || ajuda}
         </HelperText>
       ) : null}
@@ -53,7 +58,13 @@ export const CampoSenha = forwardRef(function CampoSenha(props, ref) {
 
 export function BotaoPrincipal({ children, style, ...props }) {
   return (
-    <Button mode="contained" style={[estilos.botao, style]} contentStyle={estilos.conteudoBotao} labelStyle={estilos.rotulo} {...props}>
+    <Button
+      mode="contained"
+      style={[estilos.botao, style]}
+      contentStyle={estilos.conteudoBotao}
+      labelStyle={estilos.rotulo}
+      {...props}
+    >
       {children}
     </Button>
   );

@@ -39,7 +39,12 @@ function criarApp({ armazenamento, config }) {
   // Contas do modo demonstração (sem login). Com o modo desligado, a rota não existe.
   app.get('/api/demo', (req, res) => {
     if (!config.demo?.ativo) return res.status(404).json({ erro: 'Rota não encontrada.' });
-    const contas = Object.values(config.demo.contas).map(({ papel, nome, email, senha }) => ({ papel, nome, email, senha }));
+    const contas = Object.values(config.demo.contas).map(({ papel, nome, email, senha }) => ({
+      papel,
+      nome,
+      email,
+      senha,
+    }));
     return res.json({ contas });
   });
   app.use('/api/auth', rotasAuth(armazenamento, config, { limiteAuth, autenticar: exigeLogin }));

@@ -6,7 +6,11 @@ const semEspera = () => Promise.resolve();
 
 test('servidor acordado na primeira tentativa: não avisa nada', async () => {
   const avisos = [];
-  await aguardarServidor({ verificar: async () => ({ status: 'ok' }), aoDemorar: () => avisos.push(1), esperar: semEspera });
+  await aguardarServidor({
+    verificar: async () => ({ status: 'ok' }),
+    aoDemorar: () => avisos.push(1),
+    esperar: semEspera,
+  });
   assert.deepEqual(avisos, []);
 });
 

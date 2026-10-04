@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { FAB, IconButton, Text } from 'react-native-paper';
 import { Tela, TituloSecao } from '../../componentes/Tela';
-import { ConteudoRemoto, EstadoVazio } from '../../componentes/Estados';
+import { ConteudoRemoto } from '../../componentes/Estados';
 import { ChipsFiltro } from '../../componentes/Seletores';
 import { useAvisos } from '../../contexto/Avisos';
 import { useRecurso } from '../../hooks/useRecurso';
@@ -101,7 +101,13 @@ export default function Agenda({ navigation }) {
       <Tela atualizando={agenda.atualizando} aoAtualizar={agenda.recarregar}>
         <ConteudoRemoto
           recurso={medicos}
-          vazio={{ icone: 'doctor', titulo: 'Cadastre um médico primeiro', descricao: 'Cada horário pertence à agenda de um médico.', acao: 'Novo médico', aoAgir: () => navigation.navigate('MedicoForm', {}) }}
+          vazio={{
+            icone: 'doctor',
+            titulo: 'Cadastre um médico primeiro',
+            descricao: 'Cada horário pertence à agenda de um médico.',
+            acao: 'Novo médico',
+            aoAgir: () => navigation.navigate('MedicoForm', {}),
+          }}
         >
           {(lista) => (
             <>

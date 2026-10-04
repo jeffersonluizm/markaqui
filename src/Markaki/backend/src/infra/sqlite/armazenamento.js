@@ -18,13 +18,15 @@ function criarArmazenamentoSqlite(arquivo) {
   const repos = criarRepositorios(db);
 
   const transacao = (operacao) =>
-    db.transaction(() => {
-      const resultado = operacao(repos);
-      if (resultado && typeof resultado.then === 'function') {
-        throw new Error('A operação de escrita precisa ser síncrona');
-      }
-      return resultado;
-    }).immediate();
+    db
+      .transaction(() => {
+        const resultado = operacao(repos);
+        if (resultado && typeof resultado.then === 'function') {
+          throw new Error('A operação de escrita precisa ser síncrona');
+        }
+        return resultado;
+      })
+      .immediate();
 
   return {
     async leitura(operacao) {

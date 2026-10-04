@@ -24,7 +24,8 @@ export default function Inicio({ navigation }) {
 
   let conteudo;
   if (recurso.carregando) conteudo = <EstadoCarregando mensagem="Buscando suas consultas..." />;
-  else if (recurso.erro && !recurso.dados) conteudo = <EstadoErro erro={recurso.erro} aoTentarDeNovo={recurso.recarregar} />;
+  else if (recurso.erro && !recurso.dados)
+    conteudo = <EstadoErro erro={recurso.erro} aoTentarDeNovo={recurso.recarregar} />;
   else if (recurso.dados) {
     const { proximas } = separarConsultas(recurso.dados.consultas);
     const proxima = proximas[0];
@@ -33,7 +34,10 @@ export default function Inicio({ navigation }) {
         <TituloSecao>Sua próxima consulta</TituloSecao>
         {proxima ? (
           <>
-            <CartaoConsulta consulta={proxima} aoTocar={() => navigation.navigate('DetalheConsulta', { id: proxima.id })} />
+            <CartaoConsulta
+              consulta={proxima}
+              aoTocar={() => navigation.navigate('DetalheConsulta', { id: proxima.id })}
+            />
             {proximas.length > 1 ? (
               <Text variant="bodySmall" style={estilos.secundario}>
                 E mais {proximas.length - 1} consulta(s) marcada(s) em Consultas.
@@ -78,6 +82,12 @@ const estilos = StyleSheet.create({
   boasVindas: { backgroundColor: cores.gelo, borderRadius: raio.cartao, padding: espaco.lg },
   ola: { fontFamily: fontes.media, fontSize: 18, color: cores.marinho },
   nome: { fontFamily: fontes.negrito, fontSize: 28, color: cores.marinhoEscuro },
-  vazio: { backgroundColor: cores.superficie, borderRadius: raio.cartao, borderWidth: 1, borderColor: cores.bordaSuave, padding: espaco.md },
+  vazio: {
+    backgroundColor: cores.superficie,
+    borderRadius: raio.cartao,
+    borderWidth: 1,
+    borderColor: cores.bordaSuave,
+    padding: espaco.md,
+  },
   secundario: { color: cores.textoSecundario },
 });

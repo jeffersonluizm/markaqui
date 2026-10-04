@@ -10,8 +10,16 @@ import { CartaoDemonstracao } from '../../componentes/CartaoDemonstracao';
 import { cores, espaco, fontes, raio } from '../../tema/tokens';
 
 const PILARES = [
-  { icone: 'handshake-outline', titulo: 'Nossa missão', texto: 'Simplificar a gestão de horários e conectar pacientes e clínica sem conflitos.' },
-  { icone: 'calendar-clock-outline', titulo: 'Nossa visão', texto: 'Cada agendamento simples, com o tempo de todos valorizado e bem aproveitado.' },
+  {
+    icone: 'handshake-outline',
+    titulo: 'Nossa missão',
+    texto: 'Simplificar a gestão de horários e conectar pacientes e clínica sem conflitos.',
+  },
+  {
+    icone: 'calendar-clock-outline',
+    titulo: 'Nossa visão',
+    texto: 'Cada agendamento simples, com o tempo de todos valorizado e bem aproveitado.',
+  },
   { icone: 'shield-check-outline', titulo: 'Nossos valores', texto: 'Praticidade, autonomia e transparência.' },
 ];
 
@@ -78,7 +86,14 @@ const estilos = StyleSheet.create({
     borderColor: cores.marinho,
     padding: espaco.md,
   },
-  icone: { width: 52, height: 52, borderRadius: 26, backgroundColor: cores.gelo, alignItems: 'center', justifyContent: 'center' },
+  icone: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: cores.gelo,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   textoPilar: { flex: 1, gap: 2 },
   tituloPilar: { color: cores.marinhoEscuro },
   descricao: { color: cores.textoSecundario },

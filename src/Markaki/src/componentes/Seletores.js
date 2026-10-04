@@ -32,7 +32,12 @@ function Opcao({ selecionada, aoTocar, rotulo, rotuloAcessivel, desativada, larg
 export function SeletorDia({ dias, selecionado, aoSelecionar, rotulo = 'Dia' }) {
   return (
     <View accessibilityRole="radiogroup" accessibilityLabel={rotulo}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={estilos.rolagem} contentContainerStyle={estilos.faixa}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={estilos.rolagem}
+        contentContainerStyle={estilos.faixa}
+      >
         {dias.map((dia) => (
           <Opcao
             key={dia}
@@ -70,9 +75,20 @@ export function GradeHoras({ horas, selecionadas, aoAlternar, indisponiveis = []
 
 export function ChipsFiltro({ opcoes, selecionada, aoSelecionar, rotulo = 'Filtro' }) {
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={estilos.rolagem} contentContainerStyle={estilos.faixa} accessibilityLabel={rotulo}>
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      style={estilos.rolagem}
+      contentContainerStyle={estilos.faixa}
+      accessibilityLabel={rotulo}
+    >
       {opcoes.map((opcao) => (
-        <Opcao key={opcao.valor} selecionada={opcao.valor === selecionada} aoTocar={() => aoSelecionar(opcao.valor)} rotulo={opcao.rotulo} />
+        <Opcao
+          key={opcao.valor}
+          selecionada={opcao.valor === selecionada}
+          aoTocar={() => aoSelecionar(opcao.valor)}
+          rotulo={opcao.rotulo}
+        />
       ))}
     </ScrollView>
   );
