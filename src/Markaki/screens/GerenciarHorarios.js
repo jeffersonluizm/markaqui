@@ -17,6 +17,7 @@ import {
   removerHorario,
   atualizarHorario,
 } from '../services/api';
+import { estaAgendado } from '../services/horarios';
 
 export default function GerenciarHorarios() {
   const [horarios, setHorarios] = useState([]);
@@ -86,7 +87,7 @@ export default function GerenciarHorarios() {
   };
 
   const toggleDisponibilidade = async (horario) => {
-    if (!horario.disponivel) {
+    if (estaAgendado(horario)) {
       Alert.alert(
         'Atenção',
         'Este horário está ocupado e não pode ser alterado aqui. Cancele o agendamento primeiro.'
@@ -96,12 +97,11 @@ export default function GerenciarHorarios() {
 
     try {
       setLoading(true);
-      const horarioAtualizado = {
-        ...horario,
+      // Envia só o campo alterado: uma cópia local desatualizada não pode apagar
+      // paciente/médico de um agendamento feito depois que a lista foi carregada.
+      const horarioAtualizado = await atualizarHorario(horario.id, {
         disponivel: !horario.disponivel,
-      };
-
-      await atualizarHorario(horario.id, horarioAtualizado);
+      });
 
       setHorarios((prev) =>
         prev.map((h) => (h.id === horario.id ? horarioAtualizado : h))
@@ -114,7 +114,7 @@ export default function GerenciarHorarios() {
   };
 
   const handleRemoverHorario = (horario) => {
-    if (!horario.disponivel) {
+    if (estaAgendado(horario)) {
       Alert.alert(
         'Atenção',
         'Este horário está ocupado e não pode ser removido. Cancele o agendamento primeiro.'
@@ -172,7 +172,7 @@ export default function GerenciarHorarios() {
                 item.disponivel ? styles.chipDisponivel : styles.chipOcupado,
               ]}
               textStyle={styles.chipText}>
-              {item.disponivel ? 'Disponível' : 'Ocupado'}
+              {item.disponivel ? 'Disponível' : estaAgendado(item) ? 'Ocupado' : 'Indisponível'}
             </Chip>
 
             <TouchableOpacity
