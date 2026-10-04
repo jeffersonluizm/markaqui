@@ -110,7 +110,7 @@ export default function Perfil({ navigation }) {
           style={estilos.item}
         />
         <List.Item
-          title="Termos de uso e privacidade"
+          title="Termos e privacidade"
           left={(p) => <List.Icon {...p} icon="file-document-outline" color={cores.marinho} />}
           right={(p) => <List.Icon {...p} icon="chevron-right" />}
           onPress={() => navigation.navigate('Termos')}
