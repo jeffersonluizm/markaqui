@@ -1,0 +1,48 @@
+{
+  "expo": {
+    "name": "Markaqui",
+    "slug": "markaqui",
+    "version": "2.0.0",
+    "description": "Agendamento de consultas em clínica médica: a paciente marca, acompanha e cancela; a clínica administra médicos e agenda.",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "primaryColor": "#1e3a56",
+    "backgroundColor": "#f7fbfd",
+    "scheme": "markaqui",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#d8ecf5"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#1e3a56"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "name": "Markaqui",
+      "shortName": "Markaqui",
+      "themeColor": "#1e3a56",
+      "backgroundColor": "#f7fbfd",
+      "lang": "pt-BR"
+    },
+    "plugins": [
+      "expo-secure-store",
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 160,
+          "backgroundColor": "#d8ecf5"
+        }
+      ]
+    ]
+  }
+}
