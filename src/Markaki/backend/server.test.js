@@ -209,3 +209,75 @@ test('DELETE /api/medicos/:id sem agendamento remove o médico e os horários li
   assert.deepEqual(dados.medicos.map((m) => m.id), ['m2']);
   assert.deepEqual(dados.horarios.map((h) => h.id), ['h3']);
 });
+
+// ============================================
+// EDITAR / REMOVER HORÁRIO
+// ============================================
+
+function dadosComAgendamento() {
+  return {
+    medicos: medicosBase,
+    horarios: [{ ...horarioLivre('h1', medicosBase[0]), disponivel: false, paciente_nome: 'Maria' }],
+    agendamentos: [{ id: 'a1', horario_id: 'h1', medico_id: 'm1', paciente_nome: 'Maria', status: 'agendado' }],
+  };
+}
+
+test('PUT /api/horarios/:id recusa campos que não são editáveis (400)', async () => {
+  gravarDados({ medicos: medicosBase, horarios: [horarioLivre('h1', medicosBase[0])] });
+  const res = await request(app)
+    .put('/api/horarios/h1')
+    .send({ disponivel: false, paciente_nome: 'Intruso', medico_id: 'm2' });
+  assert.equal(res.status, 400);
+  assert.match(res.body.erro, /paciente_nome/);
+  assert.deepEqual(lerDados().horarios[0], horarioLivre('h1', medicosBase[0]));
+});
+
+test('PUT /api/horarios/:id altera disponivel, data e hora', async () => {
+  gravarDados({ medicos: medicosBase, horarios: [horarioLivre('h1', medicosBase[0])] });
+  const res = await request(app)
+    .put('/api/horarios/h1')
+    .send({ disponivel: false, data: '2025-12-01', hora: '11:00 - 12:00' });
+  assert.equal(res.status, 200);
+  assert.deepEqual(lerDados().horarios[0], {
+    ...horarioLivre('h1', medicosBase[0]),
+    disponivel: false,
+    data: '2025-12-01',
+    hora: '11:00 - 12:00',
+  });
+});
+
+test('PUT /api/horarios/:id recusa disponivel que não é booleano (400)', async () => {
+  gravarDados({ medicos: medicosBase, horarios: [horarioLivre('h1', medicosBase[0])] });
+  const res = await request(app).put('/api/horarios/h1').send({ disponivel: 'nao' });
+  assert.equal(res.status, 400);
+  assert.equal(lerDados().horarios[0].disponivel, true);
+});
+
+test('PUT /api/horarios/:id não mexe em horário agendado (409)', async () => {
+  gravarDados(dadosComAgendamento());
+  const res = await request(app).put('/api/horarios/h1').send({ disponivel: true });
+  assert.equal(res.status, 409);
+  const [horario] = lerDados().horarios;
+  assert.equal(horario.disponivel, false);
+  assert.equal(horario.paciente_nome, 'Maria');
+});
+
+test('PUT /api/horarios/:id não deixa o médico com o mesmo horário duas vezes (409)', async () => {
+  gravarDados({
+    medicos: medicosBase,
+    horarios: [
+      horarioLivre('h1', medicosBase[0]),
+      { ...horarioLivre('h2', medicosBase[0]), hora: '10:00 - 11:00' },
+    ],
+  });
+  const res = await request(app).put('/api/horarios/h2').send({ hora: '09:00 - 10:00' });
+  assert.equal(res.status, 409);
+  assert.equal(lerDados().horarios[1].hora, '10:00 - 11:00');
+});
+
+test('DELETE /api/horarios/:id não remove horário agendado (409)', async () => {
+  gravarDados(dadosComAgendamento());
+  const res = await request(app).delete('/api/horarios/h1');
+  assert.equal(res.status, 409);
+  assert.equal(lerDados().horarios.length, 1);
+});

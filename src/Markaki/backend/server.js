@@ -34,6 +34,16 @@ async function salvarDados(data) {
   await fs.writeFile(DATA_FILE, JSON.stringify(data, null, 2), 'utf8');
 }
 
+// Únicos campos que o PUT /api/horarios/:id aceita. Paciente e médico só
+// mudam pelas rotas de agendamento.
+const CAMPOS_EDITAVEIS_HORARIO = ['disponivel', 'data', 'hora'];
+
+// Agendado = tem agendamento apontando para ele (ou, em dado antigo, tem paciente).
+function horarioAgendado(dados, horario) {
+  return dados.agendamentos.some(a => a.horario_id === horario.id) ||
+    (!horario.disponivel && Boolean(horario.paciente_nome));
+}
+
 // UUID: Date.now() repetia o id quando dois cadastros caíam no mesmo milissegundo.
 function gerarId() {
   return crypto.randomUUID();
@@ -252,11 +262,51 @@ app.put('/api/horarios/:id', async (req, res) => {
       return res.status(404).json({ erro: 'Horário não encontrado' });
     }
     
-    dados.horarios[index] = {
-      ...dados.horarios[index],
-      ...req.body
-    };
-    
+    const corpo = req.body || {};
+    const naoEditaveis = Object.keys(corpo).filter(
+      campo => !CAMPOS_EDITAVEIS_HORARIO.includes(campo)
+    );
+    if (naoEditaveis.length > 0) {
+      return res.status(400).json({
+        erro: `Campos não editáveis: ${naoEditaveis.join(', ')}. ` +
+          `Só é possível alterar ${CAMPOS_EDITAVEIS_HORARIO.join(', ')}.`
+      });
+    }
+
+    if ('disponivel' in corpo && typeof corpo.disponivel !== 'boolean') {
+      return res.status(400).json({ erro: 'disponivel deve ser true ou false' });
+    }
+    for (const campo of ['data', 'hora']) {
+      if (campo in corpo && (typeof corpo[campo] !== 'string' || !corpo[campo].trim())) {
+        return res.status(400).json({ erro: `${campo} não pode ficar vazio` });
+      }
+    }
+
+    const horario = dados.horarios[index];
+
+    // Paciente e médico só mudam pelo agendamento; um horário agendado só é
+    // liberado cancelando o agendamento.
+    if (horarioAgendado(dados, horario)) {
+      return res.status(409).json({
+        erro: 'Este horário está agendado. Cancele o agendamento primeiro.'
+      });
+    }
+
+    const atualizado = { ...horario, ...corpo };
+    const repetido = Boolean(atualizado.medico_id) && dados.horarios.some(
+      h => h.id !== horario.id &&
+        h.medico_id === atualizado.medico_id &&
+        h.data === atualizado.data &&
+        h.hora === atualizado.hora
+    );
+    if (repetido) {
+      return res.status(409).json({
+        erro: 'Este médico já tem um horário cadastrado nessa data e hora'
+      });
+    }
+
+    dados.horarios[index] = atualizado;
+
     await salvarDados(dados);
     res.json(dados.horarios[index]);
   } catch (error) {
@@ -268,11 +318,19 @@ app.put('/api/horarios/:id', async (req, res) => {
 app.delete('/api/horarios/:id', async (req, res) => {
   try {
     const dados = await lerDados();
-    const horariosFiltrados = dados.horarios.filter(h => h.id !== req.params.id);
+    const horario = dados.horarios.find(h => h.id === req.params.id);
     
-    if (dados.horarios.length === horariosFiltrados.length) {
+    if (!horario) {
       return res.status(404).json({ erro: 'Horário não encontrado' });
     }
+
+    if (horarioAgendado(dados, horario)) {
+      return res.status(409).json({
+        erro: 'Este horário está agendado. Cancele o agendamento primeiro.'
+      });
+    }
+
+    const horariosFiltrados = dados.horarios.filter(h => h.id !== req.params.id);
     
     dados.horarios = horariosFiltrados;
     await salvarDados(dados);
