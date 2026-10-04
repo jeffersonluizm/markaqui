@@ -40,16 +40,20 @@ export default function AgendarConsulta() {
   }, []);
 
   const carregarDados = async () => {
+    // Vira o pedido atual: descarta horários em andamento e, se um médico for
+    // escolhido enquanto a lista carrega, a resposta dele prevalece sobre esta.
+    const pedido = controleHorarios.current.nova();
+    setHorarios([]);
     try {
       setLoading(true);
-      controleHorarios.current.invalidar();
       const medicosData = await buscarMedicos();
       setMedicos(medicosData);
-      setHorarios([]);
     } catch (error) {
       Alert.alert('Erro', 'Não foi possível carregar os dados');
     } finally {
-      setLoading(false);
+      if (controleHorarios.current.ehAtual(pedido)) {
+        setLoading(false);
+      }
     }
   };
 
