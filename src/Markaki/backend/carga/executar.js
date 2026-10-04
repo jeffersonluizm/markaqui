@@ -296,7 +296,7 @@ const cenarios = {
         },
         { aquecer: false }
       );
-      const tamanhoMb = fs.statSync(adaptador.arquivoDeDados(srv.pasta)).size / 1048576;
+      const tamanhoMb = adaptador.tamanhoDosDados(srv.pasta) / 1048576;
       const depois = await medirVazao(srv, { url: BASE, connections: 50, duration: 5, requests: [pedidoDeLeitura(srv)] });
       return [
         { cenario: 'S7', variante: 'leitura antes dos corpos grandes', ...antes },

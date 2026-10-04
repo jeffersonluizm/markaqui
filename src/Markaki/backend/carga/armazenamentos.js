@@ -28,14 +28,15 @@ function planoDeDados(totalHorarios) {
   return { medicos, horarios };
 }
 
-// Versão com arquivo JSON e sem login (linha de base, antes da troca).
+// Versão com arquivo JSON e sem login (linha de base, antes da troca). Só funciona
+// com a API do commit 27c2754, a última com o armazenamento em JSON.
 const json = {
   nome: 'json',
   env(pasta) {
     return { DATA_FILE: path.join(pasta, 'database.json') };
   },
-  arquivoDeDados(pasta) {
-    return path.join(pasta, 'database.json');
+  tamanhoDosDados(pasta) {
+    return fs.statSync(path.join(pasta, 'database.json')).size;
   },
   async semear(pasta, totalHorarios) {
     const { medicos, horarios } = planoDeDados(totalHorarios);
@@ -49,7 +50,7 @@ const json = {
       })),
       agendamentos: [],
     };
-    fs.writeFileSync(this.arquivoDeDados(pasta), JSON.stringify(dados, null, 2));
+    fs.writeFileSync(path.join(pasta, 'database.json'), JSON.stringify(dados, null, 2));
     return { medicos, horarios };
   },
   // Sem login: todos os pedidos vão sem cabeçalho.
@@ -65,4 +66,34 @@ const json = {
   },
 };
 
-module.exports = { planoDeDados, armazenamentos: { json } };
+// Versão com SQLite (depois da troca). O banco é criado e semeado pelo próprio
+// armazenamento da API, numa pasta temporária.
+const sqlite = {
+  nome: 'sqlite',
+  env(pasta) {
+    return { DB_FILE: path.join(pasta, 'markaqui.db') };
+  },
+  // Tamanho do banco somado ao do WAL (onde ficam as escritas recentes).
+  tamanhoDosDados(pasta) {
+    return ['markaqui.db', 'markaqui.db-wal']
+      .map((f) => path.join(pasta, f))
+      .filter((f) => fs.existsSync(f))
+      .reduce((total, f) => total + fs.statSync(f).size, 0);
+  },
+  async semear(pasta, totalHorarios) {
+    const { criarArmazenamentoSqlite } = require('../src/infra/sqlite/armazenamento');
+    const { medicos, horarios } = planoDeDados(totalHorarios);
+    const armazenamento = criarArmazenamentoSqlite(path.join(pasta, 'markaqui.db'));
+    armazenamento.substituirTudo({
+      medicos: medicos.map((m) => ({ ...m, imagem: '' })),
+      horarios: horarios.map((h) => ({ ...h, disponivel: true, paciente_nome: '' })),
+    });
+    armazenamento.fechar();
+    return { medicos, horarios };
+  },
+  autenticar: json.autenticar,
+  corpoAgendamento: json.corpoAgendamento,
+  agendamentosAtivos: json.agendamentosAtivos,
+};
+
+module.exports = { planoDeDados, armazenamentos: { json, sqlite } };

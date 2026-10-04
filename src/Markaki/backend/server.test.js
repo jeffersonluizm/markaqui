@@ -1,5 +1,5 @@
-// Testes das rotas da API. Rodam contra um arquivo de dados temporário (DATA_FILE),
-// nunca contra o database.json real.
+// Testes das rotas da API. Rodam contra um banco SQLite temporário (DB_FILE),
+// nunca contra o banco real.
 const { test, beforeEach, after } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
@@ -8,25 +8,23 @@ const path = require('path');
 const request = require('supertest');
 
 const pastaTemp = fs.mkdtempSync(path.join(os.tmpdir(), 'markaki-api-'));
-const arquivoDados = path.join(pastaTemp, 'database.json');
-process.env.DATA_FILE = arquivoDados;
+const arquivoBanco = path.join(pastaTemp, 'markaqui.db');
+process.env.DB_FILE = arquivoBanco;
 
-const { app, gerarId } = require('./server');
+const { app, gerarId, armazenamento } = require('./server');
 
 const medicosBase = [
   { id: 'm1', nome: 'Dra. Ana', especialidade: 'Cardiologista', imagem: '' },
   { id: 'm2', nome: 'Dr. Beto', especialidade: 'Ortopedista', imagem: '' },
 ];
 
+// Substitui todo o conteúdo do banco (mesmo formato do antigo database.json).
 function gravarDados(dados) {
-  fs.writeFileSync(
-    arquivoDados,
-    JSON.stringify({ medicos: [], horarios: [], agendamentos: [], ...dados }, null, 2)
-  );
+  armazenamento.substituirTudo({ medicos: [], horarios: [], agendamentos: [], ...dados });
 }
 
 function lerDados() {
-  return JSON.parse(fs.readFileSync(arquivoDados, 'utf8'));
+  return armazenamento.exportarTudo();
 }
 
 beforeEach(() => {
@@ -34,13 +32,15 @@ beforeEach(() => {
 });
 
 after(() => {
+  armazenamento.fechar();
   fs.rmSync(pastaTemp, { recursive: true, force: true });
 });
 
-test('usa o arquivo de dados indicado em DATA_FILE', async () => {
+test('usa o banco indicado em DB_FILE', async () => {
   const res = await request(app).get('/api/medicos');
   assert.equal(res.status, 200);
   assert.deepEqual(res.body.map((m) => m.id), ['m1', 'm2']);
+  assert.ok(fs.existsSync(arquivoBanco));
 });
 
 test('gerarId não repete mesmo quando chamado várias vezes no mesmo milissegundo', () => {
@@ -198,7 +198,8 @@ test('DELETE /api/medicos/:id sem agendamento remove o médico e os horários li
     medicos: medicosBase,
     horarios: [
       horarioLivre('h1', medicosBase[0]),
-      { ...horarioLivre('h2', medicosBase[0]), disponivel: false },
+      // Hora diferente: o banco não aceita o mesmo médico duas vezes no mesmo horário.
+      { ...horarioLivre('h2', medicosBase[0]), hora: '10:00 - 11:00', disponivel: false },
       horarioLivre('h3', medicosBase[1]),
     ],
   });
@@ -327,22 +328,29 @@ test('agendamentos simultâneos no mesmo horário: só um é aceito', async () =
   assert.equal(lerDados().agendamentos.length, 1);
 });
 
-test('arquivo de dados corrompido responde 500 e não é sobrescrito', async () => {
-  fs.writeFileSync(arquivoDados, '{ "medicos": [ corrompido');
-  const res = await request(app)
-    .post('/api/medicos')
-    .send({ nome: 'Dr. Novo', especialidade: 'Clínico Geral' });
-  assert.equal(res.status, 500);
-  assert.equal(fs.readFileSync(arquivoDados, 'utf8'), '{ "medicos": [ corrompido');
-  const lista = await request(app).get('/api/medicos');
-  assert.equal(lista.status, 500);
+test('erro no meio de uma escrita desfaz tudo o que a operação já tinha feito', async () => {
+  await assert.rejects(
+    armazenamento.escrita((r) => {
+      r.medicos.inserir({ id: 'm3', nome: 'Dr. Caio', especialidade: 'Pediatra', imagem: '' });
+      throw new Error('falha simulada');
+    }),
+    /falha simulada/
+  );
+  assert.deepEqual(lerDados().medicos.map((m) => m.id), ['m1', 'm2']);
 });
 
-test('arquivo de dados inexistente vale como base vazia', async () => {
-  fs.rmSync(arquivoDados);
-  const res = await request(app).get('/api/medicos');
-  assert.equal(res.status, 200);
-  assert.deepEqual(res.body, []);
+test('o banco recusa dois agendamentos ativos no mesmo horário, mesmo fora do serviço', async () => {
+  gravarDados({ medicos: medicosBase, horarios: [horarioLivre('h1', medicosBase[0])] });
+  const agendamento = (id) => ({
+    id, horario_id: 'h1', medico_id: 'm1', medico_nome: 'Dra. Ana', medico_especialidade: 'Cardiologista',
+    paciente_nome: 'Maria', data: '2025-11-25', hora: '09:00 - 10:00', status: 'agendado', criado_em: new Date().toISOString(),
+  });
+  await armazenamento.escrita((r) => r.agendamentos.inserir(agendamento('a1')));
+  await assert.rejects(
+    armazenamento.escrita((r) => r.agendamentos.inserir(agendamento('a2'))),
+    /UNIQUE/
+  );
+  assert.equal(lerDados().agendamentos.length, 1);
 });
 
 // ============================================
@@ -392,39 +400,4 @@ test('PUT /api/horarios/:id tira espaços de data e hora antes de checar duplica
   });
   const res = await request(app).put('/api/horarios/h2').send({ hora: ' 09:00 - 10:00 ' });
   assert.equal(res.status, 409);
-});
-
-test('cliente que aborta não libera a trava antes de a rota terminar', async () => {
-  // Atrasa só a primeira leitura (depois de ler o conteúdo), sem mexer no server.js:
-  // a rota do POST "A" fica entre lerDados e salvarDados quando o cliente desiste.
-  const readFileOriginal = fs.promises.readFile;
-  let atrasou = false;
-  fs.promises.readFile = async (...args) => {
-    const conteudo = await readFileOriginal(...args);
-    if (!atrasou) {
-      atrasou = true;
-      await new Promise((r) => setTimeout(r, 300));
-    }
-    return conteudo;
-  };
-  try {
-    const abortado = request(app)
-      .post('/api/medicos')
-      .send({ nome: 'A', especialidade: 'Clínico Geral' })
-      .timeout(100);
-    await assert.rejects(abortado);
-
-    const b = await request(app)
-      .post('/api/medicos')
-      .send({ nome: 'B', especialidade: 'Clínico Geral' });
-    assert.equal(b.status, 201);
-
-    // Dá tempo para a rota de "A" terminar, caso ainda esteja rodando.
-    await new Promise((r) => setTimeout(r, 400));
-    const nomes = lerDados().medicos.map((m) => m.nome);
-    assert.ok(nomes.includes('A'), `A sumiu: ${nomes}`);
-    assert.ok(nomes.includes('B'), `B sumiu: ${nomes}`);
-  } finally {
-    fs.promises.readFile = readFileOriginal;
-  }
 });
