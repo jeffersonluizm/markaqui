@@ -110,10 +110,21 @@ export default function ListaMedicos() {
         onPress: async () => {
           try {
             setLoading(true);
-            await removerMedico(id);
+            const resultado = await removerMedico(id);
             setMedicos((prevData) => prevData.filter((item) => item.id !== id));
-            Alert.alert('Sucesso', 'Médico removido com sucesso!');
+            const removidos = resultado?.horarios_removidos || 0;
+            Alert.alert(
+              'Sucesso',
+              removidos > 0
+                ? `Médico removido com sucesso! ${removidos} horário(s) livre(s) dele também foram removidos.`
+                : 'Médico removido com sucesso!'
+            );
           } catch (error) {
+            if (error.status === 409) {
+              // Médico com consultas marcadas: a API pede para cancelar antes.
+              Alert.alert('Atenção', error.message);
+              return;
+            }
             Alert.alert('Erro', error.message || 'Erro ao remover médico');
           } finally {
             setLoading(false);
