@@ -15,21 +15,21 @@ app.use(express.json());
 
 // Trava das escritas: toda rota que altera dados lê, valida e grava o arquivo.
 // Sem a fila, duas requisições simultâneas liam a mesma versão e a última gravação
-// apagava a outra (ou dois pacientes ficavam com o mesmo horário). Cada requisição
-// de escrita só começa quando a anterior terminou de responder.
+// apagava a outra (ou dois pacientes ficavam com o mesmo horário). A trava só é
+// liberada quando a ROTA termina (não quando a resposta fecha: se o cliente desiste,
+// a rota continua entre ler e gravar e a próxima escrita leria a versão velha).
 let fila = Promise.resolve();
 const comTrava = (fn) => (fila = fila.then(fn, fn));
 
-app.use((req, res, next) => {
-  if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') {
-    return next();
+const rotaDeEscrita = (handler) => async (req, res) => {
+  try {
+    await comTrava(() => handler(req, res));
+  } catch (error) {
+    if (!res.headersSent) {
+      res.status(500).json({ erro: 'Erro interno' });
+    }
   }
-  comTrava(() => new Promise((resolve) => {
-    res.on('finish', resolve);
-    res.on('close', resolve);
-    next();
-  }));
-});
+};
 
 // ============================================
 // FUNÇÕES AUXILIARES
@@ -131,7 +131,7 @@ app.get('/api/medicos/:id', async (req, res) => {
 });
 
 // Cadastrar novo médico
-app.post('/api/medicos', async (req, res) => {
+app.post('/api/medicos', rotaDeEscrita(async (req, res) => {
   try {
     const { nome, especialidade, imagem } = req.body;
     
@@ -157,10 +157,10 @@ app.post('/api/medicos', async (req, res) => {
   } catch (error) {
     res.status(500).json({ erro: 'Erro ao cadastrar médico' });
   }
-});
+}));
 
 // Atualizar médico
-app.put('/api/medicos/:id', async (req, res) => {
+app.put('/api/medicos/:id', rotaDeEscrita(async (req, res) => {
   try {
     const { nome, especialidade, imagem } = req.body;
     const dados = await lerDados();
@@ -182,10 +182,10 @@ app.put('/api/medicos/:id', async (req, res) => {
   } catch (error) {
     res.status(500).json({ erro: 'Erro ao atualizar médico' });
   }
-});
+}));
 
 // Remover médico
-app.delete('/api/medicos/:id', async (req, res) => {
+app.delete('/api/medicos/:id', rotaDeEscrita(async (req, res) => {
   try {
     const dados = await lerDados();
     const id = req.params.id;
@@ -219,7 +219,7 @@ app.delete('/api/medicos/:id', async (req, res) => {
   } catch (error) {
     res.status(500).json({ erro: 'Erro ao remover médico' });
   }
-});
+}));
 
 // ============================================
 // ROTAS - HORÁRIOS
@@ -256,7 +256,7 @@ app.get('/api/horarios/:id', async (req, res) => {
 });
 
 // Cadastrar novo horário
-app.post('/api/horarios', async (req, res) => {
+app.post('/api/horarios', rotaDeEscrita(async (req, res) => {
   try {
     const corpo = req.body || {};
     const { medico_id } = corpo;
@@ -308,10 +308,10 @@ app.post('/api/horarios', async (req, res) => {
   } catch (error) {
     res.status(500).json({ erro: 'Erro ao cadastrar horário' });
   }
-});
+}));
 
 // Atualizar horário
-app.put('/api/horarios/:id', async (req, res) => {
+app.put('/api/horarios/:id', rotaDeEscrita(async (req, res) => {
   try {
     const dados = await lerDados();
     const index = dados.horarios.findIndex(h => h.id === req.params.id);
@@ -366,10 +366,10 @@ app.put('/api/horarios/:id', async (req, res) => {
   } catch (error) {
     res.status(500).json({ erro: 'Erro ao atualizar horário' });
   }
-});
+}));
 
 // Remover horário
-app.delete('/api/horarios/:id', async (req, res) => {
+app.delete('/api/horarios/:id', rotaDeEscrita(async (req, res) => {
   try {
     const dados = await lerDados();
     const horario = dados.horarios.find(h => h.id === req.params.id);
@@ -393,7 +393,7 @@ app.delete('/api/horarios/:id', async (req, res) => {
   } catch (error) {
     res.status(500).json({ erro: 'Erro ao remover horário' });
   }
-});
+}));
 
 // ============================================
 // ROTAS - AGENDAMENTOS
@@ -410,7 +410,7 @@ app.get('/api/agendamentos', async (req, res) => {
 });
 
 // Criar novo agendamento
-app.post('/api/agendamentos', async (req, res) => {
+app.post('/api/agendamentos', rotaDeEscrita(async (req, res) => {
   try {
     const { horario_id, medico_id, paciente_nome } = req.body;
     
@@ -478,10 +478,10 @@ app.post('/api/agendamentos', async (req, res) => {
     console.error('Erro ao criar agendamento:', error);
     res.status(500).json({ erro: 'Erro ao criar agendamento' });
   }
-});
+}));
 
 // Cancelar agendamento
-app.delete('/api/agendamentos/:id', async (req, res) => {
+app.delete('/api/agendamentos/:id', rotaDeEscrita(async (req, res) => {
   try {
     const dados = await lerDados();
     const agendamento = dados.agendamentos.find(a => a.id === req.params.id);
@@ -505,7 +505,7 @@ app.delete('/api/agendamentos/:id', async (req, res) => {
   } catch (error) {
     res.status(500).json({ erro: 'Erro ao cancelar agendamento' });
   }
-});
+}));
 
 // ============================================
 // INICIAR SERVIDOR

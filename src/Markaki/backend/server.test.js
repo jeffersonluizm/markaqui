@@ -393,3 +393,38 @@ test('PUT /api/horarios/:id tira espaços de data e hora antes de checar duplica
   const res = await request(app).put('/api/horarios/h2').send({ hora: ' 09:00 - 10:00 ' });
   assert.equal(res.status, 409);
 });
+
+test('cliente que aborta não libera a trava antes de a rota terminar', async () => {
+  // Atrasa só a primeira leitura (depois de ler o conteúdo), sem mexer no server.js:
+  // a rota do POST "A" fica entre lerDados e salvarDados quando o cliente desiste.
+  const readFileOriginal = fs.promises.readFile;
+  let atrasou = false;
+  fs.promises.readFile = async (...args) => {
+    const conteudo = await readFileOriginal(...args);
+    if (!atrasou) {
+      atrasou = true;
+      await new Promise((r) => setTimeout(r, 300));
+    }
+    return conteudo;
+  };
+  try {
+    const abortado = request(app)
+      .post('/api/medicos')
+      .send({ nome: 'A', especialidade: 'Clínico Geral' })
+      .timeout(100);
+    await assert.rejects(abortado);
+
+    const b = await request(app)
+      .post('/api/medicos')
+      .send({ nome: 'B', especialidade: 'Clínico Geral' });
+    assert.equal(b.status, 201);
+
+    // Dá tempo para a rota de "A" terminar, caso ainda esteja rodando.
+    await new Promise((r) => setTimeout(r, 400));
+    const nomes = lerDados().medicos.map((m) => m.nome);
+    assert.ok(nomes.includes('A'), `A sumiu: ${nomes}`);
+    assert.ok(nomes.includes('B'), `B sumiu: ${nomes}`);
+  } finally {
+    fs.promises.readFile = readFileOriginal;
+  }
+});
