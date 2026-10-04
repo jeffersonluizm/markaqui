@@ -88,8 +88,23 @@ export function ConteudoRemoto({ recurso, vazio, mensagemCarregando, children })
   if (recurso.erro && !recurso.dados) return <EstadoErro erro={recurso.erro} aoTentarDeNovo={recurso.recarregar} />;
   if (!recurso.dados) return null;
   const estaVazio = Array.isArray(recurso.dados) && recurso.dados.length === 0;
-  if (estaVazio && vazio) return <EstadoVazio {...vazio} />;
-  return children(recurso.dados);
+  const conteudo = estaVazio && vazio ? <EstadoVazio {...vazio} /> : children(recurso.dados);
+  if (!recurso.erro) return conteudo;
+  // Falhou ao atualizar, mas há dados anteriores: mostra os dados e avisa.
+  return (
+    <>
+      <View style={estilos.faixa} accessibilityRole="alert" accessibilityLiveRegion="polite">
+        <Icon source="cloud-alert" size={20} color={cores.aviso} />
+        <Text variant="bodySmall" style={estilos.textoFaixa}>
+          Não foi possível atualizar. Mostrando os últimos dados.
+        </Text>
+        <Button compact onPress={recurso.recarregar} textColor={cores.aviso}>
+          Tentar
+        </Button>
+      </View>
+      {conteudo}
+    </>
+  );
 }
 
 const estilos = StyleSheet.create({
@@ -108,4 +123,6 @@ const estilos = StyleSheet.create({
   texto: { color: cores.textoSecundario, textAlign: 'center', maxWidth: 420 },
   botao: { marginTop: espaco.sm, borderRadius: raio.pilula },
   conteudoBotao: { minHeight: ALVO_MINIMO, paddingHorizontal: espaco.sm },
+  faixa: { flexDirection: 'row', alignItems: 'center', gap: espaco.xs, backgroundColor: cores.avisoFundo, borderRadius: 12, paddingLeft: espaco.sm },
+  textoFaixa: { flex: 1, color: cores.aviso },
 });

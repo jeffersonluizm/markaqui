@@ -55,8 +55,9 @@ const MIGRACOES = [
   CREATE INDEX idx_agendamentos_medico ON agendamentos (medico_id);
   CREATE INDEX idx_agendamentos_data ON agendamentos (data, hora);
   `,
-  // 2: data da última troca de senha; tokens emitidos antes dela deixam de valer.
-  `ALTER TABLE usuarios ADD COLUMN senha_alterada_em TEXT;`,
+  // 2: versão dos tokens do usuário; trocar a senha incrementa e os tokens antigos
+  // (com a versão anterior) deixam de valer.
+  `ALTER TABLE usuarios ADD COLUMN versao_token INTEGER NOT NULL DEFAULT 0;`,
 ];
 
 function migrar(db) {

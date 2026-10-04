@@ -30,7 +30,9 @@ function validarNovoHorario(corpo) {
 // Edição: só bloqueado, data e hora. Médico e paciente nunca mudam por aqui.
 function validarEdicaoHorario(corpo) {
   somenteCampos(corpo, ['bloqueado', 'data', 'hora']);
-  return { bloqueado: booleano(corpo, 'bloqueado'), data: data(corpo, true), hora: hora(corpo, true) };
+  const dados = { bloqueado: booleano(corpo, 'bloqueado'), data: data(corpo, true), hora: hora(corpo, true) };
+  if (Object.values(dados).every((v) => v === undefined)) throw requisicaoInvalida('Informe o que deseja alterar.');
+  return dados;
 }
 
 module.exports = { validarNovoHorario, validarEdicaoHorario };

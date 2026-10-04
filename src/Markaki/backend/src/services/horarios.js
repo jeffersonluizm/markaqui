@@ -24,7 +24,10 @@ function listar(r, medicoId, ctx) {
 
 function detalhar(r, id, ctx) {
   const horario = buscar(r, id);
-  if (ctx.usuario.papel !== 'gestor' && !horario.disponivel) throw naoEncontrado('Horário não encontrado.');
+  const paraPaciente = ctx.usuario.papel !== 'gestor';
+  if (paraPaciente && (!horario.disponivel || !ehFuturo(horario.data, horario.hora, ctx.agora))) {
+    throw naoEncontrado('Horário não encontrado.');
+  }
   return horarioPara(ctx.usuario, horario);
 }
 

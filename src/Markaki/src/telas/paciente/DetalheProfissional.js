@@ -85,7 +85,7 @@ export default function DetalheProfissional({ navigation, route }) {
                   />
                   <BotaoPrincipal
                     disabled={!escolhido}
-                    onPress={() => navigation.navigate('ConfirmarAgendamento', { horario: escolhido })}
+                    onPress={() => navigation.navigate('ConfirmarAgendamento', { horarioId: escolhido.id })}
                     style={estilos.botao}
                   >
                     {escolhido ? `Continuar com ${escolhido.hora}` : 'Escolha um horário'}

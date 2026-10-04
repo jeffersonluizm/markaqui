@@ -1,9 +1,10 @@
-// Token de sessão: JWT HS256 com o id do usuário (sub). O papel vai no token só
-// como informação; a autorização usa sempre o papel lido do banco.
+// Token de sessão: JWT HS256 com o id do usuário (sub) e a versão dos tokens dele
+// (v). O papel vai no token só como informação; a autorização usa sempre o papel
+// lido do banco.
 const jwt = require('jsonwebtoken');
 
 function emitirToken(usuario, { segredo, validade }) {
-  return jwt.sign({ papel: usuario.papel }, segredo, {
+  return jwt.sign({ papel: usuario.papel, v: usuario.versao_token || 0 }, segredo, {
     subject: usuario.id,
     expiresIn: validade,
     algorithm: 'HS256',

@@ -47,6 +47,7 @@ Cada escrita roda numa transação `IMMEDIATE` do better-sqlite3: verificar ("o 
 - Limites: 5 tentativas de login, cadastro ou troca de senha por minuto por IP, 300 requisições por minuto por IP, corpo de até 10 KB, até 3 consultas futuras ativas por paciente.
 - A API escuta em `127.0.0.1` por padrão; `HOST=0.0.0.0` só para testar no celular na mesma rede.
 - No celular o token fica no armazenamento seguro do sistema; no navegador (Expo web) fica no `localStorage`.
+- Não há uma tela "sem permissão" separada: cada papel só monta as próprias telas (não existe caminho para a área do outro). Se a API responder 403, o estado de erro da tela mostra "Sem permissão".
 
 ## Modelo de dados
 

@@ -36,8 +36,8 @@ export function ProvedorSessao({ children }) {
       const usuario = await api.auth.eu();
       setEstado({ ...INICIAL, carregando: false, usuario });
     } catch (erro) {
-      if (erro.status === 401) await encerrar('Sua sessão expirou. Entre novamente.');
-      else setEstado({ ...INICIAL, carregando: false, erroInicial: erro });
+      // 401 já encerrou a sessão (com o motivo certo) pelo aviso do cliente HTTP.
+      if (erro.status !== 401) setEstado({ ...INICIAL, carregando: false, erroInicial: erro });
     }
   }, [encerrar]);
 

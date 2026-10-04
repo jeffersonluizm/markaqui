@@ -70,6 +70,15 @@ test('editar médico muda o nome também na agenda e nas consultas ativas, não 
   assert.equal(agendamentos.find((a) => a.id === 'a2').medico_nome, 'Dra. Ana Lima');
 });
 
+test('renomear médico não muda consulta já realizada (histórico guarda o nome da época)', async () => {
+  amb.semear({
+    horarios: [horario('passado', 'm1', { data: '2030-01-09' })],
+    agendamentos: [agendamento('a1', 'passado', 'u-ana', { data: '2030-01-09' })],
+  });
+  await amb.como(usuarios.gestor).put('/api/medicos/m1').send({ nome: 'Dra. Ana Lima Prado' });
+  assert.equal(amb.dados().agendamentos[0].medico_nome, 'Dra. Ana Lima');
+});
+
 test('editar médico inexistente responde 404', async () => {
   const res = await amb.como(usuarios.gestor).put('/api/medicos/nao-existe').send({ nome: 'Dr. Ninguém' });
   assert.equal(res.status, 404);

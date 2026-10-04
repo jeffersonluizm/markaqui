@@ -55,7 +55,7 @@ export default function Inicio({ navigation }) {
         <ChipsFiltro
           rotulo="Especialidades"
           opcoes={especialidades(recurso.dados.medicos).map((e) => ({ valor: e, rotulo: e }))}
-          aoSelecionar={(especialidade) => navigation.navigate('Profissionais', { especialidade })}
+          aoSelecionar={(especialidade) => navigation.navigate('Profissionais', { especialidade, em: Date.now() })}
         />
       </>
     );

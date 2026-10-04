@@ -182,9 +182,8 @@ test('rota inexistente responde 404 em JSON', async () => {
 });
 
 test('trocar a senha derruba as sessões antigas e devolve um token novo', async () => {
+  // Emitido no mesmo segundo da troca: a versão do token, não o horário, decide.
   const antigo = amb.token(usuarios.ana);
-  // O token antigo precisa ser de um segundo anterior à troca.
-  await new Promise((r) => setTimeout(r, 1100));
   const res = await request(amb.app).put('/api/auth/senha').set('Authorization', `Bearer ${antigo}`)
     .send({ senha_atual: SENHA, nova_senha: 'NovaSenha9' });
   assert.equal(res.status, 200);

@@ -47,6 +47,7 @@ export const api = {
 
   horarios: {
     listar: (medicoId) => http.get(medicoId ? `/horarios?medico_id=${id(medicoId)}` : '/horarios'),
+    buscar: (horarioId) => http.get(`/horarios/${id(horarioId)}`),
     cadastrar: (dados) => http.post('/horarios', dados),
     bloquear: (horarioId, bloqueado) => http.put(`/horarios/${id(horarioId)}`, { bloqueado }),
     remover: (horarioId) => http.delete(`/horarios/${id(horarioId)}`),

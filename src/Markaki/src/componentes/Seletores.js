@@ -13,6 +13,8 @@ function Opcao({ selecionada, aoTocar, rotulo, rotuloAcessivel, desativada, larg
       disabled={desativada}
       accessibilityRole="button"
       accessibilityState={{ selected: selecionada, disabled: desativada }}
+      aria-selected={selecionada}
+      aria-disabled={desativada}
       accessibilityLabel={rotuloAcessivel || rotulo}
       style={({ pressed }) => [
         estilos.opcao,

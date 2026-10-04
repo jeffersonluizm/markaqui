@@ -16,7 +16,7 @@ function rotasMedicos(armazenamento, config) {
     validar: validarNovoMedico,
   }));
   rotas.put('/:id', gestor, gravar('Erro ao atualizar médico.',
-    (r, dados, ctx) => medicos.atualizar(r, ctx.params.id, dados), { validar: validarEdicaoMedico }));
+    (r, dados, ctx) => medicos.atualizar(r, ctx.params.id, dados, ctx), { validar: validarEdicaoMedico }));
   rotas.delete('/:id', gestor, gravar('Erro ao remover médico.',
     (r, _, ctx) => medicos.remover(r, ctx.params.id, ctx)));
 

@@ -10,7 +10,9 @@ const SELECT_HORARIO = `
   JOIN medicos m ON m.id = h.medico_id
   LEFT JOIN agendamentos a ON a.horario_id = h.id AND a.status = 'agendado'`;
 
-// "Depois de agora" sem concatenar colunas, para o SQLite poder usar os índices.
+// "Depois de agora" sem concatenar colunas: na agenda de um médico o SQLite usa o
+// índice (medico_id, data, hora); na lista geral ele percorre os médicos (barato
+// nesta escala).
 const DEPOIS_DE = '(h.data > @data OR (h.data = @data AND h.hora > @hora))';
 const LIVRE = 'h.bloqueado = 0 AND a.id IS NULL';
 
@@ -100,14 +102,17 @@ function criarRepositorios(db) {
       SELECT COUNT(*) AS n FROM agendamentos
       WHERE medico_id = @medicoId AND status = 'agendado'
         AND (data > @data OR (data = @data AND hora > @hora))`),
+    // Só consultas futuras: as realizadas e canceladas guardam o nome da época.
     renomearMedicoNosAtivos: p(`
       UPDATE agendamentos SET medico_nome = @nome, medico_especialidade = @especialidade
-      WHERE medico_id = @medicoId AND status = 'agendado'`),
+      WHERE medico_id = @medicoId AND status = 'agendado'
+        AND (data > @data OR (data = @data AND hora > @hora))`),
     renomearPacienteNosAtivos: p(`
       UPDATE agendamentos SET paciente_nome = @nome
-      WHERE paciente_id = @pacienteId AND status = 'agendado'`),
+      WHERE paciente_id = @pacienteId AND status = 'agendado'
+        AND (data > @data OR (data = @data AND hora > @hora))`),
   };
-  const atualizarUsuario = atualizador(db, 'usuarios', ['nome', 'telefone', 'senha_hash', 'senha_alterada_em']);
+  const atualizarUsuario = atualizador(db, 'usuarios', ['nome', 'telefone', 'senha_hash', 'versao_token']);
   const atualizarMedico = atualizador(db, 'medicos', ['nome', 'especialidade']);
   const atualizarHorario = atualizador(db, 'horarios', ['data', 'hora', 'bloqueado']);
 
@@ -198,9 +203,10 @@ function criarRepositorios(db) {
       Boolean(q.pacienteOcupado.get({ pacienteId, data, hora })),
     contarFuturosDoPaciente: (pacienteId, momento) => q.futurosDoPaciente.get({ pacienteId, ...momento }).n,
     contarFuturosDoMedico: (medicoId, momento) => q.futurosDoMedico.get({ medicoId, ...momento }).n,
-    renomearMedicoNosAtivos: (medicoId, { nome, especialidade }) =>
-      q.renomearMedicoNosAtivos.run({ medicoId, nome, especialidade }),
-    renomearPacienteNosAtivos: (pacienteId, nome) => q.renomearPacienteNosAtivos.run({ pacienteId, nome }),
+    renomearMedicoNosAtivos: (medicoId, { nome, especialidade }, momento) =>
+      q.renomearMedicoNosAtivos.run({ medicoId, nome, especialidade, ...momento }),
+    renomearPacienteNosAtivos: (pacienteId, nome, momento) =>
+      q.renomearPacienteNosAtivos.run({ pacienteId, nome, ...momento }),
   };
 
   return { usuarios, medicos, horarios, agendamentos };

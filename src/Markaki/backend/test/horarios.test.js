@@ -146,6 +146,17 @@ test('remover horário livre; o histórico cancelado dele continua', async () =>
   assert.equal(dados.agendamentos[0].data, '2030-02-01');
 });
 
+test('paciente não abre horário livre que já passou (404)', async () => {
+  amb.semear({ horarios: [horario('velho', 'm1', { data: '2030-01-09' }), horario('novo')] });
+  assert.equal((await amb.como(usuarios.ana).get('/api/horarios/velho')).status, 404);
+  assert.equal((await amb.como(usuarios.ana).get('/api/horarios/novo')).status, 200);
+});
+
+test('edição sem nenhum campo responde 400', async () => {
+  amb.semear({ horarios: [horario('h1')] });
+  assert.equal((await gestor().put('/api/horarios/h1').send({})).status, 400);
+});
+
 test('GET /api/horarios/:id inexistente responde 404', async () => {
   assert.equal((await gestor().get('/api/horarios/nada')).status, 404);
 });

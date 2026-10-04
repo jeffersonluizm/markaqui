@@ -19,9 +19,10 @@ export default function Profissionais({ navigation, route }) {
   const [busca, setBusca] = useState('');
   const [filtro, setFiltro] = useState(route.params?.especialidade || TODAS);
 
+  // `em` muda a cada toque no atalho do Início, mesmo repetindo a especialidade.
   useEffect(() => {
     if (route.params?.especialidade) setFiltro(route.params.especialidade);
-  }, [route.params?.especialidade]);
+  }, [route.params?.especialidade, route.params?.em]);
 
   return (
     <Tela atualizando={recurso.atualizando} aoAtualizar={recurso.recarregar}>

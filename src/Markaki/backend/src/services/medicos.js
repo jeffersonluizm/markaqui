@@ -14,12 +14,12 @@ function cadastrar(r, { nome, especialidade }) {
   return r.medicos.inserir({ id: gerarId(), nome, especialidade });
 }
 
-// O nome novo vale para a agenda e para as consultas ativas; o histórico de
+// O nome novo vale para a agenda e para as consultas futuras; o histórico de
 // consultas canceladas ou realizadas guarda o nome da época.
-function atualizar(r, id, campos) {
+function atualizar(r, id, campos, ctx) {
   buscar(r, id);
   const medico = r.medicos.atualizar(id, campos);
-  r.agendamentos.renomearMedicoNosAtivos(id, medico);
+  r.agendamentos.renomearMedicoNosAtivos(id, medico, momentoLocal(ctx.agora));
   return medico;
 }
 

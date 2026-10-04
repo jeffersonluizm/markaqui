@@ -18,6 +18,8 @@ export function ProvedorAvisos({ children }) {
   const confirmar = useCallback(
     (opcoes) =>
       new Promise((resolve) => {
+        // Um diálogo novo responde "não" ao que estava aberto (nenhuma promessa fica pendurada).
+        resolverDialogo.current?.(false);
         resolverDialogo.current = resolve;
         setDialogo(opcoes);
       }),

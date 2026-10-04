@@ -5,6 +5,7 @@ const { gerarId } = require('../infra/ids');
 const { emitirToken } = require('../infra/tokens');
 const { conflito, naoAutenticado, requisicaoInvalida } = require('../erros');
 const { usuarioPublico } = require('./apresentacao');
+const { momentoLocal } = require('../dominio/tempo');
 
 const MSG_LOGIN = 'E-mail ou senha inválidos.';
 
@@ -38,7 +39,7 @@ function criarServicoAuth(armazenamento, config) {
     async atualizarPerfil(usuarioId, { nome, telefone }) {
       const usuario = await armazenamento.escrita((r) => {
         const atualizado = r.usuarios.atualizar(usuarioId, { nome, telefone });
-        if (nome) r.agendamentos.renomearPacienteNosAtivos(usuarioId, nome);
+        if (nome) r.agendamentos.renomearPacienteNosAtivos(usuarioId, nome, momentoLocal(config.relogio()));
         return atualizado;
       });
       return usuarioPublico(usuario);
@@ -50,9 +51,9 @@ function criarServicoAuth(armazenamento, config) {
         throw requisicaoInvalida('A senha atual não confere.');
       }
       const senha_hash = await bcrypt.hash(novaSenha, config.bcryptCusto);
-      // Marca a troca: tokens emitidos antes dela (ex.: um token vazado) deixam de valer.
+      // Nova versão de token: os emitidos antes (ex.: um token vazado) deixam de valer.
       const atualizado = await armazenamento.escrita((r) =>
-        r.usuarios.atualizar(usuarioId, { senha_hash, senha_alterada_em: new Date().toISOString() })
+        r.usuarios.atualizar(usuarioId, { senha_hash, versao_token: (usuario.versao_token || 0) + 1 })
       );
       return { mensagem: 'Senha alterada.', token: sessao(atualizado).token };
     },
