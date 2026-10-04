@@ -29,22 +29,24 @@ src/Markaki/
     │   ├── services/           # regras de negócio (o que pode e o que não pode)
     │   ├── dominio/tempo.js    # data e hora da clínica, passado e futuro
     │   └── infra/              # SQLite (esquema, migrações, repositórios), tokens, ids
-    ├── scripts/semear.js       # banco de demonstração (único jeito de criar gestor)
+    ├── scripts/semear.js       # cenário de demonstração (médicos, agenda, consultas)
+    ├── scripts/criar-gestor.js # conta real de gestor (o app não tem autocadastro de gestor)
     ├── test/                   # node:test + supertest, banco temporário por arquivo
     └── carga/                  # teste de carga (autocannon), ver docs/carga
 ```
 
 ## Rodar
 
-Pré-requisito: Node.js 20 ou mais novo (testado no 24).
+Pré-requisito: Node.js 22 ou mais novo (testado no 24). No Windows, o `iniciar.bat` da raiz faz tudo abaixo sozinho.
 
 ```bash
 # API
 cd src/Markaki/backend
 npm install
-cp .env.example .env         # preencha JWT_SECRET (32+ caracteres) e, se quiser, as senhas DEMO_*
-npm run semear               # cria dados/markaqui.db com médicos, horários e as contas de demonstração
-npm start                    # http://127.0.0.1:3000/api/saude
+cp .env.example .env         # preencha JWT_SECRET (32+ caracteres) e DEMO_ENABLED=true para a demonstração
+npm run semear               # cria dados/markaqui.db com médicos, agenda e consultas de exemplo
+npm start                    # http://127.0.0.1:3000/api/saude (com a demo: /api/demo)
+npm run criar-gestor -- --nome "Ana Souza" --email ana@clinica.com.br   # gestor real (fora da demo)
 
 # App (outro terminal)
 cd src/Markaki
@@ -53,7 +55,7 @@ cp .env.example .env         # EXPO_PUBLIC_API_URL
 npx expo start               # "w" abre no navegador, "a" no emulador Android, QR code no Expo Go
 ```
 
-No Windows, o `iniciar.bat` da raiz faz tudo isso: cria os dois `.env` (com um `JWT_SECRET` aleatório e as contas de demonstração), semeia o banco e abre a API e o Expo.
+O `iniciar.bat` da raiz faz tudo isso: confere o Node, instala, cria os dois `.env` (com um `JWT_SECRET` aleatório e `DEMO_ENABLED=true`), prepara o banco, espera a API e abre o app no navegador.
 
 ### Variáveis da API (`backend/.env`)
 
@@ -67,14 +69,16 @@ No Windows, o `iniciar.bat` da raiz faz tudo isso: cria os dois `.env` (com um `
 | `LIMITE_GLOBAL_POR_MINUTO` | `300` | Requisições por IP (0 desliga). |
 | `LIMITE_CONSULTAS_ATIVAS` | `3` | Consultas futuras ativas por paciente. |
 | `BCRYPT_CUSTO` / `JWT_VALIDADE` | `10` / `8h` | Custo do hash e validade da sessão. |
-| `DEMO_GESTOR_*`, `DEMO_PACIENTE_*` | e-mails `*@markaqui.demo` | Contas do `npm run semear`. Sem senha definida, ele gera uma aleatória e mostra no console. |
+| `DEMO_ENABLED` | `false` | Liga o modo demonstração: contas "Entrar como paciente / clínica" e `GET /api/demo`. Só com banco exclusivo de demo. |
+| `DEMO_RESET_MINUTOS` | `0` | Recria o cenário de demonstração a cada N minutos (0: só com banco vazio) |
+| `DEMO_PACIENTE_*`, `DEMO_GESTOR_*` | e-mails `*@markaqui.demo`, senhas geradas | E-mail e senha das contas demo. Sem senha definida, uma senha forte é gerada a cada partida. |
+| `TRUST_PROXY` | `0` | Proxies na frente da API (`1` no Render), para o limite por IP valer por visitante |
 
 ### Variáveis do app (`src/Markaki/.env`)
 
 | Variável | Exemplo |
 |---|---|
 | `EXPO_PUBLIC_API_URL` | navegador ou iOS na mesma máquina: `http://localhost:3000/api`; emulador Android: `http://10.0.2.2:3000/api`; celular: `http://IP_DO_COMPUTADOR:3000/api` |
-| `EXPO_PUBLIC_MOSTRAR_DEMO` | `1` mostra, só em desenvolvimento, os atalhos das contas de demonstração na tela de login |
 
 ## API
 
@@ -82,11 +86,12 @@ Todas as rotas, menos `saude`, `auth/login` e `auth/cadastro`, pedem `Authorizat
 
 | Método e rota | Quem | O que faz |
 |---|---|---|
-| `GET /api/saude` | todos | Confere se a API está no ar |
+| `GET /api/saude` | todos | Confere se a API está no ar (health check da hospedagem) |
+| `GET /api/demo` | todos | Com `DEMO_ENABLED=true`, as contas de demonstração; senão 404 |
 | `POST /api/auth/cadastro` | sem login | Cria conta de **paciente** (`nome`, `email`, `telefone`, `senha`, `aceite_termos`) |
 | `POST /api/auth/login` | sem login | Devolve `{ token, usuario }` |
 | `GET` / `PUT /api/auth/eu` | logado | Perfil (altera só `nome` e `telefone`) |
-| `PUT /api/auth/senha` | logado | Troca a senha, derruba as outras sessões e devolve token novo |
+| `PUT /api/auth/senha` | logado | Troca a senha, derruba as outras sessões e devolve token novo (contas demo: 403) |
 | `GET /api/medicos`, `GET /api/medicos/:id` | logado | Lista e detalhe |
 | `POST`, `PUT`, `DELETE /api/medicos/:id` | gestor | Cadastrar, editar (o nome novo vale para a agenda e as consultas ativas) e remover (409 com consulta futura) |
 | `GET /api/horarios?medico_id=` | logado | Paciente: só livres e futuros, sem dados de outras pessoas. Gestor: agenda completa com estado e paciente |
@@ -103,7 +108,7 @@ Erros sempre em JSON: `{ "erro": "mensagem para a pessoa" }`, com 400 (dado inv�
 
 ### Modelo de dados (SQLite)
 
-- `usuarios`: id, nome, email (único, sem diferenciar maiúsculas), telefone, senha_hash (bcrypt), papel (`paciente` ou `gestor`), criado_em, senha_alterada_em.
+- `usuarios`: id, nome, email (único, sem diferenciar maiúsculas), telefone, senha_hash (bcrypt), papel (`paciente` ou `gestor`), criado_em, versao_token (troca de senha derruba sessões), demo (conta protegida).
 - `medicos`: id, nome, especialidade.
 - `horarios`: id, medico_id, data, hora, bloqueado. UNIQUE (medico_id, data, hora).
 - `agendamentos`: id, horario_id, medico_id, paciente_id, cópia de médico, paciente, data e hora (para o histórico), status (`agendado` ou `cancelado`), criado_em, cancelado_em, cancelado_por. Índices UNIQUE parciais: um agendamento ativo por horário e uma consulta ativa por paciente no mesmo dia e hora.
@@ -113,8 +118,9 @@ Erros sempre em JSON: `{ "erro": "mensagem para a pessoa" }`, com 400 (dado inv�
 ## Testes
 
 ```bash
-npm test --prefix src/Markaki/backend   # API: 65 testes (auth, papéis, médicos, agenda, agendamentos, concorrência, configuração)
-npm test --prefix src/Markaki           # app: 40 testes (cliente HTTP, validação, formatação, agenda, contraste de cores)
+npm test --prefix src/Markaki/backend   # API: 78 testes (auth, papéis, demo, médicos, agenda, agendamentos, concorrência, configuração)
+npm test --prefix src/Markaki           # app: 44 testes (cliente HTTP, servidor acordando, validação, formatação, agenda, contraste)
+npm run lint && npm run formato         # ESLint e Prettier, em cada pacote (também no CI)
 ```
 
 ## Teste de carga

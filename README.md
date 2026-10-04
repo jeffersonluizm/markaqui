@@ -10,6 +10,13 @@ App Expo (React Native) · API Node/Express · SQLite · login com papéis · te
 </div>
 
 <p align="center">
+  <b><a href="https://markaqui.vercel.app">Abrir a demonstração</a></b> · API: <a href="https://markaqui-api.onrender.com/api/saude">markaqui-api.onrender.com</a> · <a href="docs/deploy.md">como publicar</a>
+</p>
+
+> Na tela inicial, use **Explore a demonstração** e entre **como paciente** ou **como clínica** com um clique (sem cadastro). A primeira visita pode levar até um minuto enquanto o servidor gratuito acorda. Os dados são fictícios e voltam ao original a cada 6 horas.
+
+
+<p align="center">
   <img src="docs/img/app/01-boas-vindas.png" width="200" alt="Tela de boas-vindas com missão, visão e valores">
   <img src="docs/img/app/08-agenda-do-medico.png" width="200" alt="Agenda do médico com escolha de dia e horário">
   <img src="docs/img/app/11-consultas.png" width="200" alt="Lista de próximas consultas da paciente">
@@ -58,33 +65,17 @@ flowchart LR
   Repos -- "transação IMMEDIATE" --> DB[("SQLite<br/>UNIQUE: 1 agendamento<br/>ativo por horário")]
 ```
 
-Detalhes: [Arquitetura da Solução](docs/05-Arquitetura%20da%20Solução.md) (camadas, segurança, modelo de dados) e [guia do código](src/Markaki/README.md) (estrutura, variáveis, rotas da API).
-
-## Rodar em poucos minutos
-
-Pré-requisito: [Node.js](https://nodejs.org/) 20 ou mais novo.
-
-**Windows:** dois cliques em `iniciar.bat`. Ele cria os arquivos `.env` (com um segredo de login aleatório), semeia o banco com médicos e horários de demonstração e abre a API e o Expo. Na janela do Expo, tecle `w` para abrir no navegador, `a` para o emulador Android, ou leia o QR code com o Expo Go (celular na mesma rede Wi-Fi).
-
-**Qualquer sistema:** veja os passos em [src/Markaki/README.md](src/Markaki/README.md#rodar).
-
-Contas de demonstração criadas pelo `iniciar.bat`:
-
-| Papel | E-mail | Senha |
-|---|---|---|
-| Paciente | `paciente@markaqui.demo` | `Paciente2026` |
-| Clínica | `gestor@markaqui.demo` | `Gestor2026` |
-
-Essas senhas são só para a demonstração local. Rodando `npm run semear` sem elas no `.env`, o script gera senhas aleatórias e as mostra no console.
+Decisões registradas em [ADRs](docs/adr/README.md). Detalhes: [Arquitetura da Solução](docs/05-Arquitetura%20da%20Solução.md) (camadas, segurança, modelo de dados) e [guia do código](src/Markaki/README.md) (estrutura, variáveis, rotas da API).
 
 ## Testes
 
 ```bash
-npm test --prefix src/Markaki/backend   # 65 testes da API, banco SQLite temporário
-npm test --prefix src/Markaki           # 40 testes do app (cliente HTTP, validação, agenda, contraste)
+npm test --prefix src/Markaki/backend   # 78 testes da API, banco SQLite temporário
+npm test --prefix src/Markaki           # 44 testes do app (cliente HTTP, validação, agenda, servidor acordando, contraste)
+npm run lint && npm run formato        # em cada pacote: ESLint e Prettier (também no CI)
 ```
 
-Cobrem login e sessão (401, sessão expirada, senha trocada), papéis (403), limites (413, 429), regras da agenda, concorrência (10 pacientes no mesmo horário: um só entra), cancelamento lógico e contraste de cores WCAG AA. Plano completo em [docs/08](docs/08-Plano%20de%20Testes%20de%20Software.md).
+Cobrem login e sessão (401, sessão expirada, senha trocada), papéis (403), limites (413, 429), modo demonstração (404 desligado, contas protegidas, nenhuma senha no código), regras da agenda, concorrência (10 pacientes no mesmo horário: um só entra), cancelamento lógico e contraste de cores WCAG AA. O GitHub Actions roda tudo a cada push ([ci.yml](.github/workflows/ci.yml)). Plano completo em [docs/08](docs/08-Plano%20de%20Testes%20de%20Software.md).
 
 ## Teste de carga
 
@@ -94,7 +85,9 @@ Antes de trocar o armazenamento, as hipóteses foram escritas e a API foi medida
 
 - **Clínica médica, não B2B genérico.** A proposta acadêmica (abaixo) era agendamento para prestadoras de serviço; o código sempre foi de clínica, então a versão 2.0 assume esse domínio. A situação de cada requisito está em [docs/02](docs/02-Especificação%20do%20Projeto.md#situação-na-versão-20-outubro-de-2026).
 - **SQLite no lugar do arquivo JSON:** transações e índices UNIQUE em vez de uma fila global que relia e regravava o arquivo inteiro a cada escrita. Medido antes e depois.
-- **Segurança por padrão:** gestor só por script, papel lido do banco, paciente vê só os próprios dados, senha com bcrypt, limite de tentativas, API em `127.0.0.1` a menos que se peça a rede.
+- **Segurança por padrão:** gestor real só por script, papel lido do banco, paciente vê só os próprios dados, senha com bcrypt, limite de tentativas, API em `127.0.0.1` a menos que se peça a rede.
+- **Modo demonstração sem senha no código:** `DEMO_ENABLED` liga contas de exemplo com senhas do ambiente ou geradas na partida, expostas só por `GET /api/demo`; contas protegidas e dados recriados de tempos em tempos ([ADR 0004](docs/adr/0004-modo-demonstracao.md)).
+- **Hospedagem gratuita:** API no Render e app web na Vercel, com tela de "acordando o servidor" ([ADR 0005](docs/adr/0005-hospedagem.md)).
 - **Cancelamento lógico:** a consulta cancelada fica no histórico, com data e quem cancelou.
 - **Identidade do próprio projeto:** marinho, azul-gelo e Inter, tirados dos protótipos da equipe ([docs/06](docs/06-Template%20Padrão%20da%20Aplicação.md)). O mascote dos protótipos saiu por ser parecido com um personagem de terceiros; fotos externas deram lugar a avatares com iniciais.
 
@@ -108,6 +101,16 @@ Antes de trocar o armazenamento, as hipóteses foram escritas e a API foi medida
 ## Próximos passos
 
 Notificações (lembrete 24 h antes), redefinição de senha pela clínica, testes de componentes das telas (React Native Testing Library), HTTPS e deploy, várias unidades.
+
+## Rodar localmente
+
+Pré-requisito: [Node.js](https://nodejs.org/) 22 ou mais novo.
+
+**Windows:** dois cliques em `iniciar.bat`. Ele confere o Node, instala as dependências, cria os arquivos `.env` (com um segredo aleatório e o modo demonstração ligado), prepara o banco SQLite com o cenário de exemplo, sobe a API, espera ela responder e abre o app no navegador. Na tela inicial, **Explore a demonstração**. Para o celular, leia o QR code da janela do Expo com o Expo Go.
+
+**Qualquer sistema:** passos em [src/Markaki/README.md](src/Markaki/README.md#rodar).
+
+As contas de demonstração não têm senha fixa: a API gera senhas novas a cada partida e o app as obtém em `GET /api/demo`. Para uma instalação real, desligue o modo demonstração e crie o gestor com `npm run criar-gestor`.
 
 ## Projeto acadêmico
 

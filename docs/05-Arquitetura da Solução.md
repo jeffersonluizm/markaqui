@@ -42,7 +42,9 @@ Cada escrita roda numa transação `IMMEDIATE` do better-sqlite3: verificar ("o 
 
 - Senhas com bcrypt (custo 10); login responde igual para e-mail inexistente e senha errada e sempre calcula um hash.
 - Token JWT HS256 com validade de 8 h; o papel usado na autorização vem do banco a cada requisição; trocar a senha invalida os tokens anteriores.
-- Autocadastro cria só paciente. Gestor existe apenas pelo script `npm run semear`.
+- Autocadastro cria só paciente. Gestor real existe apenas pelo script `npm run criar-gestor`.
+- Modo demonstração (`DEMO_ENABLED`, desligado por padrão): contas de exemplo com senhas do ambiente ou geradas na partida, expostas só por `GET /api/demo`, protegidas contra troca de senha e perfil ([ADR 0004](adr/0004-modo-demonstracao.md)).
+- Atrás do proxy da hospedagem, `TRUST_PROXY=1` faz o limite de tentativas valer por visitante.
 - Paciente vê só as próprias consultas e só horários livres e futuros, sem nome de outras pessoas; consulta de outra paciente responde 404.
 - Limites: 5 tentativas de login, cadastro ou troca de senha por minuto por IP, 300 requisições por minuto por IP, corpo de até 10 KB, até 3 consultas futuras ativas por paciente.
 - A API escuta em `127.0.0.1` por padrão; `HOST=0.0.0.0` só para testar no celular na mesma rede.
@@ -64,7 +66,8 @@ erDiagram
     text telefone
     text senha_hash
     text papel "paciente | gestor"
-    text senha_alterada_em
+    int versao_token
+    int demo
   }
   medicos {
     text id PK
@@ -109,7 +112,10 @@ A primeira versão gravava tudo num `database.json` relido e regravado inteiro a
 
 ## Hospedagem
 
-O projeto roda localmente (Windows: `iniciar.bat`). Para publicar, a API precisa de HTTPS na frente (proxy reverso), `JWT_SECRET` e senhas de demonstração próprias, e `CORS_ORIGENS` com o domínio do app web. O SQLite atende um único processo; para vários processos ou máquinas, o próximo passo é PostgreSQL com o mesmo desenho de repositórios.
+Ver [Publicar a demonstração](deploy.md) e o [ADR 0005](adr/0005-hospedagem.md): API no Render (banco de demonstração efêmero recriado a cada partida e a cada 6 horas) e app como Expo web na Vercel.
+
+
+Localmente, `iniciar.bat` sobe tudo. O SQLite atende um único processo; para vários processos ou máquinas, o próximo passo é PostgreSQL com o mesmo desenho de repositórios.
 
 ## Qualidade de software
 
@@ -117,7 +123,7 @@ Características da ISO/IEC 25010 priorizadas e como são verificadas:
 
 | Característica | Como o projeto atende | Métrica |
 |---|---|---|
-| Adequação funcional (correção) | Regras na camada de serviços, com testes para cada uma | 65 testes da API verdes |
+| Adequação funcional (correção) | Regras na camada de serviços, com testes para cada uma | 78 testes da API e 44 do app verdes; lint e formato no CI |
 | Confiabilidade (tolerância a falhas) | Transações e índices UNIQUE; estados de erro e "sem conexão" no app | 0 agendamento duplicado sob carga (S2) |
 | Segurança (confidencialidade, autenticidade) | Hash, token, papéis, limites | Testes 401/403/429 e revisão de segurança |
 | Eficiência de desempenho | SQLite com índices | req/s e p97,5 no teste de carga |

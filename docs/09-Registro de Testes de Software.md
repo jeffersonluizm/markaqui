@@ -8,8 +8,9 @@ Ambiente: Windows 11, Node.js 24.11.1, Chrome 154 (headless), Lighthouse 12.8, R
 
 | Suíte | Comando | Resultado |
 |---|---|---|
-| API (CT01 a CT13) | `npm test --prefix src/Markaki/backend` | 65 de 65 aprovados (6 arquivos: auth, médicos, horários, agendamentos, configuração) |
-| App (CT14, CT15) | `npm test --prefix src/Markaki` | 40 de 40 aprovados (cliente HTTP, validação, formatação, agenda, contraste) |
+| API (CT01 a CT13) | `npm test --prefix src/Markaki/backend` | 78 de 78 aprovados (7 arquivos: auth, demo, médicos, horários, agendamentos, configuração) |
+| App (CT14, CT15) | `npm test --prefix src/Markaki` | 44 de 44 aprovados (cliente HTTP, servidor acordando, validação, formatação, agenda, contraste) |
+| Lint e formato | `npm run lint` e `npm run formato` nos dois pacotes | Sem erros nem avisos (ESLint 9, Prettier 3) |
 | Build web | `npx expo export --platform web` | Gerado sem erros (1,56 MB); as senhas de demonstração não aparecem no bundle de produção |
 | Lighthouse (build web, tela inicial, celular) | `lighthouse --only-categories=accessibility,best-practices` | Acessibilidade 100, Boas práticas 100 |
 | Fluxos nas telas (CT16) | Roteiros no Chrome headless contra a API com banco de demonstração | Paciente: escolha de perfil, cadastro com erros, login, agendar, consultas, histórico, diálogo de cancelamento, perfil. Clínica: painel, bloquear horário, abrir 3 horários, editar médico, consultas. Sem conexão, 404 e Sobre. Todos concluídos |

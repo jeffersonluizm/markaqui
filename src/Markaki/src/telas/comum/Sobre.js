@@ -116,6 +116,7 @@ export default function Sobre() {
           'Domínio de clínica médica (a proposta original era agendamento B2B genérico).',
           'Arquivo JSON trocado por SQLite: transações no lugar da fila global de escrita; medido antes e depois.',
           'O papel vem do banco a cada requisição; o cadastro pelo app só cria paciente.',
+          'Modo demonstração sem senha no código: contas de exemplo com senhas geradas na partida, protegidas e recriadas de tempos em tempos.',
           'Cancelamento lógico: a consulta fica no histórico com data e quem cancelou.',
           'Dados copiados no agendamento (médico, data, hora) para o histórico continuar legível.',
           'Sem fotos de terceiros: avatar com iniciais; logo e ícones próprios gerados por script.',
