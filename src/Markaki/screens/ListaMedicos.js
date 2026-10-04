@@ -116,7 +116,7 @@ export default function ListaMedicos() {
             Alert.alert(
               'Sucesso',
               removidos > 0
-                ? `Médico removido com sucesso! ${removidos} horário(s) livre(s) dele também foram removidos.`
+                ? `Médico removido com sucesso! ${removidos} horário(s) sem agendamento dele também foram removidos.`
                 : 'Médico removido com sucesso!'
             );
           } catch (error) {
