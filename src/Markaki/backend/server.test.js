@@ -11,7 +11,7 @@ const pastaTemp = fs.mkdtempSync(path.join(os.tmpdir(), 'markaki-api-'));
 const arquivoDados = path.join(pastaTemp, 'database.json');
 process.env.DATA_FILE = arquivoDados;
 
-const { app } = require('./server');
+const { app, gerarId } = require('./server');
 
 const medicosBase = [
   { id: 'm1', nome: 'Dra. Ana', especialidade: 'Cardiologista', imagem: '' },
@@ -41,4 +41,9 @@ test('usa o arquivo de dados indicado em DATA_FILE', async () => {
   const res = await request(app).get('/api/medicos');
   assert.equal(res.status, 200);
   assert.deepEqual(res.body.map((m) => m.id), ['m1', 'm2']);
+});
+
+test('gerarId não repete mesmo quando chamado várias vezes no mesmo milissegundo', () => {
+  const ids = new Set(Array.from({ length: 1000 }, () => gerarId()));
+  assert.equal(ids.size, 1000);
 });

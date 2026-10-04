@@ -2,6 +2,7 @@ const express = require('express');
 const fs = require('fs').promises;
 const path = require('path');
 const cors = require('cors');
+const crypto = require('crypto');
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
@@ -33,8 +34,9 @@ async function salvarDados(data) {
   await fs.writeFile(DATA_FILE, JSON.stringify(data, null, 2), 'utf8');
 }
 
+// UUID: Date.now() repetia o id quando dois cadastros caíam no mesmo milissegundo.
 function gerarId() {
-  return String(Date.now());
+  return crypto.randomUUID();
 }
 
 // ============================================
@@ -361,4 +363,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { app };
+module.exports = { app, gerarId };
