@@ -1,6 +1,6 @@
 // Teste de carga da API (cenários S1 a S7 de docs/carga). Cada cenário sobe a API
 // num processo próprio, com dados descartáveis numa pasta temporária, e a derruba
-// no fim. Uso: node carga/executar.js --armazenamento json|sqlite [--cenarios S1,S2]
+// no fim. Uso: node carga/executar.js --armazenamento final [--cenarios S1,S2]
 //             [--trava <pasta>] [--saida <arquivo.json>]
 const { fork } = require('child_process');
 const fs = require('fs');
@@ -33,7 +33,7 @@ async function subirServidor(adaptador, totalHorarios, envExtra = {}) {
   });
   await esperarMensagem(filho, 'pronto');
   const cab = await adaptador.autenticar(BASE, dados);
-  return { filho, pasta, dados, cab };
+  return { filho, pasta, dados, cab, adaptador };
 }
 
 function esperarMensagem(filho, tipo) {
@@ -98,7 +98,8 @@ function percentil(valores, p) {
   return ordenados[Math.min(ordenados.length - 1, Math.ceil((p / 100) * ordenados.length) - 1)];
 }
 
-// Pedido de escrita sem aumentar a base: alterna a disponibilidade de um horário.
+// Pedido de escrita sem aumentar a base: alterna o bloqueio (ou a disponibilidade,
+// na versão antiga) de um horário.
 function pedidoDeEscrita(srv) {
   const ids = srv.dados.horarios.map((h) => h.id);
   let n = 0;
@@ -110,7 +111,7 @@ function pedidoDeEscrita(srv) {
         ...req,
         path: `/api/horarios/${ids[n % ids.length]}`,
         headers: { ...srv.cab.gestor, 'content-type': 'application/json' },
-        body: JSON.stringify({ disponivel: n % 2 === 0 }),
+        body: JSON.stringify(srv.adaptador.corpoEscrita(n)),
       };
     },
   };
@@ -275,6 +276,44 @@ const cenarios = {
     } finally {
       await derrubar(srv);
     }
+  },
+
+  // Login com bcrypt (só na versão com login): vazão sem limitador e, depois, o
+  // limitador padrão (5 por minuto por IP) devolvendo 429.
+  async S6(adaptador) {
+    if (!adaptador.temLogin) return [];
+    const linhas = [];
+    const srv = await subirServidor(adaptador, 100);
+    try {
+      const corpo = JSON.stringify(adaptador.credenciais.pacientes[0]);
+      for (const conexoes of [1, 10, 50]) {
+        const r = await medirVazao(
+          srv,
+          { url: BASE, connections: conexoes, duration: 10, method: 'POST', path: '/api/auth/login',
+            headers: { 'content-type': 'application/json' }, body: corpo },
+          { aquecer: conexoes === 1 }
+        );
+        linhas.push({ cenario: 'S6', variante: `login (bcrypt custo 10), ${conexoes} conexões`, ...r });
+      }
+    } finally {
+      await derrubar(srv);
+    }
+    const limitado = await subirServidor(adaptador, 100, { LIMITE_AUTH_POR_MINUTO: '5' });
+    try {
+      const status = [];
+      for (let i = 0; i < 8; i++) {
+        const resp = await fetch(`${BASE}/api/auth/login`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ email: 'nao-existe@carga.dev', senha: 'Errada123' }),
+        });
+        status.push(resp.status);
+      }
+      linhas.push({ cenario: 'S6', variante: 'limitador padrão: 8 logins errados seguidos', sequencia: status.join(' ') });
+    } finally {
+      await derrubar(limitado);
+    }
+    return linhas;
   },
 
   // Corpo grande: 90 KB no nome do médico.

@@ -60,20 +60,36 @@ const json = {
   corpoAgendamento(horarioId, i) {
     return { horario_id: horarioId, paciente_nome: `Paciente ${i}` };
   },
+  corpoEscrita: (n) => ({ disponivel: n % 2 === 0 }),
   async agendamentosAtivos(base, cab) {
     const r = await fetch(`${base}/api/agendamentos`, { headers: cab.gestor });
     return (await r.json()).filter((a) => (a.status || 'agendado') === 'agendado');
   },
 };
 
-// Versão com SQLite (depois da troca). O banco é criado e semeado pelo próprio
-// armazenamento da API, numa pasta temporária.
-const sqlite = {
-  nome: 'sqlite',
-  env(pasta) {
-    return { DB_FILE: path.join(pasta, 'markaqui.db') };
+// Versão final: SQLite com login. Gestor e 20 pacientes são criados direto no
+// banco (senha com bcrypt custo 10) e os tokens vêm do POST /api/auth/login.
+const SENHA_CARGA = 'Carga2026';
+const PACIENTES = 20;
+
+const final = {
+  nome: 'final',
+  temLogin: true,
+  credenciais: {
+    gestor: { email: 'gestor@carga.dev', senha: SENHA_CARGA },
+    pacientes: Array.from({ length: PACIENTES }, (_, i) => ({ email: `paciente${i}@carga.dev`, senha: SENHA_CARGA })),
   },
-  // Tamanho do banco somado ao do WAL (onde ficam as escritas recentes).
+  env(pasta) {
+    return {
+      DB_FILE: path.join(pasta, 'markaqui.db'),
+      JWT_SECRET: require('crypto').randomBytes(48).toString('base64url'),
+      BCRYPT_CUSTO: '10',
+      // Um único IP gera toda a carga: o limitador global fica desligado e o de
+      // login, alto (o S6 mede o limitador padrão à parte).
+      LIMITE_GLOBAL_POR_MINUTO: '0',
+      LIMITE_AUTH_POR_MINUTO: '1000000',
+    };
+  },
   tamanhoDosDados(pasta) {
     return ['markaqui.db', 'markaqui.db-wal']
       .map((f) => path.join(pasta, f))
@@ -81,19 +97,39 @@ const sqlite = {
       .reduce((total, f) => total + fs.statSync(f).size, 0);
   },
   async semear(pasta, totalHorarios) {
+    const bcrypt = require('bcryptjs');
     const { criarArmazenamentoSqlite } = require('../src/infra/sqlite/armazenamento');
     const { medicos, horarios } = planoDeDados(totalHorarios);
+    const hash = await bcrypt.hash(SENHA_CARGA, 10);
+    const usuarios = [
+      { id: 'carga-gestor', nome: 'Gestor Carga', email: 'gestor@carga.dev', papel: 'gestor', senha_hash: hash },
+      ...Array.from({ length: PACIENTES }, (_, i) => ({
+        id: `carga-paciente-${i}`, nome: `Paciente Carga ${i}`, email: `paciente${i}@carga.dev`, papel: 'paciente', senha_hash: hash,
+      })),
+    ];
     const armazenamento = criarArmazenamentoSqlite(path.join(pasta, 'markaqui.db'));
-    armazenamento.substituirTudo({
-      medicos: medicos.map((m) => ({ ...m, imagem: '' })),
-      horarios: horarios.map((h) => ({ ...h, disponivel: true, paciente_nome: '' })),
-    });
+    armazenamento.substituirTudo({ usuarios, medicos, horarios });
     armazenamento.fechar();
     return { medicos, horarios };
   },
-  autenticar: json.autenticar,
-  corpoAgendamento: json.corpoAgendamento,
+  async autenticar(base) {
+    const entrar = async ({ email, senha }) => {
+      const r = await fetch(`${base}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ email, senha }),
+      });
+      const { token } = await r.json();
+      return { authorization: `Bearer ${token}` };
+    };
+    return {
+      gestor: await entrar(this.credenciais.gestor),
+      pacientes: await Promise.all(this.credenciais.pacientes.map(entrar)),
+    };
+  },
+  corpoAgendamento: (horarioId) => ({ horario_id: horarioId }),
+  corpoEscrita: (n) => ({ bloqueado: n % 2 === 0 }),
   agendamentosAtivos: json.agendamentosAtivos,
 };
 
-module.exports = { planoDeDados, armazenamentos: { json, sqlite } };
+module.exports = { planoDeDados, armazenamentos: { json, final } };

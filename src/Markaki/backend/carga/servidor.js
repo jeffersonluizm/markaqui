@@ -1,7 +1,9 @@
 // Sobe a API num processo separado para o teste de carga (iniciado por executar.js
 // com fork) e responde pelo IPC com o consumo de CPU e de memória desde a última
 // marcação. Nunca é usado fora da carga.
-const { app } = require('../server');
+// A versão com login exporta iniciar(); as antigas exportavam o app pronto.
+const api = require('../server');
+const app = api.iniciar ? api.iniciar(process.env).app : api.app;
 
 const porta = Number(process.env.PORT);
 const servidor = app.listen(porta, '127.0.0.1', () => process.send({ tipo: 'pronto' }));
