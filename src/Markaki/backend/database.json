@@ -32,8 +32,8 @@
       "hora": "09:00 - 10:00",
       "disponivel": true,
       "paciente_nome": "",
-      "medico_id": null,
-      "medico_nome": ""
+      "medico_id": "1",
+      "medico_nome": "Dr. Levi Alves"
     },
     {
       "id": "h2",
@@ -41,8 +41,8 @@
       "hora": "10:00 - 11:00",
       "disponivel": true,
       "paciente_nome": "",
-      "medico_id": null,
-      "medico_nome": ""
+      "medico_id": "2",
+      "medico_nome": "Dr. Jefferson"
     },
     {
       "id": "h3",
@@ -50,8 +50,8 @@
       "hora": "14:00 - 15:00",
       "disponivel": true,
       "paciente_nome": "",
-      "medico_id": null,
-      "medico_nome": ""
+      "medico_id": "3",
+      "medico_nome": "Dr. Kaua Silva"
     },
     {
       "id": "h4",
@@ -59,8 +59,8 @@
       "hora": "09:00 - 10:00",
       "disponivel": true,
       "paciente_nome": "",
-      "medico_id": null,
-      "medico_nome": ""
+      "medico_id": "4",
+      "medico_nome": "Dr. Bruno"
     },
     {
       "id": "h5",
@@ -68,8 +68,8 @@
       "hora": "15:00 - 16:00",
       "disponivel": true,
       "paciente_nome": "",
-      "medico_id": null,
-      "medico_nome": ""
+      "medico_id": "1",
+      "medico_nome": "Dr. Levi Alves"
     },
     {
       "id": "h6",
@@ -77,8 +77,8 @@
       "hora": "10:00 - 11:00",
       "disponivel": true,
       "paciente_nome": "",
-      "medico_id": null,
-      "medico_nome": ""
+      "medico_id": "2",
+      "medico_nome": "Dr. Jefferson"
     }
   ],
   "agendamentos": []

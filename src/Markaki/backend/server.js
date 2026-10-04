@@ -2,38 +2,102 @@ const express = require('express');
 const fs = require('fs').promises;
 const path = require('path');
 const cors = require('cors');
+const crypto = require('crypto');
 
 const app = express();
-const PORT = 3000;
-const DATA_FILE = path.join(__dirname, 'database.json');
+const PORT = Number(process.env.PORT) || 3000;
+// DATA_FILE permite apontar para outro arquivo (os testes usam um arquivo temporário).
+const DATA_FILE = process.env.DATA_FILE || path.join(__dirname, 'database.json');
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 
+// Trava das escritas: toda rota que altera dados lê, valida e grava o arquivo.
+// Sem a fila, duas requisições simultâneas liam a mesma versão e a última gravação
+// apagava a outra (ou dois pacientes ficavam com o mesmo horário). A trava só é
+// liberada quando a ROTA termina (não quando a resposta fecha: se o cliente desiste,
+// a rota continua entre ler e gravar e a próxima escrita leria a versão velha).
+let fila = Promise.resolve();
+const comTrava = (fn) => (fila = fila.then(fn, fn));
+
+const rotaDeEscrita = (handler) => async (req, res) => {
+  try {
+    await comTrava(() => handler(req, res));
+  } catch (error) {
+    if (!res.headersSent) {
+      res.status(500).json({ erro: 'Erro interno' });
+    }
+  }
+};
+
 // ============================================
 // FUNÇÕES AUXILIARES
 // ============================================
 
+// Só a falta do arquivo vale como base vazia. JSON inválido é erro (a rota
+// responde 500) para que a próxima gravação não apague os dados existentes.
 async function lerDados() {
+  let data;
   try {
-    const data = await fs.readFile(DATA_FILE, 'utf8');
-    return JSON.parse(data);
+    data = await fs.readFile(DATA_FILE, 'utf8');
   } catch (error) {
-    return {
-      medicos: [],
-      horarios: [],
-      agendamentos: []
-    };
+    if (error.code === 'ENOENT') {
+      return {
+        medicos: [],
+        horarios: [],
+        agendamentos: []
+      };
+    }
+    throw error;
+  }
+  return JSON.parse(data);
+}
+
+// Grava num arquivo temporário e troca pelo definitivo com rename: se o processo
+// cair no meio da gravação, o database.json antigo continua inteiro.
+async function salvarDados(data) {
+  const temporario = `${DATA_FILE}.${process.pid}.${crypto.randomUUID()}.tmp`;
+  try {
+    await fs.writeFile(temporario, JSON.stringify(data, null, 2), 'utf8');
+    await fs.rename(temporario, DATA_FILE);
+  } catch (error) {
+    await fs.rm(temporario, { force: true });
+    throw error;
   }
 }
 
-async function salvarDados(data) {
-  await fs.writeFile(DATA_FILE, JSON.stringify(data, null, 2), 'utf8');
+// Únicos campos que o PUT /api/horarios/:id aceita. Paciente e médico só
+// mudam pelas rotas de agendamento.
+const CAMPOS_EDITAVEIS_HORARIO = ['disponivel', 'data', 'hora'];
+
+// Valida os campos editáveis presentes no corpo (POST e PUT de horário) e devolve
+// data e hora sem espaços nas pontas, para a checagem de duplicado não ser driblada.
+function validarCamposHorario(corpo) {
+  if ('disponivel' in corpo && typeof corpo.disponivel !== 'boolean') {
+    return { erro: 'disponivel deve ser true ou false' };
+  }
+  const valores = {};
+  if ('disponivel' in corpo) valores.disponivel = corpo.disponivel;
+  for (const campo of ['data', 'hora']) {
+    if (!(campo in corpo)) continue;
+    if (typeof corpo[campo] !== 'string' || !corpo[campo].trim()) {
+      return { erro: `${campo} deve ser um texto preenchido` };
+    }
+    valores[campo] = corpo[campo].trim();
+  }
+  return { valores };
 }
 
+// Agendado = tem agendamento apontando para ele (ou, em dado antigo, tem paciente).
+function horarioAgendado(dados, horario) {
+  return dados.agendamentos.some(a => a.horario_id === horario.id) ||
+    (!horario.disponivel && Boolean(horario.paciente_nome));
+}
+
+// UUID: Date.now() repetia o id quando dois cadastros caíam no mesmo milissegundo.
 function gerarId() {
-  return String(Date.now());
+  return crypto.randomUUID();
 }
 
 // ============================================
@@ -67,7 +131,7 @@ app.get('/api/medicos/:id', async (req, res) => {
 });
 
 // Cadastrar novo médico
-app.post('/api/medicos', async (req, res) => {
+app.post('/api/medicos', rotaDeEscrita(async (req, res) => {
   try {
     const { nome, especialidade, imagem } = req.body;
     
@@ -93,10 +157,10 @@ app.post('/api/medicos', async (req, res) => {
   } catch (error) {
     res.status(500).json({ erro: 'Erro ao cadastrar médico' });
   }
-});
+}));
 
 // Atualizar médico
-app.put('/api/medicos/:id', async (req, res) => {
+app.put('/api/medicos/:id', rotaDeEscrita(async (req, res) => {
   try {
     const { nome, especialidade, imagem } = req.body;
     const dados = await lerDados();
@@ -118,36 +182,58 @@ app.put('/api/medicos/:id', async (req, res) => {
   } catch (error) {
     res.status(500).json({ erro: 'Erro ao atualizar médico' });
   }
-});
+}));
 
 // Remover médico
-app.delete('/api/medicos/:id', async (req, res) => {
+app.delete('/api/medicos/:id', rotaDeEscrita(async (req, res) => {
   try {
     const dados = await lerDados();
-    const medicosFiltrados = dados.medicos.filter(m => m.id !== req.params.id);
+    const id = req.params.id;
+    const medicosFiltrados = dados.medicos.filter(m => m.id !== id);
     
     if (dados.medicos.length === medicosFiltrados.length) {
       return res.status(404).json({ erro: 'Médico não encontrado' });
     }
+
+    // Com consulta marcada o médico não sai: os agendamentos ficariam órfãos.
+    const agendamentosDoMedico = dados.agendamentos.filter(a => a.medico_id === id);
+    if (agendamentosDoMedico.length > 0) {
+      return res.status(409).json({
+        erro: `Este médico tem ${agendamentosDoMedico.length} agendamento(s). Cancele os agendamentos primeiro.`
+      });
+    }
+
+    // Sem agendamentos, os horários que sobram do médico são livres ou bloqueados.
+    // Eles saem junto: sem o médico ninguém poderia agendá-los.
+    const horariosRestantes = dados.horarios.filter(h => h.medico_id !== id);
+    const horariosRemovidos = dados.horarios.length - horariosRestantes.length;
     
     dados.medicos = medicosFiltrados;
+    dados.horarios = horariosRestantes;
     await salvarDados(dados);
     
-    res.json({ mensagem: 'Médico removido com sucesso' });
+    res.json({
+      mensagem: 'Médico removido com sucesso',
+      horarios_removidos: horariosRemovidos
+    });
   } catch (error) {
     res.status(500).json({ erro: 'Erro ao remover médico' });
   }
-});
+}));
 
 // ============================================
 // ROTAS - HORÁRIOS
 // ============================================
 
-// Listar todos os horários
+// Listar horários (todos, ou só os de um médico com ?medico_id=)
 app.get('/api/horarios', async (req, res) => {
   try {
     const dados = await lerDados();
-    res.json(dados.horarios);
+    const { medico_id } = req.query;
+    const horarios = medico_id
+      ? dados.horarios.filter(h => h.medico_id === medico_id)
+      : dados.horarios;
+    res.json(horarios);
   } catch (error) {
     res.status(500).json({ erro: 'Erro ao buscar horários' });
   }
@@ -170,26 +256,49 @@ app.get('/api/horarios/:id', async (req, res) => {
 });
 
 // Cadastrar novo horário
-app.post('/api/horarios', async (req, res) => {
+app.post('/api/horarios', rotaDeEscrita(async (req, res) => {
   try {
-    const { data, hora, disponivel } = req.body;
+    const corpo = req.body || {};
+    const { medico_id } = corpo;
+
+    const { erro, valores } = validarCamposHorario(corpo);
+    if (erro) {
+      return res.status(400).json({ erro });
+    }
+    const { data, hora } = valores;
     
-    if (!data || !hora) {
+    if (!data || !hora || !medico_id) {
       return res.status(400).json({ 
-        erro: 'Data e hora são obrigatórios' 
+        erro: 'Médico, data e hora são obrigatórios' 
       });
     }
     
     const dados = await lerDados();
+
+    // O horário pertence a um médico: é a agenda dele.
+    const medico = dados.medicos.find(m => m.id === medico_id);
+    if (!medico) {
+      return res.status(400).json({ erro: 'Médico não encontrado' });
+    }
+
+    // Dois médicos podem ter o mesmo horário; o mesmo médico, não.
+    const repetido = dados.horarios.some(
+      h => h.medico_id === medico_id && h.data === data && h.hora === hora
+    );
+    if (repetido) {
+      return res.status(409).json({
+        erro: 'Este médico já tem um horário cadastrado nessa data e hora'
+      });
+    }
     
     const novoHorario = {
       id: gerarId(),
       data,
       hora,
-      disponivel: disponivel !== undefined ? disponivel : true,
+      disponivel: valores.disponivel !== undefined ? valores.disponivel : true,
       paciente_nome: '',
-      medico_id: null,
-      medico_nome: ''
+      medico_id,
+      medico_nome: medico.nome
     };
     
     dados.horarios.push(novoHorario);
@@ -199,10 +308,10 @@ app.post('/api/horarios', async (req, res) => {
   } catch (error) {
     res.status(500).json({ erro: 'Erro ao cadastrar horário' });
   }
-});
+}));
 
 // Atualizar horário
-app.put('/api/horarios/:id', async (req, res) => {
+app.put('/api/horarios/:id', rotaDeEscrita(async (req, res) => {
   try {
     const dados = await lerDados();
     const index = dados.horarios.findIndex(h => h.id === req.params.id);
@@ -211,27 +320,71 @@ app.put('/api/horarios/:id', async (req, res) => {
       return res.status(404).json({ erro: 'Horário não encontrado' });
     }
     
-    dados.horarios[index] = {
-      ...dados.horarios[index],
-      ...req.body
-    };
-    
+    const corpo = req.body || {};
+    const naoEditaveis = Object.keys(corpo).filter(
+      campo => !CAMPOS_EDITAVEIS_HORARIO.includes(campo)
+    );
+    if (naoEditaveis.length > 0) {
+      return res.status(400).json({
+        erro: `Campos não editáveis: ${naoEditaveis.join(', ')}. ` +
+          `Só é possível alterar ${CAMPOS_EDITAVEIS_HORARIO.join(', ')}.`
+      });
+    }
+
+    const { erro, valores } = validarCamposHorario(corpo);
+    if (erro) {
+      return res.status(400).json({ erro });
+    }
+
+    const horario = dados.horarios[index];
+
+    // Paciente e médico só mudam pelo agendamento; um horário agendado só é
+    // liberado cancelando o agendamento.
+    if (horarioAgendado(dados, horario)) {
+      return res.status(409).json({
+        erro: 'Este horário está agendado. Cancele o agendamento primeiro.'
+      });
+    }
+
+    const atualizado = { ...horario, ...valores };
+    const repetido = Boolean(atualizado.medico_id) && dados.horarios.some(
+      h => h.id !== horario.id &&
+        h.medico_id === atualizado.medico_id &&
+        h.data === atualizado.data &&
+        h.hora === atualizado.hora
+    );
+    if (repetido) {
+      return res.status(409).json({
+        erro: 'Este médico já tem um horário cadastrado nessa data e hora'
+      });
+    }
+
+    dados.horarios[index] = atualizado;
+
     await salvarDados(dados);
     res.json(dados.horarios[index]);
   } catch (error) {
     res.status(500).json({ erro: 'Erro ao atualizar horário' });
   }
-});
+}));
 
 // Remover horário
-app.delete('/api/horarios/:id', async (req, res) => {
+app.delete('/api/horarios/:id', rotaDeEscrita(async (req, res) => {
   try {
     const dados = await lerDados();
-    const horariosFiltrados = dados.horarios.filter(h => h.id !== req.params.id);
+    const horario = dados.horarios.find(h => h.id === req.params.id);
     
-    if (dados.horarios.length === horariosFiltrados.length) {
+    if (!horario) {
       return res.status(404).json({ erro: 'Horário não encontrado' });
     }
+
+    if (horarioAgendado(dados, horario)) {
+      return res.status(409).json({
+        erro: 'Este horário está agendado. Cancele o agendamento primeiro.'
+      });
+    }
+
+    const horariosFiltrados = dados.horarios.filter(h => h.id !== req.params.id);
     
     dados.horarios = horariosFiltrados;
     await salvarDados(dados);
@@ -240,7 +393,7 @@ app.delete('/api/horarios/:id', async (req, res) => {
   } catch (error) {
     res.status(500).json({ erro: 'Erro ao remover horário' });
   }
-});
+}));
 
 // ============================================
 // ROTAS - AGENDAMENTOS
@@ -257,13 +410,13 @@ app.get('/api/agendamentos', async (req, res) => {
 });
 
 // Criar novo agendamento
-app.post('/api/agendamentos', async (req, res) => {
+app.post('/api/agendamentos', rotaDeEscrita(async (req, res) => {
   try {
     const { horario_id, medico_id, paciente_nome } = req.body;
     
-    if (!horario_id || !medico_id || !paciente_nome) {
+    if (!horario_id || !paciente_nome) {
       return res.status(400).json({ 
-        erro: 'Horário, médico e nome do paciente são obrigatórios' 
+        erro: 'Horário e nome do paciente são obrigatórios' 
       });
     }
     
@@ -279,8 +432,21 @@ app.post('/api/agendamentos', async (req, res) => {
       return res.status(400).json({ erro: 'Horário não está disponível' });
     }
     
-    // Verificar se o médico existe
-    const medico = dados.medicos.find(m => m.id === medico_id);
+    // O médico da consulta é o dono do horário. Horário antigo sem médico
+    // (cadastrado antes da agenda por médico) não pode ser agendado.
+    if (!horario.medico_id) {
+      return res.status(400).json({
+        erro: 'Este horário não tem médico. Cadastre o horário na agenda de um médico.'
+      });
+    }
+
+    if (medico_id && medico_id !== horario.medico_id) {
+      return res.status(400).json({
+        erro: 'O horário escolhido não pertence a este médico'
+      });
+    }
+
+    const medico = dados.medicos.find(m => m.id === horario.medico_id);
     if (!medico) {
       return res.status(404).json({ erro: 'Médico não encontrado' });
     }
@@ -289,7 +455,7 @@ app.post('/api/agendamentos', async (req, res) => {
     const novoAgendamento = {
       id: gerarId(),
       horario_id,
-      medico_id,
+      medico_id: medico.id,
       medico_nome: medico.nome,
       medico_especialidade: medico.especialidade,
       paciente_nome,
@@ -303,8 +469,6 @@ app.post('/api/agendamentos', async (req, res) => {
     const horarioIndex = dados.horarios.findIndex(h => h.id === horario_id);
     dados.horarios[horarioIndex].disponivel = false;
     dados.horarios[horarioIndex].paciente_nome = paciente_nome;
-    dados.horarios[horarioIndex].medico_id = medico_id;
-    dados.horarios[horarioIndex].medico_nome = medico.nome;
     
     dados.agendamentos.push(novoAgendamento);
     await salvarDados(dados);
@@ -314,10 +478,10 @@ app.post('/api/agendamentos', async (req, res) => {
     console.error('Erro ao criar agendamento:', error);
     res.status(500).json({ erro: 'Erro ao criar agendamento' });
   }
-});
+}));
 
 // Cancelar agendamento
-app.delete('/api/agendamentos/:id', async (req, res) => {
+app.delete('/api/agendamentos/:id', rotaDeEscrita(async (req, res) => {
   try {
     const dados = await lerDados();
     const agendamento = dados.agendamentos.find(a => a.id === req.params.id);
@@ -326,13 +490,11 @@ app.delete('/api/agendamentos/:id', async (req, res) => {
       return res.status(404).json({ erro: 'Agendamento não encontrado' });
     }
     
-    // Liberar o horário
+    // Liberar o horário (ele continua na agenda do mesmo médico)
     const horarioIndex = dados.horarios.findIndex(h => h.id === agendamento.horario_id);
     if (horarioIndex !== -1) {
       dados.horarios[horarioIndex].disponivel = true;
       dados.horarios[horarioIndex].paciente_nome = '';
-      dados.horarios[horarioIndex].medico_id = null;
-      dados.horarios[horarioIndex].medico_nome = '';
     }
     
     // Remover agendamento
@@ -343,16 +505,21 @@ app.delete('/api/agendamentos/:id', async (req, res) => {
   } catch (error) {
     res.status(500).json({ erro: 'Erro ao cancelar agendamento' });
   }
-});
+}));
 
 // ============================================
 // INICIAR SERVIDOR
 // ============================================
 
-app.listen(PORT, () => {
-  console.log(`🚀 Servidor rodando em http://localhost:${PORT}`);
-  console.log(`📋 Endpoints disponíveis:`);
-  console.log(`   - GET/POST    /api/medicos`);
-  console.log(`   - GET/POST    /api/horarios`);
-  console.log(`   - GET/POST    /api/agendamentos`);
-});
+// Só sobe o servidor quando executado direto (node server.js); os testes importam o app.
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`🚀 Servidor rodando em http://localhost:${PORT}`);
+    console.log(`📋 Endpoints disponíveis:`);
+    console.log(`   - GET/POST    /api/medicos`);
+    console.log(`   - GET/POST    /api/horarios`);
+    console.log(`   - GET/POST    /api/agendamentos`);
+  });
+}
+
+module.exports = { app, gerarId };

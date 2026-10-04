@@ -13,20 +13,23 @@ import {
 import { FAB, Card, Chip } from 'react-native-paper';
 import {
   buscarHorarios,
+  buscarMedicos,
   cadastrarHorario,
   removerHorario,
   atualizarHorario,
 } from '../services/api';
-import { estaAgendado } from '../services/horarios';
+import { estaAgendado, rotuloMedico } from '../services/horarios';
 
 export default function GerenciarHorarios() {
   const [horarios, setHorarios] = useState([]);
+  const [medicos, setMedicos] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const [novaData, setNovaData] = useState('');
   const [novaHora, setNovaHora] = useState('');
+  const [novoMedicoId, setNovoMedicoId] = useState(null);
 
   useEffect(() => {
     carregarHorarios();
@@ -35,8 +38,12 @@ export default function GerenciarHorarios() {
   const carregarHorarios = async () => {
     try {
       setLoading(true);
-      const dados = await buscarHorarios();
-      setHorarios(dados);
+      const [dadosHorarios, dadosMedicos] = await Promise.all([
+        buscarHorarios(),
+        buscarMedicos(),
+      ]);
+      setHorarios(dadosHorarios);
+      setMedicos(dadosMedicos);
     } catch (error) {
       Alert.alert('Erro', 'Não foi possível carregar os horários');
     } finally {
@@ -47,8 +54,12 @@ export default function GerenciarHorarios() {
   const onRefresh = async () => {
     try {
       setRefreshing(true);
-      const dados = await buscarHorarios();
-      setHorarios(dados);
+      const [dadosHorarios, dadosMedicos] = await Promise.all([
+        buscarHorarios(),
+        buscarMedicos(),
+      ]);
+      setHorarios(dadosHorarios);
+      setMedicos(dadosMedicos);
     } catch (error) {
       Alert.alert('Erro', 'Não foi possível atualizar a lista');
     } finally {
@@ -56,7 +67,19 @@ export default function GerenciarHorarios() {
     }
   };
 
+  const fecharModal = () => {
+    setModalVisible(false);
+    setNovaData('');
+    setNovaHora('');
+    setNovoMedicoId(null);
+  };
+
   const adicionarHorario = async () => {
+    if (!novoMedicoId) {
+      Alert.alert('Erro', 'Escolha o médico do horário');
+      return;
+    }
+
     if (!novaData.trim() || !novaHora.trim()) {
       Alert.alert('Erro', 'Por favor, preencha data e hora');
       return;
@@ -66,17 +89,16 @@ export default function GerenciarHorarios() {
       setLoading(true);
 
       const novoHorario = {
-        data: novaData,
-        hora: novaHora,
+        medico_id: novoMedicoId,
+        data: novaData.trim(),
+        hora: novaHora.trim(),
         disponivel: true,
       };
 
       const horarioCadastrado = await cadastrarHorario(novoHorario);
       setHorarios([...horarios, horarioCadastrado]);
 
-      setNovaData('');
-      setNovaHora('');
-      setModalVisible(false);
+      fecharModal();
 
       Alert.alert('Sucesso', 'Horário cadastrado com sucesso!');
     } catch (error) {
@@ -157,12 +179,16 @@ export default function GerenciarHorarios() {
           <View style={styles.horarioInfo}>
             <Text style={styles.horarioData}>📅 {item.data}</Text>
             <Text style={styles.horarioHora}>🕐 {item.hora}</Text>
-            {item.paciente_nome && (
+            <Text
+              style={[
+                styles.horarioMedico,
+                !item.medico_id && styles.horarioSemMedico,
+              ]}>
+              👨‍⚕️ {rotuloMedico(item, medicos)}
+            </Text>
+            {item.paciente_nome ? (
               <Text style={styles.horarioPaciente}>👤 {item.paciente_nome}</Text>
-            )}
-            {item.medico_nome && (
-              <Text style={styles.horarioMedico}>👨‍⚕️ {item.medico_nome}</Text>
-            )}
+            ) : null}
           </View>
 
           <View style={styles.horarioAcoes}>
@@ -230,10 +256,34 @@ export default function GerenciarHorarios() {
         animationType="fade"
         transparent={true}
         visible={modalVisible}
-        onRequestClose={() => setModalVisible(false)}>
+        onRequestClose={fecharModal}>
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Cadastrar Novo Horário</Text>
+
+            <Text style={styles.inputLabel}>Médico *</Text>
+            <View style={styles.medicosContainer}>
+              {medicos.length === 0 ? (
+                <Text style={styles.dica}>
+                  Cadastre um médico antes de criar horários.
+                </Text>
+              ) : (
+                medicos.map((medico) => (
+                  <Chip
+                    key={medico.id}
+                    mode="outlined"
+                    selected={novoMedicoId === medico.id}
+                    onPress={() => setNovoMedicoId(medico.id)}
+                    disabled={loading}
+                    style={[
+                      styles.chipMedico,
+                      novoMedicoId === medico.id && styles.chipMedicoSelecionado,
+                    ]}>
+                    {medico.nome}
+                  </Chip>
+                ))
+              )}
+            </View>
 
             <Text style={styles.inputLabel}>Data *</Text>
             <TextInput
@@ -260,11 +310,7 @@ export default function GerenciarHorarios() {
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={[styles.btnModal, styles.btnCancelar]}
-                onPress={() => {
-                  setModalVisible(false);
-                  setNovaData('');
-                  setNovaHora('');
-                }}
+                onPress={fecharModal}
                 disabled={loading}>
                 <Text style={styles.btnTexto}>Cancelar</Text>
               </TouchableOpacity>
@@ -336,6 +382,11 @@ const styles = StyleSheet.create({
   horarioMedico: {
     fontSize: 14,
     color: '#28a745',
+    marginBottom: 4,
+  },
+  horarioSemMedico: {
+    color: '#999',
+    fontStyle: 'italic',
   },
   horarioAcoes: {
     alignItems: 'flex-end',
@@ -416,6 +467,19 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
     marginBottom: 5,
+  },
+  medicosContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 15,
+  },
+  chipMedico: {
+    backgroundColor: '#fff',
+  },
+  chipMedicoSelecionado: {
+    backgroundColor: '#e3f2fd',
+    borderColor: '#007bff',
   },
   dica: {
     fontSize: 12,

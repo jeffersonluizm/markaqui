@@ -15,14 +15,19 @@ npm start
 ### 2️⃣ Frontend (2 minutos)
 
 ```bash
-# Na raiz do projeto
+# Nesta pasta (src/Markaki)
 npm install
 
-# Configure o IP em services/api.js:
+# Crie o .env a partir do modelo (o .env não vai para o Git)
+copy .env.example .env      # Windows (Mac/Linux: cp .env.example .env)
+
+# Ajuste EXPO_PUBLIC_API_URL no .env:
 # Emulador Android: http://10.0.2.2:3000/api
-# Emulador iOS: http://localhost:3000/api  
+# Emulador iOS / navegador: http://localhost:3000/api
 # Dispositivo físico: http://SEU_IP:3000/api
 ```
+
+> Atalho no Windows: `iniciar.bat` na raiz do repositório sobe a API e o Expo em janelas separadas.
 
 ### 3️⃣ Rodar o App (1 minuto)
 
@@ -46,8 +51,8 @@ npm run android  # ou npm run ios
 ### Fluxo Completo:
 
 1. **Cadastrar Médicos** → Aba 👨‍⚕️
-2. **Criar Horários** → Aba 🕐
-3. **Agendar Consulta** → Aba 📅+ (seleciona médico + horário)
+2. **Criar Horários** → Aba 🕐 (cada horário é cadastrado para um médico)
+3. **Agendar Consulta** → Aba 📅+ (seleciona o médico e um horário livre da agenda dele)
 4. **Ver Agendamentos** → Aba ✓
 
 ---
@@ -58,17 +63,17 @@ npm run android  # ou npm run ios
 - Ver todos os médicos
 - Buscar e filtrar por especialidade
 - Adicionar novo médico (botão +)
-- Remover médico (botão ×)
+- Remover médico (botão ×); se ele tiver agendamentos, o app avisa para cancelar antes
 
 ### 2. Gerenciar Horários (🕐)
-- Ver horários disponíveis e ocupados
-- Adicionar novo horário (botão +)
-- Remover horário disponível
+- Ver horários disponíveis e ocupados, com o médico de cada um
+- Adicionar novo horário (botão +), escolhendo o médico
+- Remover horário não agendado
 - Ver info de quem agendou (se ocupado)
 
 ### 3. Agendar Consulta (📅+)
 - **Passo 1:** Selecionar médico
-- **Passo 2:** Selecionar horário disponível
+- **Passo 2:** Selecionar horário disponível (só os do médico escolhido)
 - **Passo 3:** Digitar nome do paciente
 - **Confirmar:** Agendamento criado!
 
@@ -95,13 +100,15 @@ ifconfig
 # Procure: inet
 ```
 
-### Editar API_URL:
+### Editar o endereço da API:
 
-Arquivo: `services/api.js`
+Arquivo: `.env` (copiado de `.env.example`, fica fora do Git)
 
-```javascript
-const API_URL = 'http://SEU_IP_AQUI:3000/api';
+```bash
+EXPO_PUBLIC_API_URL=http://SEU_IP_AQUI:3000/api
 ```
+
+Reinicie o Expo depois de mudar o `.env`.
 
 ---
 
@@ -109,7 +116,7 @@ const API_URL = 'http://SEU_IP_AQUI:3000/api';
 
 - [ ] Backend rodando em localhost:3000
 - [ ] API responde no navegador
-- [ ] `API_URL` configurado corretamente
+- [ ] `EXPO_PUBLIC_API_URL` configurado no `.env`
 - [ ] App instalado e rodando
 - [ ] Lista de médicos carrega
 
@@ -129,7 +136,7 @@ const API_URL = 'http://SEU_IP_AQUI:3000/api';
    http://localhost:3000/api/medicos
    ```
 
-3. `API_URL` está correto?
+3. `EXPO_PUBLIC_API_URL` no `.env` está correto?
    - Emulador Android: `http://10.0.2.2:3000/api`
    - Dispositivo físico: `http://SEU_IP:3000/api`
 
@@ -151,7 +158,10 @@ sistema-integrado/
 │   ├── AgendarConsulta.js
 │   └── MeusAgendamentos.js
 ├── services/
-│   └── api.js          ⭐ Config API
+│   ├── api.js          ⭐ Chamadas da API
+│   ├── http.js         URL da API (EXPO_PUBLIC_API_URL)
+│   └── horarios.js     Regras dos horários
+├── .env.example        ⭐ Modelo do .env
 ├── App.js              ⭐ Principal
 └── package.json
 ```
@@ -178,13 +188,14 @@ npm start
 ## 📞 Ajuda Rápida
 
 **Porta 3000 ocupada?**
-```javascript
-// Em backend/server.js, mude:
-const PORT = 3001;
+```bash
+# Suba a API em outra porta (Windows/cmd):
+set PORT=3001 && npm start
+# e ajuste a porta em EXPO_PUBLIC_API_URL no .env
 ```
 
 **Erro de conexão?**
-- Verifique IP em `services/api.js`
+- Verifique `EXPO_PUBLIC_API_URL` no `.env`
 - Backend está rodando?
 - Firewall bloqueando?
 

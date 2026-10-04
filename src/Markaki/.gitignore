@@ -1,0 +1,7 @@
+node_modules/
+.expo/
+dist/
+.env
+.env.local
+# temporarios da gravacao atomica do backend (database.json.*.tmp)
+*.tmp
