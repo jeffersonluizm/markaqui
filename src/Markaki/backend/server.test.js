@@ -344,3 +344,52 @@ test('arquivo de dados inexistente vale como base vazia', async () => {
   assert.equal(res.status, 200);
   assert.deepEqual(res.body, []);
 });
+
+// ============================================
+// VALIDAÇÃO DO POST DE HORÁRIO
+// ============================================
+
+test('POST /api/horarios recusa disponivel que não é booleano (400)', async () => {
+  const res = await request(app)
+    .post('/api/horarios')
+    .send({ data: '2025-11-25', hora: '09:00 - 10:00', medico_id: 'm1', disponivel: 'false' });
+  assert.equal(res.status, 400);
+  assert.equal(lerDados().horarios.length, 0);
+});
+
+test('POST /api/horarios recusa data ou hora que não são texto (400)', async () => {
+  const semTexto = await request(app)
+    .post('/api/horarios')
+    .send({ data: 123, hora: '09:00 - 10:00', medico_id: 'm1' });
+  assert.equal(semTexto.status, 400);
+  const soEspacos = await request(app)
+    .post('/api/horarios')
+    .send({ data: '2025-11-25', hora: '   ', medico_id: 'm1' });
+  assert.equal(soEspacos.status, 400);
+  assert.equal(lerDados().horarios.length, 0);
+});
+
+test('POST /api/horarios tira espaços de data e hora antes de checar duplicado', async () => {
+  const primeiro = await request(app)
+    .post('/api/horarios')
+    .send({ data: ' 2025-11-25 ', hora: ' 09:00 - 10:00 ', medico_id: 'm1' });
+  assert.equal(primeiro.status, 201);
+  assert.equal(primeiro.body.data, '2025-11-25');
+  assert.equal(primeiro.body.hora, '09:00 - 10:00');
+  const repetido = await request(app)
+    .post('/api/horarios')
+    .send({ data: '2025-11-25', hora: '09:00 - 10:00 ', medico_id: 'm1' });
+  assert.equal(repetido.status, 409);
+});
+
+test('PUT /api/horarios/:id tira espaços de data e hora antes de checar duplicado', async () => {
+  gravarDados({
+    medicos: medicosBase,
+    horarios: [
+      horarioLivre('h1', medicosBase[0]),
+      { ...horarioLivre('h2', medicosBase[0]), hora: '10:00 - 11:00' },
+    ],
+  });
+  const res = await request(app).put('/api/horarios/h2').send({ hora: ' 09:00 - 10:00 ' });
+  assert.equal(res.status, 409);
+});

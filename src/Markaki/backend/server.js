@@ -71,6 +71,24 @@ async function salvarDados(data) {
 // mudam pelas rotas de agendamento.
 const CAMPOS_EDITAVEIS_HORARIO = ['disponivel', 'data', 'hora'];
 
+// Valida os campos editáveis presentes no corpo (POST e PUT de horário) e devolve
+// data e hora sem espaços nas pontas, para a checagem de duplicado não ser driblada.
+function validarCamposHorario(corpo) {
+  if ('disponivel' in corpo && typeof corpo.disponivel !== 'boolean') {
+    return { erro: 'disponivel deve ser true ou false' };
+  }
+  const valores = {};
+  if ('disponivel' in corpo) valores.disponivel = corpo.disponivel;
+  for (const campo of ['data', 'hora']) {
+    if (!(campo in corpo)) continue;
+    if (typeof corpo[campo] !== 'string' || !corpo[campo].trim()) {
+      return { erro: `${campo} deve ser um texto preenchido` };
+    }
+    valores[campo] = corpo[campo].trim();
+  }
+  return { valores };
+}
+
 // Agendado = tem agendamento apontando para ele (ou, em dado antigo, tem paciente).
 function horarioAgendado(dados, horario) {
   return dados.agendamentos.some(a => a.horario_id === horario.id) ||
@@ -240,7 +258,14 @@ app.get('/api/horarios/:id', async (req, res) => {
 // Cadastrar novo horário
 app.post('/api/horarios', async (req, res) => {
   try {
-    const { data, hora, disponivel, medico_id } = req.body;
+    const corpo = req.body || {};
+    const { medico_id } = corpo;
+
+    const { erro, valores } = validarCamposHorario(corpo);
+    if (erro) {
+      return res.status(400).json({ erro });
+    }
+    const { data, hora } = valores;
     
     if (!data || !hora || !medico_id) {
       return res.status(400).json({ 
@@ -270,7 +295,7 @@ app.post('/api/horarios', async (req, res) => {
       id: gerarId(),
       data,
       hora,
-      disponivel: disponivel !== undefined ? disponivel : true,
+      disponivel: valores.disponivel !== undefined ? valores.disponivel : true,
       paciente_nome: '',
       medico_id,
       medico_nome: medico.nome
@@ -306,13 +331,9 @@ app.put('/api/horarios/:id', async (req, res) => {
       });
     }
 
-    if ('disponivel' in corpo && typeof corpo.disponivel !== 'boolean') {
-      return res.status(400).json({ erro: 'disponivel deve ser true ou false' });
-    }
-    for (const campo of ['data', 'hora']) {
-      if (campo in corpo && (typeof corpo[campo] !== 'string' || !corpo[campo].trim())) {
-        return res.status(400).json({ erro: `${campo} não pode ficar vazio` });
-      }
+    const { erro, valores } = validarCamposHorario(corpo);
+    if (erro) {
+      return res.status(400).json({ erro });
     }
 
     const horario = dados.horarios[index];
@@ -325,7 +346,7 @@ app.put('/api/horarios/:id', async (req, res) => {
       });
     }
 
-    const atualizado = { ...horario, ...corpo };
+    const atualizado = { ...horario, ...valores };
     const repetido = Boolean(atualizado.medico_id) && dados.horarios.some(
       h => h.id !== horario.id &&
         h.medico_id === atualizado.medico_id &&
