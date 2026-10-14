@@ -387,7 +387,14 @@ async function principal() {
   const adaptador = armazenamentos[nome];
   if (!adaptador) throw new Error(`armazenamento desconhecido: ${nome}`);
   const lista = argumento('cenarios', Object.keys(cenarios).join(',')).split(',');
-  const trava = argumento('trava');
+  // Trava compartilhada entre os projetos da máquina (uma carga por vez). Só caminho
+  // absoluto: relativo criaria uma pasta em outro lugar e não protegeria nada.
+  const trava = argumento('trava', process.env.CARGA_TRAVA);
+  if (trava && !path.isAbsolute(trava)) {
+    console.error(`--trava precisa ser um caminho absoluto (recebido: ${trava}).`);
+    process.exitCode = 1;
+    return;
+  }
   const saida = argumento('saida');
 
   if (trava) {
@@ -403,6 +410,9 @@ async function principal() {
     }
   }
   const linhas = [];
+  // Janela da medição (com a trava já tomada), para conferir sobreposição com outras cargas.
+  const inicio = new Date().toISOString();
+  let fim;
   try {
     for (const c of lista) {
       if (!cenarios[c]) {
@@ -415,6 +425,7 @@ async function principal() {
       linhas.push(...resultado);
     }
   } finally {
+    fim = new Date().toISOString();
     if (trava) fs.rmSync(trava, { recursive: true, force: true });
   }
 
@@ -426,6 +437,9 @@ async function principal() {
         {
           armazenamento: nome,
           data: new Date().toISOString(),
+          medicaoInicio: inicio,
+          medicaoFim: fim,
+          trava: trava || null,
           node: process.version,
           cpu: os.cpus()[0].model,
           nucleos: os.cpus().length,
