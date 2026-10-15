@@ -212,9 +212,38 @@ test('resetarDemonstracao recria médicos, agenda, consultas de exemplo e o gest
   assert.equal(new Set(ativos).size, ativos.length);
 });
 
-test('atrás de proxy (Render), TRUST_PROXY faz o limite de tentativas valer por visitante', () => {
+test('TRUST_PROXY é lido do ambiente (padrão 0: sem proxy confiável)', () => {
   assert.equal(lerConfig(BASE).trustProxy, 0);
   assert.equal(lerConfig({ ...BASE, TRUST_PROXY: '1' }).trustProxy, 1);
+});
+
+// Login errado de um "visitante" (IP no X-Forwarded-For, como o proxy do Render manda).
+const tentarLogin = (amb, ip) =>
+  request(amb.app)
+    .post('/api/auth/login')
+    .set('X-Forwarded-For', ip)
+    .send({ email: 'ninguem@teste.dev', senha: 'Errada2026' });
+
+test('atrás de proxy (TRUST_PROXY=1), o limite de tentativas vale por visitante (X-Forwarded-For)', async () => {
+  const amb = criarAmbiente({ trustProxy: 1, limiteAuthMax: 2 });
+  ambientes.push(amb);
+  amb.semear();
+  assert.equal((await tentarLogin(amb, '203.0.113.10')).status, 401);
+  assert.equal((await tentarLogin(amb, '203.0.113.10')).status, 401);
+  assert.equal((await tentarLogin(amb, '203.0.113.10')).status, 429);
+  // Outro visitante, atrás do mesmo proxy, não foi bloqueado pelo primeiro.
+  assert.equal((await tentarLogin(amb, '198.51.100.7')).status, 401);
+  // O cliente não escapa do limite inventando um IP à esquerda: vale o que o proxy acrescentou.
+  assert.equal((await tentarLogin(amb, '10.9.9.9, 203.0.113.10')).status, 429);
+});
+
+test('sem proxy (TRUST_PROXY=0), X-Forwarded-For é ignorado e não serve para burlar o limite', async () => {
+  const amb = criarAmbiente({ trustProxy: 0, limiteAuthMax: 2 });
+  ambientes.push(amb);
+  amb.semear();
+  await tentarLogin(amb, '203.0.113.10');
+  await tentarLogin(amb, '203.0.113.11');
+  assert.equal((await tentarLogin(amb, '203.0.113.12')).status, 429);
 });
 
 test('modo demonstração recusa banco com dados reais (não publica conta de gestor nem apaga nada)', () => {
