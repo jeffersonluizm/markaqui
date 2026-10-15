@@ -49,6 +49,9 @@ function criarRepositorios(db) {
     usuarioInserir: p(`
       INSERT INTO usuarios (id, nome, email, telefone, senha_hash, papel, criado_em, demo)
       VALUES (@id, @nome, @email, @telefone, @senha_hash, @papel, @criado_em, @demo)`),
+    usuarioRemover: p('DELETE FROM usuarios WHERE id = ?'),
+    // Pacientes efêmeras do modo demonstração, da mais antiga para a mais nova.
+    visitantesDemo: p("SELECT id FROM usuarios WHERE demo = 1 AND papel = 'paciente' ORDER BY criado_em, rowid"),
 
     medicos: p('SELECT id, nome, especialidade FROM medicos ORDER BY rowid'),
     medicoPorId: p('SELECT id, nome, especialidade FROM medicos WHERE id = ?'),
@@ -82,6 +85,7 @@ function criarRepositorios(db) {
       SELECT * FROM agendamentos
       WHERE status = 'agendado' AND data BETWEEN @inicio AND @fim ORDER BY data, hora`),
     agendamentoPorId: p('SELECT * FROM agendamentos WHERE id = ?'),
+    agendamentosRemoverDoPaciente: p('DELETE FROM agendamentos WHERE paciente_id = ?'),
     agendamentosBrutos: p('SELECT * FROM agendamentos ORDER BY rowid'),
     agendamentoInserir: p(`
       INSERT INTO agendamentos (id, horario_id, medico_id, paciente_id, medico_nome,
@@ -128,6 +132,8 @@ function criarRepositorios(db) {
       atualizarUsuario(id, campos);
       return usuarios.buscar(id);
     },
+    listarVisitantesDemo: () => q.visitantesDemo.all().map((u) => u.id),
+    remover: (id) => q.usuarioRemover.run(id).changes,
   };
 
   const medicos = {
@@ -197,6 +203,7 @@ function criarRepositorios(db) {
       q.agendamentoCancelar.run({ id, cancelado_em, cancelado_por });
       return agendamentos.buscar(id);
     },
+    removerDoPaciente: (pacienteId) => q.agendamentosRemoverDoPaciente.run(pacienteId).changes,
     pacienteOcupado: ({ pacienteId, data, hora }) => Boolean(q.pacienteOcupado.get({ pacienteId, data, hora })),
     contarFuturosDoPaciente: (pacienteId, momento) => q.futurosDoPaciente.get({ pacienteId, ...momento }).n,
     contarFuturosDoMedico: (medicoId, momento) => q.futurosDoMedico.get({ medicoId, ...momento }).n,

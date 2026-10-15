@@ -1,10 +1,13 @@
 // Modo demonstração: dados de exemplo (médicos, agenda e consultas fictícias) e
-// as contas "Entrar como paciente / gestor". As senhas vêm da configuração
-// (.env ou geradas na partida); nada de senha no código.
+// "Entrar como paciente / clínica" sem senha nenhuma: paciente efêmera por visita
+// e um gestor de demonstração compartilhado.
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const { gerarId } = require('../infra/ids');
+const { emitirToken } = require('../infra/tokens');
+const { naoAutenticado } = require('../erros');
 const { momentoLocal } = require('../dominio/tempo');
+const { usuarioPublico } = require('./apresentacao');
 
 const MEDICOS = [
   { id: 'demo-medico-1', nome: 'Dra. Helena Duarte', especialidade: 'Cardiologia' },
@@ -54,33 +57,107 @@ function dadosDeDemonstracao({ hoje = new Date() } = {}) {
 
 const hashInutilizavel = () => bcrypt.hashSync(crypto.randomBytes(24).toString('hex'), 4);
 
-// Cria ou atualiza as contas de demonstração (idempotente). Não toca em conta real.
+// Garante o gestor de demonstração (idempotente). Ele não tem senha utilizável:
+// só se entra nele por POST /api/demo/entrar. Não toca em conta real.
 function prepararDemonstracao(armazenamento, config) {
   if (!config.demo.ativo) return;
-  const contas = Object.values(config.demo.contas);
-  const hashes = contas.map((c) => bcrypt.hashSync(c.senha, config.bcryptCusto));
+  const conta = config.demo.contas.gestor;
   armazenamento.escritaSincrona((r) => {
-    contas.forEach((conta, i) => {
-      const existente = r.usuarios.buscarPorEmail(conta.email);
-      if (existente && !existente.demo) {
-        throw new Error(
-          `O e-mail de demonstração ${conta.email} já pertence a uma conta real. Troque DEMO_${conta.papel.toUpperCase()}_EMAIL.`
-        );
-      }
-      if (existente) {
-        r.usuarios.atualizar(existente.id, { senha_hash: hashes[i], versao_token: (existente.versao_token || 0) + 1 });
-      } else {
-        r.usuarios.inserir({
-          id: gerarId(),
-          nome: conta.nome,
-          email: conta.email,
-          papel: conta.papel,
-          senha_hash: hashes[i],
-          demo: true,
-        });
-      }
-    });
+    const existente = r.usuarios.buscarPorEmail(conta.email);
+    if (existente && !existente.demo) {
+      throw new Error(
+        `O e-mail de demonstração ${conta.email} já pertence a uma conta real. Troque DEMO_GESTOR_EMAIL.`
+      );
+    }
+    if (!existente) {
+      r.usuarios.inserir({
+        id: 'demo-gestor',
+        nome: conta.nome,
+        email: conta.email,
+        papel: 'gestor',
+        senha_hash: hashInutilizavel(),
+        demo: true,
+      });
+    }
   });
+}
+
+// Pacientes efêmeras: cada "Entrar como paciente" ganha uma conta própria, com uma
+// consulta futura, uma cancelada e uma realizada. Assim o limite de consultas
+// ativas vale por visitante, e ninguém herda a agenda (nem o limite) de outro.
+function criarVisitante(r, config, agora) {
+  // Teto: passando de maxVisitantes, a mais antiga sai junto com as consultas dela.
+  const visitantes = r.usuarios.listarVisitantesDemo();
+  const sobra = visitantes.length - Math.max(1, config.demo.maxVisitantes) + 1;
+  for (const id of visitantes.slice(0, Math.max(0, sobra))) {
+    r.agendamentos.removerDoPaciente(id);
+    r.usuarios.remover(id);
+  }
+
+  const id = `demo-visitante-${gerarId()}`;
+  const paciente = r.usuarios.inserir({
+    id,
+    nome: config.demo.contas.paciente.nome,
+    email: `${id}@markaqui.demo`,
+    telefone: '31988887777',
+    papel: 'paciente',
+    senha_hash: hashInutilizavel(),
+    demo: true,
+    criado_em: agora.toISOString(),
+  });
+
+  const consulta = (h, extra = {}) =>
+    r.agendamentos.inserir({
+      id: gerarId(),
+      horario_id: h.id,
+      medico_id: h.medico_id,
+      medico_nome: h.medico_nome,
+      medico_especialidade: h.medico_especialidade,
+      paciente_id: id,
+      paciente_nome: paciente.nome,
+      data: h.data,
+      hora: h.hora,
+      criado_em: agora.toISOString(),
+      ...extra,
+    });
+  // Sorteia entre os primeiros horários livres, para as visitantes não disputarem
+  // sempre o mesmo.
+  const livres = r.horarios.listarLivres(undefined, momentoLocal(agora)).slice(0, 24);
+  if (livres.length > 0) {
+    const [futura] = livres.splice(crypto.randomInt(livres.length), 1);
+    consulta(futura);
+  }
+  if (livres.length > 0) {
+    const cancelada = livres[crypto.randomInt(livres.length)];
+    consulta(cancelada, { status: 'cancelado', cancelado_em: agora.toISOString(), cancelado_por: 'paciente' });
+  }
+  // Realizada no último dia útil (sem horário: a agenda passada não é reaproveitada).
+  const [ultimoDiaUtil] = diasUteis(1, agora, -1);
+  const medico = MEDICOS[1];
+  consulta({
+    id: null,
+    medico_id: r.medicos.buscar(medico.id) ? medico.id : null,
+    medico_nome: medico.nome,
+    medico_especialidade: medico.especialidade,
+    data: ultimoDiaUtil,
+    hora: '10:00',
+  });
+  return paciente;
+}
+
+// "Entrar como paciente / clínica": devolve uma sessão como a do login.
+async function entrarNaDemonstracao(armazenamento, config, papel) {
+  const agora = config.relogio();
+  const usuario = await armazenamento.escrita((r) => {
+    if (papel === 'paciente') return criarVisitante(r, config, agora);
+    const gestor = r.usuarios.buscarPorEmail(config.demo.contas.gestor.email);
+    if (!gestor || !gestor.demo) throw naoAutenticado('A demonstração está sendo preparada. Tente de novo.');
+    return gestor;
+  });
+  return {
+    token: emitirToken(usuario, { segredo: config.jwtSegredo, validade: config.jwtValidade }),
+    usuario: usuarioPublico(usuario),
+  };
 }
 
 // Apaga tudo e recria o cenário de demonstração (banco exclusivo da demo).
@@ -89,25 +166,13 @@ function resetarDemonstracao(armazenamento, config, agora = new Date()) {
   const medico = (id) => MEDICOS.find((m) => m.id === id);
   const dias = proximosDiasUteis(DIAS_UTEIS, agora);
   const [ultimoDiaUtil] = diasUteis(1, agora, -1);
-  const contaPaciente = config.demo.contas.paciente;
 
-  const usuarios = [
-    ...FICTICIAS.map((p) => ({
-      ...p,
-      email: `${p.id}@exemplo.invalid`,
-      papel: 'paciente',
-      senha_hash: hashInutilizavel(),
-    })),
-    {
-      id: 'demo-paciente',
-      nome: contaPaciente.nome,
-      email: contaPaciente.email,
-      telefone: '31988887777',
-      papel: 'paciente',
-      senha_hash: hashInutilizavel(),
-      demo: true,
-    },
-  ];
+  const usuarios = FICTICIAS.map((p) => ({
+    ...p,
+    email: `${p.id}@exemplo.invalid`,
+    papel: 'paciente',
+    senha_hash: hashInutilizavel(),
+  }));
 
   // Um horário que já passou, para o histórico ter uma consulta realizada.
   const passado = {
@@ -137,14 +202,12 @@ function resetarDemonstracao(armazenamento, config, agora = new Date()) {
     };
   };
   const agendamentos = [
-    consulta('demo-paciente', 'demo-medico-1', dias[0], '09:00'),
-    consulta('demo-paciente', 'demo-medico-3', dias[2], '14:00'),
-    consulta('demo-paciente', 'demo-medico-4', dias[1], '10:00', {
+    consulta('demo-ficticia-3', 'demo-medico-2', ultimoDiaUtil, '10:00'),
+    consulta('demo-ficticia-2', 'demo-medico-4', dias[1], '10:00', {
       status: 'cancelado',
       cancelado_em: agora.toISOString(),
       cancelado_por: 'paciente',
     }),
-    consulta('demo-paciente', 'demo-medico-2', ultimoDiaUtil, '10:00'),
     consulta('demo-ficticia-1', 'demo-medico-1', dias[0], '08:00'),
     consulta('demo-ficticia-2', 'demo-medico-1', dias[0], '10:00'),
     consulta('demo-ficticia-3', 'demo-medico-2', dias[0], '14:00'),
@@ -190,6 +253,7 @@ module.exports = {
   proximosDiasUteis,
   prepararDemonstracao,
   resetarDemonstracao,
+  entrarNaDemonstracao,
   podeSemear,
   iniciarDemonstracao,
 };

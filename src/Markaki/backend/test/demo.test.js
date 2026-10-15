@@ -1,5 +1,6 @@
-// Modo demonstração: contas de paciente e gestor sem senha no código. Só existe
-// com DEMO_ENABLED=true; as senhas vêm do .env ou são geradas na partida.
+// Modo demonstração: "Entrar como paciente / clínica" sem senha nenhuma. Só existe
+// com DEMO_ENABLED=true. Cada visita de paciente ganha uma conta efêmera própria;
+// a clínica é um gestor de demonstração compartilhado.
 const { test, after } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
@@ -8,100 +9,157 @@ const request = require('supertest');
 const { lerConfig } = require('../src/config');
 const { prepararDemonstracao, resetarDemonstracao } = require('../src/services/demonstracao');
 const { criarGestor } = require('../scripts/criar-gestor');
-const { criarAmbiente } = require('./apoio');
+const { criarAmbiente, AGORA } = require('./apoio');
 
 const BASE = { JWT_SECRET: 'x'.repeat(32) };
 const ambientes = [];
 after(() => ambientes.forEach((a) => a.fechar()));
 
+const configDemo = (envExtra = {}) => lerConfig({ ...BASE, BCRYPT_CUSTO: '4', DEMO_ENABLED: 'true', ...envExtra });
+
+// Banco de demonstração com o cenário de exemplo, no "agora" fixo dos testes.
 function ambienteDemo(envExtra = {}) {
-  const config = lerConfig({ ...BASE, BCRYPT_CUSTO: '4', ...envExtra });
+  const config = configDemo(envExtra);
   const amb = criarAmbiente({ demo: config.demo });
-  amb.semear({ usuarios: [] });
-  prepararDemonstracao(amb.armazenamento, { ...config, bcryptCusto: 4 });
   ambientes.push(amb);
+  amb.semear({ usuarios: [], medicos: [] });
+  resetarDemonstracao(amb.armazenamento, config, AGORA);
   return amb;
 }
+
+const entrarComo = (amb, papel) => request(amb.app).post('/api/demo/entrar').send({ papel });
+const bearer = (token) => ({ Authorization: `Bearer ${token}` });
 
 test('sem DEMO_ENABLED o modo demonstração fica desligado e /api/demo responde 404', async () => {
   assert.equal(lerConfig(BASE).demo.ativo, false);
   const amb = criarAmbiente();
   ambientes.push(amb);
-  const res = await request(amb.app).get('/api/demo');
-  assert.equal(res.status, 404);
+  assert.equal((await request(amb.app).get('/api/demo')).status, 404);
+  assert.equal((await request(amb.app).post('/api/demo/entrar').send({ papel: 'paciente' })).status, 404);
 });
 
-test('com DEMO_ENABLED e sem senha no .env, as senhas são geradas fortes e diferentes', () => {
-  const a = lerConfig({ ...BASE, DEMO_ENABLED: 'true' }).demo.contas;
-  const b = lerConfig({ ...BASE, DEMO_ENABLED: 'true' }).demo.contas;
-  for (const conta of [a.paciente, a.gestor]) {
-    assert.ok(conta.senha.length >= 16);
-    assert.match(conta.senha, /[A-Za-z]/);
-    assert.match(conta.senha, /\d/);
-  }
-  assert.notEqual(a.gestor.senha, b.gestor.senha);
-  assert.notEqual(a.paciente.senha, a.gestor.senha);
+test('a configuração da demonstração não tem senha nenhuma', () => {
+  const demo = configDemo({ DEMO_MAX_VISITANTES: '7' }).demo;
+  assert.equal(demo.maxVisitantes, 7);
+  assert.equal(configDemo().demo.maxVisitantes, 50);
+  assert.doesNotMatch(JSON.stringify(demo), /senha/i);
 });
 
-test('senhas da demonstração vêm do .env quando definidas', () => {
-  const { contas } = lerConfig({
-    ...BASE,
-    DEMO_ENABLED: 'true',
-    DEMO_GESTOR_SENHA: 'GestorForte2026x',
-    DEMO_PACIENTE_SENHA: 'PacienteForte2026x',
-  }).demo;
-  assert.equal(contas.gestor.senha, 'GestorForte2026x');
-  assert.equal(contas.paciente.senha, 'PacienteForte2026x');
-});
-
-test('GET /api/demo (sem login) devolve as contas e elas entram com o papel certo', async () => {
-  const amb = ambienteDemo({ DEMO_ENABLED: 'true' });
+test('GET /api/demo (sem login) lista só os papéis, sem e-mail nem senha', async () => {
+  const amb = ambienteDemo();
   const res = await request(amb.app).get('/api/demo');
   assert.equal(res.status, 200);
-  const papeis = res.body.contas.map((c) => c.papel).sort();
-  assert.deepEqual(papeis, ['gestor', 'paciente']);
-  for (const conta of res.body.contas) {
-    const login = await request(amb.app).post('/api/auth/login').send({ email: conta.email, senha: conta.senha });
-    assert.equal(login.status, 200, conta.papel);
-    assert.equal(login.body.usuario.papel, conta.papel);
-    assert.equal(login.body.usuario.demo, true);
+  assert.deepEqual(res.body.contas.map((c) => c.papel).sort(), ['gestor', 'paciente']);
+  for (const conta of res.body.contas) assert.deepEqual(Object.keys(conta).sort(), ['nome', 'papel']);
+});
+
+test('cada "Entrar como paciente" cria uma paciente efêmera, com consulta futura e histórico', async () => {
+  const amb = ambienteDemo();
+  const a = await entrarComo(amb, 'paciente');
+  const b = await entrarComo(amb, 'paciente');
+  assert.equal(a.status, 200);
+  assert.equal(a.body.usuario.papel, 'paciente');
+  assert.equal(a.body.usuario.demo, true);
+  assert.notEqual(a.body.usuario.id, b.body.usuario.id);
+  const consultas = (await request(amb.app).get('/api/agendamentos').set(bearer(a.body.token))).body;
+  assert.deepEqual(consultas.map((c) => c.situacao).sort(), ['agendado', 'cancelado', 'realizado']);
+  assert.ok(consultas.every((c) => c.paciente_id === a.body.usuario.id));
+});
+
+// Horários livres para quem tem o token, em momentos distintos e longe das
+// consultas que a pessoa já tem.
+async function livresParaAgendar(amb, token) {
+  const minhas = (await request(amb.app).get('/api/agendamentos').set(bearer(token))).body;
+  const ocupados = new Set(minhas.map((c) => `${c.data} ${c.hora}`));
+  const livres = (await request(amb.app).get('/api/horarios').set(bearer(token))).body;
+  return livres.filter((h) => {
+    const momento = `${h.data} ${h.hora}`;
+    if (ocupados.has(momento)) return false;
+    ocupados.add(momento);
+    return true;
+  });
+}
+
+test('a paciente efêmera agenda mais duas consultas e só então chega ao limite (409)', async () => {
+  const amb = ambienteDemo();
+  const agendar = (tk, h) =>
+    request(amb.app).post('/api/agendamentos').set(bearer(tk)).send({ horario_id: h.id, medico_id: h.medico_id });
+  const { token } = (await entrarComo(amb, 'paciente')).body;
+  const livres = await livresParaAgendar(amb, token);
+  assert.equal((await agendar(token, livres[0])).status, 201);
+  assert.equal((await agendar(token, livres[1])).status, 201);
+  const cheia = await agendar(token, livres[2]);
+  assert.equal(cheia.status, 409);
+  assert.match(cheia.body.erro, /3 consultas/);
+  // Outra visitante não herda o limite da primeira.
+  const outra = (await entrarComo(amb, 'paciente')).body.token;
+  assert.equal((await agendar(outra, (await livresParaAgendar(amb, outra))[0])).status, 201);
+});
+
+test('"Entrar como clínica" entra sempre no mesmo gestor de demonstração', async () => {
+  const amb = ambienteDemo();
+  const a = (await entrarComo(amb, 'gestor')).body;
+  const b = (await entrarComo(amb, 'gestor')).body;
+  assert.equal(a.usuario.papel, 'gestor');
+  assert.equal(a.usuario.demo, true);
+  assert.equal(a.usuario.id, b.usuario.id);
+  assert.equal((await request(amb.app).get('/api/painel').set(bearer(a.token))).status, 200);
+});
+
+test('papel desconhecido em /api/demo/entrar responde 400', async () => {
+  const amb = ambienteDemo();
+  assert.equal((await entrarComo(amb, 'admin')).status, 400);
+  assert.equal((await request(amb.app).post('/api/demo/entrar').send({})).status, 400);
+});
+
+test('teto de visitantes: passando de DEMO_MAX_VISITANTES, a mais antiga sai com as consultas dela', async () => {
+  const amb = ambienteDemo({ DEMO_MAX_VISITANTES: '2' });
+  const primeira = (await entrarComo(amb, 'paciente')).body;
+  await entrarComo(amb, 'paciente');
+  await entrarComo(amb, 'paciente');
+  const dados = amb.dados();
+  const visitantes = dados.usuarios.filter((u) => u.demo && u.papel === 'paciente');
+  assert.equal(visitantes.length, 2);
+  assert.ok(!visitantes.some((u) => u.id === primeira.usuario.id));
+  assert.ok(!dados.agendamentos.some((ag) => ag.paciente_id === primeira.usuario.id));
+  assert.equal((await request(amb.app).get('/api/auth/eu').set(bearer(primeira.token))).status, 401);
+});
+
+test('o reset da demonstração apaga as pacientes efêmeras', async () => {
+  const amb = ambienteDemo();
+  await entrarComo(amb, 'paciente');
+  await entrarComo(amb, 'paciente');
+  resetarDemonstracao(amb.armazenamento, configDemo(), AGORA);
+  assert.equal(amb.dados().usuarios.filter((u) => u.demo && u.papel === 'paciente').length, 0);
+});
+
+test('contas de demonstração não trocam a senha nem o perfil (403)', async () => {
+  const amb = ambienteDemo();
+  for (const papel of ['paciente', 'gestor']) {
+    const { token } = (await entrarComo(amb, papel)).body;
+    const senha = await request(amb.app)
+      .put('/api/auth/senha')
+      .set(bearer(token))
+      .send({ senha_atual: 'Qualquer2026', nova_senha: 'OutraSenha2026' });
+    assert.equal(senha.status, 403, papel);
+    const perfil = await request(amb.app).put('/api/auth/eu').set(bearer(token)).send({ nome: 'Outro Nome' });
+    assert.equal(perfil.status, 403, papel);
   }
 });
 
-test('prepararDemonstracao é idempotente e troca a senha quando o .env muda', async () => {
-  const amb = ambienteDemo({ DEMO_ENABLED: 'true', DEMO_GESTOR_SENHA: 'PrimeiraSenha2026' });
-  const config = lerConfig({ ...BASE, DEMO_ENABLED: 'true', DEMO_GESTOR_SENHA: 'SegundaSenha2026' });
-  prepararDemonstracao(amb.armazenamento, { ...config, bcryptCusto: 4 });
-  const usuarios = amb.dados().usuarios.filter((u) => u.demo);
-  assert.equal(usuarios.length, 2);
-  const email = config.demo.contas.gestor.email;
-  assert.equal(
-    (await request(amb.app).post('/api/auth/login').send({ email, senha: 'PrimeiraSenha2026' })).status,
-    401
-  );
-  assert.equal((await request(amb.app).post('/api/auth/login').send({ email, senha: 'SegundaSenha2026' })).status, 200);
-});
-
-test('contas de demonstração não trocam a senha (403)', async () => {
-  const amb = ambienteDemo({ DEMO_ENABLED: 'true' });
-  const { contas } = (await request(amb.app).get('/api/demo')).body;
-  const paciente = contas.find((c) => c.papel === 'paciente');
-  const { token } = (
-    await request(amb.app).post('/api/auth/login').send({ email: paciente.email, senha: paciente.senha })
-  ).body;
-  const res = await request(amb.app)
-    .put('/api/auth/senha')
-    .set('Authorization', `Bearer ${token}`)
-    .send({ senha_atual: paciente.senha, nova_senha: 'OutraSenha2026' });
-  assert.equal(res.status, 403);
+test('contas de demonstração não entram por e-mail e senha', async () => {
+  const amb = ambienteDemo();
+  const { usuario } = (await entrarComo(amb, 'gestor')).body;
+  const res = await request(amb.app).post('/api/auth/login').send({ email: usuario.email, senha: 'Qualquer2026' });
+  assert.equal(res.status, 401);
 });
 
 test('prepararDemonstracao não sobrescreve um usuário real com o mesmo e-mail', () => {
   const amb = criarAmbiente();
   ambientes.push(amb);
-  const config = lerConfig({ ...BASE, DEMO_ENABLED: 'true', DEMO_PACIENTE_EMAIL: 'ana@teste.dev' });
   amb.semear();
-  assert.throws(() => prepararDemonstracao(amb.armazenamento, { ...config, bcryptCusto: 4 }), /ana@teste\.dev/);
+  const config = configDemo({ DEMO_GESTOR_EMAIL: 'gestor@teste.dev' });
+  assert.throws(() => prepararDemonstracao(amb.armazenamento, config), /gestor@teste\.dev/);
 });
 
 test('criarGestor (script separado) cria gestor real com senha em hash e recusa senha fraca', async () => {
@@ -131,26 +189,24 @@ test('nenhuma senha de demonstração escrita no código-fonte', () => {
   const arquivos = [
     ...fs.readdirSync(path.join(raiz, 'backend', 'scripts')).map((f) => path.join(raiz, 'backend', 'scripts', f)),
     path.join(raiz, 'backend', 'src', 'config.js'),
+    path.join(raiz, 'backend', 'src', 'services', 'demonstracao.js'),
     path.join(raiz, 'src', 'telas', 'conexao', 'Entrar.js'),
+    path.join(raiz, 'src', 'componentes', 'CartaoDemonstracao.js'),
   ];
   for (const arquivo of arquivos) {
     const texto = fs.readFileSync(arquivo, 'utf8');
-    assert.doesNotMatch(texto, /Gestor2026|Paciente2026/, arquivo);
+    assert.doesNotMatch(texto, /Gestor2026|Paciente2026|DEMO_\w+_SENHA/, arquivo);
   }
 });
 
-test('resetarDemonstracao recria médicos, agenda e consultas de exemplo e as contas demo', async () => {
-  const amb = ambienteDemo({ DEMO_ENABLED: 'true' });
-  const config = lerConfig({ ...BASE, DEMO_ENABLED: 'true', BCRYPT_CUSTO: '4' });
-  resetarDemonstracao(amb.armazenamento, config, new Date('2030-01-11T09:00:00-03:00'));
+test('resetarDemonstracao recria médicos, agenda, consultas de exemplo e o gestor demo', () => {
+  const amb = ambienteDemo();
+  resetarDemonstracao(amb.armazenamento, configDemo(), new Date('2030-01-11T09:00:00-03:00'));
   const dados = amb.dados();
   assert.ok(dados.medicos.length >= 4);
   assert.ok(dados.horarios.length > 100);
-  const pacienteDemo = dados.usuarios.find((u) => u.demo && u.papel === 'paciente');
-  const daPaciente = dados.agendamentos.filter((a) => a.paciente_id === pacienteDemo.id);
-  assert.ok(daPaciente.some((a) => a.status === 'agendado'));
-  assert.ok(daPaciente.some((a) => a.status === 'cancelado'));
-  assert.ok(dados.agendamentos.some((a) => a.paciente_id !== pacienteDemo.id));
+  assert.ok(dados.usuarios.some((u) => u.demo && u.papel === 'gestor'));
+  assert.ok(dados.agendamentos.some((a) => a.status === 'agendado'));
   // Tudo coerente: nenhum horário com dois agendamentos ativos.
   const ativos = dados.agendamentos.filter((a) => a.status === 'agendado').map((a) => a.horario_id);
   assert.equal(new Set(ativos).size, ativos.length);
@@ -161,27 +217,25 @@ test('atrás de proxy (Render), TRUST_PROXY faz o limite de tentativas valer por
   assert.equal(lerConfig({ ...BASE, TRUST_PROXY: '1' }).trustProxy, 1);
 });
 
-test('modo demonstração recusa banco com dados reais (não publica senha de gestor nem apaga nada)', () => {
+test('modo demonstração recusa banco com dados reais (não publica conta de gestor nem apaga nada)', () => {
   const { iniciarDemonstracao } = require('../src/services/demonstracao');
   const amb = criarAmbiente();
   ambientes.push(amb);
   amb.semear(); // usuários reais (gestor e pacientes) e médicos
-  const config = lerConfig({ ...BASE, DEMO_ENABLED: 'true', BCRYPT_CUSTO: '4' });
-  assert.throws(() => iniciarDemonstracao(amb.armazenamento, config), /banco de demonstração/);
+  assert.throws(() => iniciarDemonstracao(amb.armazenamento, configDemo()), /banco de demonstração/);
   assert.equal(amb.dados().usuarios.filter((u) => u.demo).length, 0);
   assert.equal(amb.dados().medicos.length, 2);
 });
 
-test('banco vazio vira banco de demonstração; na próxima partida só atualiza as contas', () => {
+test('banco vazio vira banco de demonstração; na próxima partida não recria', () => {
   const { iniciarDemonstracao } = require('../src/services/demonstracao');
   const amb = criarAmbiente();
   ambientes.push(amb);
   amb.semear({ usuarios: [], medicos: [] });
-  const config = lerConfig({ ...BASE, DEMO_ENABLED: 'true', BCRYPT_CUSTO: '4' });
+  const config = configDemo();
   iniciarDemonstracao(amb.armazenamento, config);
   assert.equal(amb.armazenamento.ehBancoDemo(), true);
-  const consultas = amb.dados().agendamentos.length;
-  assert.ok(consultas > 0);
+  assert.ok(amb.dados().agendamentos.length > 0);
   amb.armazenamento.escritaSincrona((r) =>
     r.medicos.inserir({ id: 'm-novo', nome: 'Dr. Novo Teste', especialidade: 'Pediatria' })
   );

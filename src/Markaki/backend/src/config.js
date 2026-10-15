@@ -1,32 +1,28 @@
-const crypto = require('crypto');
 const path = require('path');
 
 const caminhoBanco = (env = process.env) => env.DB_FILE || path.join(__dirname, '..', 'dados', 'markaqui.db');
+const numero = (valor, padrao) => (valor === undefined || valor === '' ? padrao : Number(valor));
 
-// Senha forte aleatória (letras e números), usada quando o .env não define uma.
-const senhaAleatoria = () => `${crypto.randomBytes(15).toString('base64url')}a7`;
-
-// Modo demonstração: desligado por padrão. Ligado (DEMO_ENABLED=true), cria uma
-// paciente e um gestor de demonstração, com senhas do .env ou geradas na partida,
-// e expõe GET /api/demo para o app mostrar "Entrar como...". Nenhuma senha fica
-// no código.
+// Modo demonstração: desligado por padrão. Ligado (DEMO_ENABLED=true), a API cria
+// um gestor de demonstração e expõe GET /api/demo e POST /api/demo/entrar para o
+// app mostrar "Entrar como paciente / clínica". Não existe senha: cada "Entrar
+// como paciente" cria uma paciente efêmera, e a clínica é um gestor compartilhado.
 function lerDemo(env) {
-  const conta = (papel, nome, emailPadrao) => {
-    const prefixo = `DEMO_${papel.toUpperCase()}`;
-    return {
-      papel,
-      nome,
-      email: (env[`${prefixo}_EMAIL`] || emailPadrao).toLowerCase(),
-      senha: env[`${prefixo}_SENHA`] || senhaAleatoria(),
-    };
-  };
   return {
     ativo: env.DEMO_ENABLED === 'true',
     // Minutos entre os resets dos dados (0 = só na partida).
-    resetMinutos: Number(env.DEMO_RESET_MINUTOS) || 0,
+    resetMinutos: numero(env.DEMO_RESET_MINUTOS, 0),
+    // Pacientes efêmeras ao mesmo tempo; passando disso, a mais antiga sai.
+    maxVisitantes: numero(env.DEMO_MAX_VISITANTES, 50),
+    // "Entrar como" por IP por minuto.
+    entradasPorMinuto: numero(env.DEMO_ENTRADAS_POR_MINUTO, 10),
     contas: {
-      paciente: conta('paciente', 'Marina Albuquerque', 'paciente@markaqui.demo'),
-      gestor: conta('gestor', 'Gestão Clínica Markaqui', 'gestor@markaqui.demo'),
+      paciente: { papel: 'paciente', nome: 'Marina Albuquerque' },
+      gestor: {
+        papel: 'gestor',
+        nome: 'Gestão Clínica Markaqui',
+        email: (env.DEMO_GESTOR_EMAIL || 'gestor@markaqui.demo').toLowerCase(),
+      },
     },
   };
 }
@@ -41,7 +37,6 @@ function lerConfig(env = process.env) {
         '(veja .env.example; o iniciar.bat cria um automaticamente).'
     );
   }
-  const numero = (valor, padrao) => (valor === undefined || valor === '' ? padrao : Number(valor));
   return {
     porta: numero(env.PORT, 3000),
     // Só a própria máquina por padrão. Para o celular na mesma rede, HOST=0.0.0.0

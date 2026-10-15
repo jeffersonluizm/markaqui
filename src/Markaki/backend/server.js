@@ -14,8 +14,8 @@ function iniciar(env = process.env) {
 }
 
 // Modo demonstração: banco vazio (ex.: disco efêmero do Render) recebe o cenário de
-// exemplo; as contas demo sempre recebem as senhas desta partida; e, com
-// DEMO_RESET_MINUTOS, o cenário volta ao original de tempos em tempos.
+// exemplo; e, com DEMO_RESET_MINUTOS, o cenário volta ao original de tempos em
+// tempos (o que também apaga as pacientes efêmeras).
 function ligarDemonstracao(armazenamento, config) {
   if (!config.demo.ativo) return;
   iniciarDemonstracao(armazenamento, config);
@@ -33,9 +33,7 @@ function ligarDemonstracao(armazenamento, config) {
     );
   }
   console.log(
-    `[demo] modo demonstração ligado (${Object.values(config.demo.contas)
-      .map((c) => c.email)
-      .join(', ')})`
+    `[demo] modo demonstração ligado: paciente efêmera por visita (até ${config.demo.maxVisitantes}) e gestor ${config.demo.contas.gestor.email}`
   );
 }
 
