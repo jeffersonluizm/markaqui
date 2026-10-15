@@ -297,3 +297,35 @@ test('semear não apaga banco com conta real, mesmo sem médicos', () => {
   vazio.semear({ usuarios: [], medicos: [] });
   assert.equal(podeSemear(vazio.armazenamento), true);
 });
+
+test('banco demo antigo: a senha já publicada do gestor deixa de valer e a paciente compartilhada sai', async () => {
+  const bcrypt = require('bcryptjs');
+  const { iniciarDemonstracao } = require('../src/services/demonstracao');
+  const amb = criarAmbiente({ demo: configDemo().demo });
+  ambientes.push(amb);
+  const senhaPublicada = 'SenhaPublicada2026';
+  const hash = bcrypt.hashSync(senhaPublicada, 4);
+  amb.semear({
+    usuarios: [
+      { id: 'g-antigo', nome: 'Gestão', email: 'gestor@markaqui.demo', papel: 'gestor', senha_hash: hash, demo: true },
+      {
+        id: 'p-antiga',
+        nome: 'Marina',
+        email: 'paciente@markaqui.demo',
+        papel: 'paciente',
+        senha_hash: hash,
+        demo: true,
+      },
+    ],
+    medicos: [],
+  });
+  amb.armazenamento.marcarComoDemo();
+  const login = (email) => request(amb.app).post('/api/auth/login').send({ email, senha: senhaPublicada });
+  assert.equal((await login('gestor@markaqui.demo')).status, 200, 'pré-condição: a senha antiga funcionava');
+
+  iniciarDemonstracao(amb.armazenamento, configDemo());
+  assert.equal((await login('gestor@markaqui.demo')).status, 401);
+  assert.equal((await login('paciente@markaqui.demo')).status, 401);
+  assert.ok(!amb.dados().usuarios.some((u) => u.email === 'paciente@markaqui.demo'));
+  assert.equal((await entrarComo(amb, 'gestor')).status, 200);
+});

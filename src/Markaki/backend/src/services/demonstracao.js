@@ -55,6 +55,9 @@ function dadosDeDemonstracao({ hoje = new Date() } = {}) {
   return { medicos: MEDICOS, horarios };
 }
 
+// E-mail da paciente compartilhada das versões antigas (antes da paciente efêmera).
+const PACIENTE_ANTIGA = 'paciente@markaqui.demo';
+
 const hashInutilizavel = () => bcrypt.hashSync(crypto.randomBytes(24).toString('hex'), 4);
 
 // Garante o gestor de demonstração (idempotente). Ele não tem senha utilizável:
@@ -69,7 +72,15 @@ function prepararDemonstracao(armazenamento, config) {
         `O e-mail de demonstração ${conta.email} já pertence a uma conta real. Troque DEMO_GESTOR_EMAIL.`
       );
     }
-    if (!existente) {
+    if (existente) {
+      // Banco demo de uma versão antiga, quando as senhas eram publicadas em
+      // GET /api/demo: a senha do gestor é trocada por uma inutilizável e os tokens
+      // emitidos com ela deixam de valer.
+      r.usuarios.atualizar(existente.id, {
+        senha_hash: hashInutilizavel(),
+        versao_token: (existente.versao_token || 0) + 1,
+      });
+    } else {
       r.usuarios.inserir({
         id: 'demo-gestor',
         nome: conta.nome,
@@ -78,6 +89,14 @@ function prepararDemonstracao(armazenamento, config) {
         senha_hash: hashInutilizavel(),
         demo: true,
       });
+    }
+    // A antiga paciente compartilhada (senha publicada) sai com as consultas dela.
+    const antigas = [r.usuarios.buscarPorEmail(PACIENTE_ANTIGA), r.usuarios.buscar('demo-paciente')];
+    for (const antiga of antigas) {
+      if (antiga && antiga.demo) {
+        r.agendamentos.removerDoPaciente(antiga.id);
+        r.usuarios.remover(antiga.id);
+      }
     }
   });
 }
