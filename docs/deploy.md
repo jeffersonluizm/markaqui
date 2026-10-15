@@ -46,8 +46,8 @@ A demonstração não tem senha nenhuma: cada "Entrar como paciente" cria uma pa
 ## 3. App web na Vercel
 
 1. Em [vercel.com](https://vercel.com), **Add New > Project** e importe o repositório.
-2. **Root Directory:** `src/Markaki`. O `vercel.json` já define instalação, build (`npx expo export --platform web`), pasta `dist`, rotas da SPA e cabeçalhos de segurança.
-3. Em **Environment Variables**, crie `EXPO_PUBLIC_API_URL` = `https://SUA-API.onrender.com/api`.
+2. **Root Directory:** `src/Markaki`. O `vercel.json` já define instalação, build (`node scripts/conferir-api-url.mjs && npx expo export --platform web`), pasta `dist`, rotas da SPA e cabeçalhos de segurança.
+3. Em **Environment Variables**, crie `EXPO_PUBLIC_API_URL` = `https://SUA-API.onrender.com/api`. Ela é obrigatória: sem ela (ou apontando para `localhost`, ou sem `https`), o build para com a mensagem `[build] EXPO_PUBLIC_API_URL ...` em vez de publicar um app que procura a API na máquina do visitante.
 4. **Deploy.** Anote a URL (por exemplo `https://markaqui.vercel.app`).
 5. Volte ao Render e confira se `CORS_ORIGENS` é exatamente essa URL (sem barra no fim). Se mudou, salve: o serviço reinicia.
 

@@ -42,6 +42,7 @@ jobs:
       - run: npm run lint
       - run: npm run formato
       - run: npm test
-      - run: npx expo export --platform web
+      # O mesmo build da Vercel: confere EXPO_PUBLIC_API_URL e exporta o site.
+      - run: node scripts/conferir-api-url.mjs && npx expo export --platform web
         env:
           EXPO_PUBLIC_API_URL: https://exemplo.invalid/api

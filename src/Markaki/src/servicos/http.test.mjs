@@ -24,3 +24,14 @@ test('erroDaApi usa a mensagem padrão quando a resposta não tem corpo útil', 
   assert.equal(erro.status, 500);
   assert.equal(erro.message, 'Erro ao remover médico');
 });
+
+test('build de publicação: EXPO_PUBLIC_API_URL é obrigatória, em https e fora de localhost', async () => {
+  const { problemaNaApiUrlDePublicacao } = await import('./http.js');
+  assert.match(problemaNaApiUrlDePublicacao(undefined), /EXPO_PUBLIC_API_URL/);
+  assert.match(problemaNaApiUrlDePublicacao('  '), /EXPO_PUBLIC_API_URL/);
+  assert.match(problemaNaApiUrlDePublicacao('http://localhost:3000/api'), /localhost/);
+  assert.match(problemaNaApiUrlDePublicacao('https://127.0.0.1:3000/api'), /localhost/);
+  assert.match(problemaNaApiUrlDePublicacao('http://markaqui-api.onrender.com/api'), /https/);
+  assert.match(problemaNaApiUrlDePublicacao('nao e url'), /endereço/);
+  assert.equal(problemaNaApiUrlDePublicacao('https://markaqui-api.onrender.com/api'), null);
+});
