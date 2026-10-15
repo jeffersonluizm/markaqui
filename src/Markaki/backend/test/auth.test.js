@@ -235,3 +235,35 @@ test('troca de senha também tem limite de tentativas (429)', async () => {
     limitado.fechar();
   }
 });
+
+test('conta que some no meio da troca de senha ou do perfil (reset da demo) responde 401, não 500', async () => {
+  const { criarServicoAuth } = require('../src/services/auth');
+  const amb = criarAmbiente();
+  amb.semear();
+  const config = { jwtSegredo: SEGREDO, jwtValidade: '8h', bcryptCusto: 4, relogio: () => new Date() };
+  const apagar = () =>
+    amb.armazenamento.escrita((r) => {
+      r.agendamentos.removerDoPaciente('u-ana');
+      r.usuarios.remover('u-ana');
+    });
+  // Some entre a leitura (senha conferida) e a gravação.
+  const someNaGravacao = {
+    leitura: (op) => amb.armazenamento.leitura(op),
+    escrita: async (op) => {
+      await apagar();
+      return amb.armazenamento.escrita(op);
+    },
+  };
+  await assert.rejects(
+    criarServicoAuth(someNaGravacao, config).trocarSenha('u-ana', { senhaAtual: SENHA, novaSenha: 'NovaSenha9' }),
+    (erro) => erro.status === 401
+  );
+  // Já tinha sumido antes da leitura.
+  const auth = criarServicoAuth(amb.armazenamento, config);
+  await assert.rejects(
+    auth.trocarSenha('u-ana', { senhaAtual: SENHA, novaSenha: 'NovaSenha9' }),
+    (erro) => erro.status === 401
+  );
+  await assert.rejects(auth.atualizarPerfil('u-ana', { nome: 'Ana Nova' }), (erro) => erro.status === 401);
+  amb.fechar();
+});

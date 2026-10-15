@@ -9,6 +9,13 @@ const { momentoLocal } = require('../dominio/tempo');
 
 const MSG_LOGIN = 'E-mail ou senha inválidos.';
 const MSG_DEMO = 'Contas de demonstração não podem ser alteradas.';
+const MSG_SUMIU = 'Sua sessão terminou. Entre novamente.';
+
+// A conta pode sumir entre a autenticação e a gravação (ex.: reset da demonstração).
+function exigirConta(usuario) {
+  if (!usuario) throw naoAutenticado(MSG_SUMIU);
+  return usuario;
+}
 
 function criarServicoAuth(armazenamento, config) {
   // Hash de comparação para e-mail inexistente: o login leva o mesmo tempo com ou
@@ -39,7 +46,7 @@ function criarServicoAuth(armazenamento, config) {
 
     async atualizarPerfil(usuarioId, { nome, telefone }) {
       const usuario = await armazenamento.escrita((r) => {
-        if (r.usuarios.buscar(usuarioId).demo) throw semPermissao(MSG_DEMO);
+        if (exigirConta(r.usuarios.buscar(usuarioId)).demo) throw semPermissao(MSG_DEMO);
         const atualizado = r.usuarios.atualizar(usuarioId, { nome, telefone });
         if (nome) r.agendamentos.renomearPacienteNosAtivos(usuarioId, nome, momentoLocal(config.relogio()));
         return atualizado;
@@ -48,7 +55,7 @@ function criarServicoAuth(armazenamento, config) {
     },
 
     async trocarSenha(usuarioId, { senhaAtual, novaSenha }) {
-      const usuario = await armazenamento.leitura((r) => r.usuarios.buscar(usuarioId));
+      const usuario = exigirConta(await armazenamento.leitura((r) => r.usuarios.buscar(usuarioId)));
       if (usuario.demo) throw semPermissao(MSG_DEMO);
       if (!(await bcrypt.compare(senhaAtual, usuario.senha_hash))) {
         throw requisicaoInvalida('A senha atual não confere.');
@@ -56,7 +63,7 @@ function criarServicoAuth(armazenamento, config) {
       const senha_hash = await bcrypt.hash(novaSenha, config.bcryptCusto);
       // Nova versão de token: os emitidos antes (ex.: um token vazado) deixam de valer.
       const atualizado = await armazenamento.escrita((r) =>
-        r.usuarios.atualizar(usuarioId, { senha_hash, versao_token: (usuario.versao_token || 0) + 1 })
+        exigirConta(r.usuarios.atualizar(usuarioId, { senha_hash, versao_token: (usuario.versao_token || 0) + 1 }))
       );
       return { mensagem: 'Senha alterada.', token: sessao(atualizado).token };
     },
