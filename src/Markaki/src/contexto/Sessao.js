@@ -58,6 +58,8 @@ export function ProvedorSessao({ children }) {
       ...estado,
       entrar: async (email, senha) => iniciarSessao(await api.auth.entrar(email, senha)),
       cadastrar: async (dados) => iniciarSessao(await api.auth.cadastrar(dados)),
+      // Modo demonstração: a API devolve uma sessão pronta (sem senha).
+      entrarNaDemonstracao: async (sessao) => iniciarSessao(sessao),
       sair: () => encerrar(null),
       // Depois de trocar a senha a API devolve um token novo (os antigos deixam de valer).
       renovarToken: async (token) => {

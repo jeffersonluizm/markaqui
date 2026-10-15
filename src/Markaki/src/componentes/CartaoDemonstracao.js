@@ -1,10 +1,12 @@
 // "Explore a demonstração": com o modo demonstração ligado na API (GET /api/demo),
-// entra como paciente ou como clínica com um toque. Com ele desligado (404), o
-// cartão simplesmente não aparece.
+// entra como paciente ou como clínica com um toque, sem senha (POST
+// /api/demo/entrar). Cada entrada de paciente ganha uma conta própria. Com o modo
+// desligado (404), o cartão simplesmente não aparece.
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Button, Icon, Text } from 'react-native-paper';
 import { api } from '../servicos/api';
+import { entrarNaDemonstracao as entrarComNovaTentativa } from '../servicos/demonstracao';
 import { useSessao } from '../contexto/Sessao';
 import { cores, espaco, fontes, raio, ALVO_MINIMO } from '../tema/tokens';
 
@@ -12,15 +14,15 @@ const ROTULO = { paciente: 'Entrar como paciente', gestor: 'Entrar como clínica
 const ICONE = { paciente: 'account-heart-outline', gestor: 'hospital-building' };
 
 export function CartaoDemonstracao({ escuro = false }) {
-  const { entrar } = useSessao();
+  const { entrarNaDemonstracao } = useSessao();
   const [contas, setContas] = useState(null);
   const [entrando, setEntrando] = useState(null);
   const [erro, setErro] = useState(null);
 
   useEffect(() => {
     let ativo = true;
-    api
-      .demo()
+    api.demo
+      .contas()
       .then((r) => ativo && setContas(r.contas))
       .catch(() => ativo && setContas([]));
     return () => {
@@ -34,7 +36,13 @@ export function CartaoDemonstracao({ escuro = false }) {
     setEntrando(conta.papel);
     setErro(null);
     try {
-      await entrar(conta.email, conta.senha);
+      const recarregar = async () => {
+        const { contas: novas } = await api.demo.contas();
+        setContas(novas);
+        return novas;
+      };
+      const sessao = await entrarComNovaTentativa(conta.papel, { entrar: api.demo.entrar, recarregar });
+      await entrarNaDemonstracao(sessao);
     } catch (e) {
       setErro(e.message);
       setEntrando(null);
@@ -52,7 +60,8 @@ export function CartaoDemonstracao({ escuro = false }) {
         </Text>
       </View>
       <Text variant="bodyMedium" style={estilos.texto}>
-        Entre com uma conta de exemplo, sem cadastro. Os dados são fictícios e voltam ao original de tempos em tempos.
+        Entre sem cadastro nem senha. Como paciente, você ganha uma conta de exemplo só sua. Os dados são fictícios e
+        voltam ao original de tempos em tempos.
       </Text>
       {ordenadas.map((conta) => (
         <Button
