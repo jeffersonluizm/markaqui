@@ -62,14 +62,35 @@ A demonstração não tem senha nenhuma: cada "Entrar como paciente" cria uma pa
 - **Navegador do celular:** basta abrir a URL da Vercel.
 - **Expo Go (app nativo):** instale o Expo Go, rode `npx expo start` em `src/Markaki` com `EXPO_PUBLIC_API_URL` apontando para a API do Render no `.env` e leia o QR code. Não precisa de rede local, porque a API está na internet.
 
-## 5. Atualizar os links do README
+## 5. Conferir que a API enxerga o IP de cada visitante (`TRUST_PROXY`)
 
-Troque os marcadores `https://markaqui.vercel.app` e `https://markaqui-api.onrender.com` no [README](../README.md) pelas URLs reais.
+O limite de tentativas (login, cadastro, "Entrar como") conta por IP. Atrás do proxy do Render, a API só enxerga o IP do visitante se `TRUST_PROXY` for igual ao número de proxies na frente dela (o blueprint usa `1`). Com valor menor, todos os visitantes parecem o mesmo IP e um bloqueia o outro; com valor maior, o visitante consegue inventar um IP no cabeçalho `X-Forwarded-For` e fugir do limite. Depois do deploy:
+
+1. **Logs do Render:** se aparecer `ERR_ERL_UNEXPECTED_X_FORWARDED_FOR`, o `TRUST_PROXY` está `0`. Ajuste para `1`.
+2. **Cada visitante tem o próprio contador.** Rode duas vezes, de redes diferentes (por exemplo o computador e o celular no 4G), e compare o cabeçalho `RateLimit` (o `r=` é o que sobra):
+   ```bash
+   curl -si -X POST https://SUA-API.onrender.com/api/auth/login      -H "Content-Type: application/json" -d '{"email":"teste@exemplo.invalid","senha":"Errada2026"}' | grep -i "^ratelimit"
+   ```
+   Da mesma rede, o `r=` cai a cada chamada (4, 3, 2...). Da outra rede, recomeça em 4. Se as duas redes dividem o mesmo contador, há mais de um proxy: suba `TRUST_PROXY` para `2` e repita.
+3. **IP inventado não zera o contador.** Repita a chamada acrescentando `-H "X-Forwarded-For: 203.0.113.$RANDOM"`. O `r=` deve continuar caindo. Se ele recomeçar a cada valor inventado, o `TRUST_PROXY` está alto demais: volte um número.
+
+O teste automático `demo.test.js` cobre o comportamento da API com `TRUST_PROXY=1` e `0`; esta conferência valida o número de proxies do ambiente real.
+
+## 6. Trocar os endereços previstos pelos reais
+
+Os nomes `markaqui.vercel.app` e `markaqui-api.onrender.com` são os **endereços previstos**; a Vercel e o Render podem dar outros (por exemplo `markaqui-abc123.vercel.app`) se o nome estiver ocupado. Com as URLs definitivas em mãos:
+
+1. **README:** no bloco do topo, troque o texto "Demonstração online (endereço previsto)" pelos links reais, por exemplo `<b><a href="https://URL-DA-VERCEL">Abrir a demonstração</a></b> · API: <a href="https://URL-DO-RENDER/api/saude">URL-DO-RENDER</a>`, e apague a linha "Link definitivo depois da publicação".
+2. **Render:** `CORS_ORIGENS` = URL exata da Vercel (sem barra no fim).
+3. **Vercel:** `EXPO_PUBLIC_API_URL` = `https://URL-DO-RENDER/api` e publique de novo (o endereço entra no build).
+4. **Prévia de link:** em `src/Markaki/public/index.html`, use a URL completa da imagem (`https://URL-DA-VERCEL/og-image.png`).
+5. **CSP:** se a API não ficar em `*.onrender.com`, ajuste `connect-src` no `src/Markaki/vercel.json`.
+6. Abra a URL da Vercel numa janela anônima e repita a seção "Conferir" do passo 3.
 
 ## Segurança da demonstração
 
-- A API só liga o modo demonstração num banco vazio ou criado pelo próprio modo demo (marcado como banco de demonstração). Num banco com dados reais ela se recusa a subir: nunca publica a senha de um gestor real nem apaga dados.
-- A senha do gestor demo é pública por definição: qualquer visitante pode remover médicos ou cadastrar textos até o próximo reset (6 h). Cadastros de visitantes também ficam visíveis para quem entra como clínica.
+- A API só liga o modo demonstração num banco vazio ou criado pelo próprio modo demo (marcado como banco de demonstração). Num banco com dados reais ela se recusa a subir: nunca abre a conta de um gestor real nem apaga dados.
+- Não há senha de demonstração. O gestor demo é compartilhado: o cenário de exemplo é protegido (403), o que os visitantes criam tem teto e tudo volta ao original no próximo reset (45 min). Cadastros de visitantes ficam visíveis para quem entra como clínica até lá.
 - O app web na Vercel envia uma Content-Security-Policy que só permite chamar a API do Render (`connect-src https://*.onrender.com`). Se a API ficar em outro domínio, ajuste o `vercel.json`.
 
 - O banco hospedado é exclusivo da demo e descartável: nunca aponte `DB_FILE` para dados reais com `DEMO_ENABLED=true`.

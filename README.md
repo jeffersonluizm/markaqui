@@ -10,7 +10,8 @@ App Expo (React Native) · API Node/Express · SQLite · login com papéis · te
 </div>
 
 <p align="center">
-  <b><a href="https://markaqui.vercel.app">Abrir a demonstração</a></b> · API: <a href="https://markaqui-api.onrender.com/api/saude">markaqui-api.onrender.com</a> · <a href="docs/deploy.md">como publicar</a>
+  <b>Demonstração online (endereço previsto):</b> <code>markaqui.vercel.app</code> · API: <code>markaqui-api.onrender.com</code><br>
+  <sub>Link definitivo depois da publicação; ver <a href="docs/deploy.md">docs/deploy.md</a>. Enquanto isso, rode localmente com o <code>iniciar.bat</code> (abaixo).</sub>
 </p>
 
 > Na tela inicial, use **Explore a demonstração** e entre **como paciente** ou **como clínica** com um clique (sem cadastro). A primeira visita pode levar até um minuto enquanto o servidor gratuito acorda. Os dados são fictícios e voltam ao original a cada 45 minutos.
@@ -117,7 +118,7 @@ Antes de trocar o armazenamento, as hipóteses foram escritas e a API foi medida
 
 ## Próximos passos
 
-Notificações (lembrete 24 h antes), redefinição de senha pela clínica, testes de componentes das telas (React Native Testing Library), HTTPS e deploy, várias unidades.
+Notificações (lembrete 24 h antes), redefinição de senha pela clínica, testes de componentes das telas (React Native Testing Library), banco persistente (PostgreSQL) para uma instalação real fora da demonstração, várias unidades.
 
 ## Rodar localmente
 
