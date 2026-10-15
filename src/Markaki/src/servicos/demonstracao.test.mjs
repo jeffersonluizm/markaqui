@@ -80,3 +80,18 @@ test('outros erros (429, conexão) não disparam nova tentativa', async () => {
   );
   assert.equal(tentativas, 1);
 });
+
+test('demonstração cheia (503): mensagem amigável, sem nova tentativa', async () => {
+  let tentativas = 0;
+  await assert.rejects(
+    entrarNaDemonstracao('paciente', {
+      entrar: async () => {
+        tentativas += 1;
+        throw Object.assign(new Error('Service Unavailable'), { status: 503 });
+      },
+      recarregar: async () => assert.fail('não devia recarregar'),
+    }),
+    (e) => e.status === 503 && /cheia/.test(e.message) && /alguns minutos/.test(e.message)
+  );
+  assert.equal(tentativas, 1);
+});
