@@ -120,9 +120,12 @@ function criarVisitante(r, config, agora) {
       criado_em: agora.toISOString(),
       ...extra,
     });
-  // Sorteia entre os primeiros horários livres, para as visitantes não disputarem
+  // Sorteia entre os primeiros horários livres depois do primeiro dia com vaga (esse
+  // dia fica inteiro para a visitante agendar), para as visitantes não disputarem
   // sempre o mesmo.
-  const livres = r.horarios.listarLivres(undefined, momentoLocal(agora), 24);
+  const proximos = r.horarios.listarLivres(undefined, momentoLocal(agora), 200);
+  const depoisDoPrimeiroDia = proximos.filter((h) => h.data !== proximos[0].data);
+  const livres = (depoisDoPrimeiroDia.length > 0 ? depoisDoPrimeiroDia : proximos).slice(0, 24);
   if (livres.length > 0) {
     const [futura] = livres.splice(crypto.randomInt(livres.length), 1);
     consulta(futura);

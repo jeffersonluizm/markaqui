@@ -66,6 +66,17 @@ test('cada "Entrar como paciente" cria uma paciente efêmera, com consulta futur
   assert.ok(consultas.every((c) => c.paciente_id === a.body.usuario.id));
 });
 
+test('a consulta de exemplo da visitante deixa livre o primeiro dia da agenda (para ela agendar ali)', async () => {
+  const amb = ambienteDemo();
+  for (let i = 0; i < 8; i++) {
+    const { token } = (await entrarComo(amb, 'paciente')).body;
+    const livres = (await request(amb.app).get('/api/horarios').set(bearer(token))).body;
+    const minhas = (await request(amb.app).get('/api/agendamentos').set(bearer(token))).body;
+    const futura = minhas.find((c) => c.situacao === 'agendado');
+    assert.notEqual(futura.data, livres[0].data);
+  }
+});
+
 // Horários livres para quem tem o token, em momentos distintos e longe das
 // consultas que a pessoa já tem.
 async function livresParaAgendar(amb, token) {
