@@ -69,7 +69,8 @@ O limite de tentativas (login, cadastro, "Entrar como") conta por IP. Atrás do 
 1. **Logs do Render:** se aparecer `ERR_ERL_UNEXPECTED_X_FORWARDED_FOR`, o `TRUST_PROXY` está `0`. Ajuste para `1`.
 2. **Cada visitante tem o próprio contador.** Rode duas vezes, de redes diferentes (por exemplo o computador e o celular no 4G), e compare o cabeçalho `RateLimit` (o `r=` é o que sobra):
    ```bash
-   curl -si -X POST https://SUA-API.onrender.com/api/auth/login      -H "Content-Type: application/json" -d '{"email":"teste@exemplo.invalid","senha":"Errada2026"}' | grep -i "^ratelimit"
+   curl -si -X POST https://SUA-API.onrender.com/api/auth/login \
+     -H "Content-Type: application/json" -d '{"email":"teste@exemplo.invalid","senha":"Errada2026"}' | grep -i "^ratelimit"
    ```
    Da mesma rede, o `r=` cai a cada chamada (4, 3, 2...). Da outra rede, recomeça em 4. Se as duas redes dividem o mesmo contador, há mais de um proxy: suba `TRUST_PROXY` para `2` e repita.
 3. **IP inventado não zera o contador.** Repita a chamada acrescentando `-H "X-Forwarded-For: 203.0.113.$RANDOM"`. O `r=` deve continuar caindo. Se ele recomeçar a cada valor inventado, o `TRUST_PROXY` está alto demais: volte um número.
