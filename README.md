@@ -73,7 +73,7 @@ Decisões registradas em [ADRs](docs/adr/README.md). Detalhes: [Arquitetura da S
 ## Testes
 
 ```bash
-npm test --prefix src/Markaki/backend   # 78 testes da API, banco SQLite temporário
+npm test --prefix src/Markaki/backend   # 81 testes da API, banco SQLite temporário
 npm test --prefix src/Markaki           # 44 testes do app (cliente HTTP, validação, agenda, servidor acordando, contraste)
 npm run lint && npm run formato        # em cada pacote: ESLint e Prettier (também no CI)
 ```
@@ -83,6 +83,16 @@ Cobrem login e sessão (401, sessão expirada, senha trocada), papéis (403), li
 ## Teste de carga
 
 Antes de trocar o armazenamento, as hipóteses foram escritas e a API foi medida com o arquivo JSON da primeira versão; depois, medida de novo com SQLite, com o mesmo roteiro (autocannon, banco descartável numa pasta temporária, gerador e servidor na mesma máquina). Resultados, gráfico e quais hipóteses se confirmaram: [docs/carga](docs/carga/2026-10-04-resultados.md).
+
+| Cenário (10.000 horários) | Arquivo JSON (antes) | SQLite (depois) |
+|---|---|---|
+| Leitura da agenda de um médico | 93 req/s, p97,5 620 ms | 1.266 req/s, p97,5 48 ms |
+| Escrita com 50 conexões | 43 escritas/s, p97,5 1,5 s | 5.863 escritas/s, p97,5 10 ms |
+| Misto 90/10 com 300 conexões | 4.663 erros, p97,5 7,3 s | 0 erro, p97,5 250 ms |
+| Leitores e escritores ao mesmo tempo | 100% das escritas com erro 500 (`EPERM` no Windows) | 0 erro |
+| 4.000 pedidos no mesmo horário (200 horários) | 0 duplicado | 0 duplicado |
+
+<img src="docs/carga/2026-10-14-grafico.svg" alt="Gráfico: leitura, escrita e latência do arquivo JSON e do SQLite" width="760">
 
 ## Decisões
 

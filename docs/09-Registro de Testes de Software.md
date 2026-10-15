@@ -2,19 +2,19 @@
 
 <span style="color:red">Pré-requisitos: <a href="04-Projeto de Interface.md"> Projeto de Interface</a></span>, <a href="08-Plano de Testes de Software.md"> Plano de Testes de Software</a>
 
-## Versão 2.0 (registro de 4 de outubro de 2026)
+## Versão 2.0 (registro de 14 de outubro de 2026)
 
 Ambiente: Windows 11, Node.js 24.11.1, Chrome 154 (headless), Lighthouse 12.8, Ryzen 5 5600, 16 GB.
 
 | Suíte | Comando | Resultado |
 |---|---|---|
-| API (CT01 a CT13) | `npm test --prefix src/Markaki/backend` | 78 de 78 aprovados (7 arquivos: auth, demo, médicos, horários, agendamentos, configuração) |
+| API (CT01 a CT13) | `npm test --prefix src/Markaki/backend` | 81 de 81 aprovados (6 arquivos: auth, demo, médicos, horários, agendamentos, configuração) |
 | App (CT14, CT15) | `npm test --prefix src/Markaki` | 44 de 44 aprovados (cliente HTTP, servidor acordando, validação, formatação, agenda, contraste) |
 | Lint e formato | `npm run lint` e `npm run formato` nos dois pacotes | Sem erros nem avisos (ESLint 9, Prettier 3) |
 | Build web | `npx expo export --platform web` | Gerado sem erros (1,56 MB); as senhas de demonstração não aparecem no bundle de produção |
 | Lighthouse (build web, tela inicial, celular) | `lighthouse --only-categories=accessibility,best-practices` | Acessibilidade 100, Boas práticas 100 |
 | Fluxos nas telas (CT16) | Roteiros no Chrome headless contra a API com banco de demonstração | Paciente: escolha de perfil, cadastro com erros, login, agendar, consultas, histórico, diálogo de cancelamento, perfil. Clínica: painel, bloquear horário, abrir 3 horários, editar médico, consultas. Sem conexão, 404 e Sobre. Todos concluídos |
-| Carga (CT17) | `npm run carga` | Ver [resultados](carga/2026-10-04-resultados.md) |
+| Carga (CT17) | `npm run carga` (JSON 14/10, SQLite 14/10 e final 13/10, com a trava) | 7 hipóteses confirmadas (S3 com um detalhe refutado); 0 agendamento duplicado nas três versões. Ver [resultados](carga/2026-10-04-resultados.md) |
 
 Evidências dos fluxos: prints em [`docs/img/app`](img/app). Aviso conhecido no console do navegador: o `@react-navigation/bottom-tabs` registra um alerta do React sobre `style` num `Fragment` interno da biblioteca; não afeta o uso.
 

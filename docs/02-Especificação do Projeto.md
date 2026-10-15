@@ -21,7 +21,7 @@ A proposta original (abaixo, preservada como registro acadêmico) era um agendam
 | RF-005 Painel gerencial | Parcial: consultas de hoje e da semana, horários livres e agenda do dia (sem receita) | `src/telas/gestor/Painel.js`, `GET /api/painel` |
 | RF-006 Serviços com preço | Não implementado (no domínio de clínica, a especialidade substitui o serviço) | |
 | RNF-001 Segurança e LGPD | Parcial: senha com hash, paciente só vê os próprios dados, limites de tentativa. HTTPS depende da hospedagem | [Arquitetura](05-Arquitetura%20da%20Solução.md) |
-| RNF-002 Desempenho | Medido na API: ver [teste de carga](carga/2026-10-04-resultados.md) | `backend/carga/` |
+| RNF-002 Desempenho | Medido na API: leitura da agenda com p97,5 de 13 ms (100 horários) a 60 ms (10.000) na versão final; ver [teste de carga](carga/2026-10-04-resultados.md) | `backend/carga/` |
 | RNF-003 Material Design | Implementado: React Native Paper (MD3) com o tema do projeto | [Template](06-Template%20Padrão%20da%20Aplicação.md) |
 | RNF-004 Compatibilidade Android | Expo SDK 54 / React Native 0.81 | |
 | RNF-005 Consumo de bateria e dados | Não medido | |
