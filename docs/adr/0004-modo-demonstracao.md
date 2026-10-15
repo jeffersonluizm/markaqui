@@ -22,4 +22,4 @@ Alternativa considerada e descartada: manter a paciente compartilhada, semear s�
 ## Consequências
 - Nenhuma senha de demonstração existe, nem no código nem em resposta da API; o teste `demo.test.js` falha se uma voltar.
 - Cada visitante vê a experiência completa da paciente, com a mesma regra de limite da instalação real.
-- Quem entra como clínica divide o gestor com os outros visitantes; o que proteger nesse papel está na ADR 0005 e em `docs/deploy.md`, e o reset periódico devolve o cenário original.
+- Quem entra como clínica divide o gestor com os outros visitantes; por isso o cenário de exemplo é protegido (403 amigável), o que se cria tem teto e o reset periódico (45 minutos no Render) devolve o cenário original. Detalhes na ADR 0005 e em `docs/deploy.md`.

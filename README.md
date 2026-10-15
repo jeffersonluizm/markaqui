@@ -13,7 +13,7 @@ App Expo (React Native) · API Node/Express · SQLite · login com papéis · te
   <b><a href="https://markaqui.vercel.app">Abrir a demonstração</a></b> · API: <a href="https://markaqui-api.onrender.com/api/saude">markaqui-api.onrender.com</a> · <a href="docs/deploy.md">como publicar</a>
 </p>
 
-> Na tela inicial, use **Explore a demonstração** e entre **como paciente** ou **como clínica** com um clique (sem cadastro). A primeira visita pode levar até um minuto enquanto o servidor gratuito acorda. Os dados são fictícios e voltam ao original a cada 6 horas.
+> Na tela inicial, use **Explore a demonstração** e entre **como paciente** ou **como clínica** com um clique (sem cadastro). A primeira visita pode levar até um minuto enquanto o servidor gratuito acorda. Os dados são fictícios e voltam ao original a cada 45 minutos.
 
 
 <p align="center">

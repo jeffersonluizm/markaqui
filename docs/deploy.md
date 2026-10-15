@@ -31,9 +31,13 @@ Variáveis que o blueprint já define:
 | `JWT_SECRET` | gerado pelo Render | Segredo dos tokens (nunca vai para o Git) |
 | `DB_FILE` | `/tmp/markaqui.db` | Banco **só de demonstração**, efêmero |
 | `DEMO_ENABLED` | `true` | "Entrar como paciente / clínica" sem senha (`GET /api/demo` e `POST /api/demo/entrar`) |
-| `DEMO_RESET_MINUTOS` | `360` | Recria médicos, agenda e consultas a cada 6 horas |
+| `DEMO_RESET_MINUTOS` | `45` | Recria médicos, agenda e consultas a cada 45 minutos (e apaga as pacientes efêmeras). O gestor de demonstração é o mesmo para todos os visitantes; o reset desfaz o que mudaram |
+| `DEMO_MAX_MEDICOS` e `DEMO_MAX_HORARIOS` | `20` e `500` | Tetos do que os visitantes criam como clínica (contando o cenário de exemplo). Passando disso, a API responde 409 com uma mensagem clara |
+| `LIMITE_LISTAGEM` | `500` | Itens por listagem (horários, consultas, médicos): nenhuma resposta cresce sem fim |
 | `TRUST_PROXY` | `1` | Limite de tentativas por visitante (atrás do proxy). Só use com um proxy na frente: sem ele, o cliente forjaria `X-Forwarded-For` |
 | `CORS_ORIGENS` | URL do app na Vercel | Só o app publicado chama a API pelo navegador |
+
+Proteções do modo demonstração (só valem com `DEMO_ENABLED=true`): os registros do cenário de exemplo (ids que começam com `demo-`) não podem ser removidos, renomeados nem mudar de data, e a clínica não cancela as consultas de exemplo; a API responde 403 com uma mensagem explicando o que dá para testar (bloquear e liberar horários, cadastrar médicos e horários novos). O que o visitante cria pode ser editado e removido normalmente.
 
 A demonstração não tem senha nenhuma: cada "Entrar como paciente" cria uma paciente efêmera só para quem clicou (com uma consulta marcada, uma cancelada e uma realizada), e "Entrar como clínica" entra no gestor de demonstração, que não aceita login por senha. Opcionais: `DEMO_MAX_VISITANTES` (padrão 50 pacientes efêmeras ao mesmo tempo; acima disso a mais antiga sai) e `DEMO_ENTRADAS_POR_MINUTO` (padrão 10 por visitante).
 

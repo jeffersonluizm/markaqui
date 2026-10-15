@@ -112,7 +112,7 @@ A primeira versão gravava tudo num `database.json` relido e regravado inteiro a
 
 ## Hospedagem
 
-Ver [Publicar a demonstração](deploy.md) e o [ADR 0005](adr/0005-hospedagem.md): API no Render (banco de demonstração efêmero recriado a cada partida e a cada 6 horas) e app como Expo web na Vercel.
+Ver [Publicar a demonstração](deploy.md) e o [ADR 0005](adr/0005-hospedagem.md): API no Render (banco de demonstração efêmero recriado a cada partida e a cada 45 minutos) e app como Expo web na Vercel.
 
 
 Localmente, `iniciar.bat` sobe tudo. O SQLite atende um único processo; para vários processos ou máquinas, o próximo passo é PostgreSQL com o mesmo desenho de repositórios.

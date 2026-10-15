@@ -24,13 +24,21 @@ services:
       - key: JWT_SECRET
         generateValue: true
       # Banco de demonstração descartável: o disco do plano gratuito é efêmero e o
-      # cenário é recriado a cada partida e a cada 6 horas.
+      # cenário é recriado a cada partida e a cada 45 minutos (o gestor demo é
+      # compartilhado; o reset desfaz o que os visitantes mudaram).
       - key: DB_FILE
         value: /tmp/markaqui.db
       - key: DEMO_ENABLED
         value: "true"
       - key: DEMO_RESET_MINUTOS
-        value: "360"
+        value: "45"
+      # Tetos do que os visitantes criam como clínica.
+      - key: DEMO_MAX_MEDICOS
+        value: "20"
+      - key: DEMO_MAX_HORARIOS
+        value: "500"
+      - key: LIMITE_LISTAGEM
+        value: "500"
       - key: TRUST_PROXY
         value: "1"
       - key: CORS_ORIGENS
