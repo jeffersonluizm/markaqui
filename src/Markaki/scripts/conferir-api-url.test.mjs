@@ -29,3 +29,21 @@ test('com a URL https da API o build segue', () => {
   const r = rodar('https://markaqui-api.onrender.com/api');
   assert.equal(r.status, 0, r.stderr);
 });
+
+test('API fora do connect-src da CSP do vercel.json: o build falha e diz o que ajustar', () => {
+  const r = rodar('https://api.exemplo.com/api');
+  assert.equal(r.status, 1);
+  assert.match(r.stderr, /connect-src/);
+  assert.match(r.stderr, /vercel\.json/);
+});
+
+test('permitidoPeloConnectSrc segue as regras de host da CSP', async () => {
+  const { permitidoPeloConnectSrc } = await import('./conferir-api-url.mjs');
+  const csp = "default-src 'self'; connect-src 'self' https://*.onrender.com https://api.exemplo.com; img-src 'self'";
+  assert.equal(permitidoPeloConnectSrc('https://markaqui-api.onrender.com/api', csp), true);
+  assert.equal(permitidoPeloConnectSrc('https://api.exemplo.com/api', csp), true);
+  assert.equal(permitidoPeloConnectSrc('https://onrender.com.golpe.com/api', csp), false);
+  assert.equal(permitidoPeloConnectSrc('https://outro.exemplo.com/api', csp), false);
+  assert.equal(permitidoPeloConnectSrc('http://api.exemplo.com/api', csp), false);
+  assert.equal(permitidoPeloConnectSrc('https://qualquer.com/api', "default-src 'self'"), false);
+});
