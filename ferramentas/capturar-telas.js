@@ -83,7 +83,8 @@ const ROTEIRO = [
   pagina.on('pageerror', (e) => erros.push(e.message));
   try {
     for (const [acao, alvo] of ROTEIRO) {
-      if (acao === 'abrir') await pagina.goto(base + alvo);
+      // A primeira abertura do Expo web compila o bundle: pode passar de um minuto.
+      if (acao === 'abrir') await pagina.goto(base + alvo, { timeout: 180000 });
       if (acao === 'esperar') await pagina.getByText(alvo, { exact: false }).first().waitFor({ timeout: 90000 });
       if (acao === 'clicar') {
         // Com dois botões de mesmo nome (ex.: "Sair" na tela e no diálogo), vale o último:
