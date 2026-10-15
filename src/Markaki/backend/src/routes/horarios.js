@@ -39,7 +39,7 @@ function rotasHorarios(armazenamento, config) {
   rotas.delete(
     '/:id',
     gestor,
-    gravar('Erro ao remover horário.', (r, _, ctx) => horarios.remover(r, ctx.params.id))
+    gravar('Erro ao remover horário.', (r, _, ctx) => horarios.remover(r, ctx.params.id, ctx))
   );
 
   return rotas;

@@ -122,7 +122,7 @@ function criarVisitante(r, config, agora) {
     });
   // Sorteia entre os primeiros horários livres, para as visitantes não disputarem
   // sempre o mesmo.
-  const livres = r.horarios.listarLivres(undefined, momentoLocal(agora)).slice(0, 24);
+  const livres = r.horarios.listarLivres(undefined, momentoLocal(agora), 24);
   if (livres.length > 0) {
     const [futura] = livres.splice(crypto.randomInt(livres.length), 1);
     consulta(futura);
@@ -183,11 +183,13 @@ function resetarDemonstracao(armazenamento, config, agora = new Date()) {
   };
   const todosHorarios = [...horarios, passado];
 
+  let seq = 0;
   const consulta = (pacienteId, medicoId, data, hora, extra = {}) => {
     const m = medico(medicoId);
     const paciente = usuarios.find((u) => u.id === pacienteId);
+    seq += 1;
     return {
-      id: gerarId(),
+      id: `demo-ag-${seq}`,
       horario_id: `${medicoId}-${data}-${hora}`,
       medico_id: medicoId,
       medico_nome: m.nome,

@@ -3,6 +3,7 @@
 const { gerarId } = require('../infra/ids');
 const { naoEncontrado, conflito } = require('../erros');
 const { momentoLocal } = require('../dominio/tempo');
+const { protegerCenario, respeitarTeto } = require('./protecaoDemo');
 
 function buscar(r, id) {
   const medico = r.medicos.buscar(id);
@@ -10,7 +11,8 @@ function buscar(r, id) {
   return medico;
 }
 
-function cadastrar(r, { nome, especialidade }) {
+function cadastrar(r, { nome, especialidade }, ctx) {
+  respeitarTeto(ctx, { atual: r.medicos.contar(), chave: 'maxMedicos', rotulo: 'médicos' });
   return r.medicos.inserir({ id: gerarId(), nome, especialidade });
 }
 
@@ -18,6 +20,7 @@ function cadastrar(r, { nome, especialidade }) {
 // consultas canceladas ou realizadas guarda o nome da época.
 function atualizar(r, id, campos, ctx) {
   buscar(r, id);
+  protegerCenario(ctx, 'medico', id);
   const medico = r.medicos.atualizar(id, campos);
   r.agendamentos.renomearMedicoNosAtivos(id, medico, momentoLocal(ctx.agora));
   return medico;
@@ -27,6 +30,7 @@ function atualizar(r, id, campos, ctx) {
 // e o histórico de consultas continua (com o nome copiado no agendamento).
 function remover(r, id, ctx) {
   buscar(r, id);
+  protegerCenario(ctx, 'medico', id);
   const futuras = r.agendamentos.contarFuturosDoMedico(id, momentoLocal(ctx.agora));
   if (futuras > 0) {
     throw conflito(`Este médico tem ${futuras} consulta(s) marcada(s). Cancele as consultas primeiro.`);

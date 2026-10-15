@@ -11,7 +11,7 @@ function rotasMedicos(armazenamento, config) {
 
   rotas.get(
     '/',
-    ler('Erro ao buscar médicos.', (r) => r.medicos.listar())
+    ler('Erro ao buscar médicos.', (r, ctx) => r.medicos.listar(ctx.config.limiteListagem))
   );
   rotas.get(
     '/:id',
@@ -20,7 +20,7 @@ function rotasMedicos(armazenamento, config) {
   rotas.post(
     '/',
     gestor,
-    gravar('Erro ao cadastrar médico.', (r, dados) => medicos.cadastrar(r, dados), {
+    gravar('Erro ao cadastrar médico.', (r, dados, ctx) => medicos.cadastrar(r, dados, ctx), {
       status: 201,
       validar: validarNovoMedico,
     })

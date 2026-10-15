@@ -16,6 +16,12 @@ const SELECT_HORARIO = `
 const DEPOIS_DE = '(h.data > @data OR (h.data = @data AND h.hora > @hora))';
 const LIVRE = 'h.bloqueado = 0 AND a.id IS NULL';
 
+// Listagens com limite (@limite; -1 = sem limite). Para a clínica valem os itens
+// mais recentes por data (a agenda futura e o passado próximo), devolvidos em
+// ordem crescente; para a paciente, os horários livres mais próximos.
+const RECENTES = (sql, ordemDesc, ordemAsc) =>
+  `SELECT * FROM (${sql} ORDER BY ${ordemDesc} LIMIT @limite) ORDER BY ${ordemAsc}`;
+
 function paraHorario(linha) {
   if (!linha) return undefined;
   const bloqueado = Boolean(linha.bloqueado);
@@ -53,17 +59,22 @@ function criarRepositorios(db) {
     // Pacientes efêmeras do modo demonstração, da mais antiga para a mais nova.
     visitantesDemo: p("SELECT id FROM usuarios WHERE demo = 1 AND papel = 'paciente' ORDER BY criado_em, rowid"),
 
-    medicos: p('SELECT id, nome, especialidade FROM medicos ORDER BY rowid'),
+    medicos: p('SELECT id, nome, especialidade FROM medicos ORDER BY rowid LIMIT ?'),
     medicoPorId: p('SELECT id, nome, especialidade FROM medicos WHERE id = ?'),
     medicoInserir: p('INSERT INTO medicos (id, nome, especialidade) VALUES (@id, @nome, @especialidade)'),
     medicoRemover: p('DELETE FROM medicos WHERE id = ?'),
     medicosContar: p('SELECT COUNT(*) AS n FROM medicos'),
 
-    horarios: p(`${SELECT_HORARIO} ORDER BY h.data, h.hora, m.nome`),
-    horariosDoMedico: p(`${SELECT_HORARIO} WHERE h.medico_id = ? ORDER BY h.data, h.hora`),
-    horariosLivres: p(`${SELECT_HORARIO} WHERE ${LIVRE} AND ${DEPOIS_DE} ORDER BY h.data, h.hora, m.nome`),
+    horarios: p(RECENTES(SELECT_HORARIO, 'h.data DESC, h.hora DESC, m.nome DESC', 'data, hora, medico_nome')),
+    horariosDoMedico: p(
+      RECENTES(`${SELECT_HORARIO} WHERE h.medico_id = @medicoId`, 'h.data DESC, h.hora DESC', 'data, hora')
+    ),
+    horariosLivres: p(
+      `${SELECT_HORARIO} WHERE ${LIVRE} AND ${DEPOIS_DE} ORDER BY h.data, h.hora, m.nome LIMIT @limite`
+    ),
     horariosLivresDoMedico: p(`${SELECT_HORARIO}
-      WHERE h.medico_id = @medicoId AND ${LIVRE} AND ${DEPOIS_DE} ORDER BY h.data, h.hora`),
+      WHERE h.medico_id = @medicoId AND ${LIVRE} AND ${DEPOIS_DE} ORDER BY h.data, h.hora LIMIT @limite`),
+    horariosContar: p('SELECT COUNT(*) AS n FROM horarios'),
     horariosLivresContar: p(`
       SELECT COUNT(*) AS n FROM horarios h
       LEFT JOIN agendamentos a ON a.horario_id = h.id AND a.status = 'agendado'
@@ -79,8 +90,16 @@ function criarRepositorios(db) {
       SELECT 1 FROM horarios
       WHERE medico_id = @medicoId AND data = @data AND hora = @hora AND id <> @excetoId`),
 
-    agendamentos: p('SELECT * FROM agendamentos ORDER BY data, hora, criado_em'),
-    agendamentosDoPaciente: p('SELECT * FROM agendamentos WHERE paciente_id = ? ORDER BY data, hora, criado_em'),
+    agendamentos: p(
+      RECENTES('SELECT * FROM agendamentos', 'data DESC, hora DESC, criado_em DESC', 'data, hora, criado_em')
+    ),
+    agendamentosDoPaciente: p(
+      RECENTES(
+        'SELECT * FROM agendamentos WHERE paciente_id = @pacienteId',
+        'data DESC, hora DESC, criado_em DESC',
+        'data, hora, criado_em'
+      )
+    ),
     agendamentosAtivosEntre: p(`
       SELECT * FROM agendamentos
       WHERE status = 'agendado' AND data BETWEEN @inicio AND @fim ORDER BY data, hora`),
@@ -137,7 +156,7 @@ function criarRepositorios(db) {
   };
 
   const medicos = {
-    listar: () => q.medicos.all(),
+    listar: (limite = -1) => q.medicos.all(limite),
     buscar: (id) => q.medicoPorId.get(id),
     contar: () => q.medicosContar.get().n,
     inserir(m) {
@@ -153,12 +172,15 @@ function criarRepositorios(db) {
   };
 
   const horarios = {
-    listar: (medicoId) => (medicoId ? q.horariosDoMedico.all(medicoId) : q.horarios.all()).map(paraHorario),
+    listar: (medicoId, limite = -1) =>
+      (medicoId ? q.horariosDoMedico.all({ medicoId, limite }) : q.horarios.all({ limite })).map(paraHorario),
     // Só os livres depois de `momento` ({ data, hora }).
-    listarLivres: (medicoId, momento) =>
-      (medicoId ? q.horariosLivresDoMedico.all({ medicoId, ...momento }) : q.horariosLivres.all(momento)).map(
-        paraHorario
-      ),
+    listarLivres: (medicoId, momento, limite = -1) =>
+      (medicoId
+        ? q.horariosLivresDoMedico.all({ medicoId, ...momento, limite })
+        : q.horariosLivres.all({ ...momento, limite })
+      ).map(paraHorario),
+    contar: () => q.horariosContar.get().n,
     contarLivres: (momento) => q.horariosLivresContar.get(momento).n,
     buscar: (id) => paraHorario(q.horarioPorId.get(id)),
     listarBrutos: () => q.horariosBrutos.all().map((h) => ({ ...h, bloqueado: Boolean(h.bloqueado) })),
@@ -183,7 +205,8 @@ function criarRepositorios(db) {
   };
 
   const agendamentos = {
-    listar: (pacienteId) => (pacienteId ? q.agendamentosDoPaciente.all(pacienteId) : q.agendamentos.all()),
+    listar: (pacienteId, limite = -1) =>
+      pacienteId ? q.agendamentosDoPaciente.all({ pacienteId, limite }) : q.agendamentos.all({ limite }),
     ativosEntre: (inicio, fim) => q.agendamentosAtivosEntre.all({ inicio, fim }),
     buscar: (id) => q.agendamentoPorId.get(id),
     listarBrutos: () => q.agendamentosBrutos.all(),

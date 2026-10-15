@@ -14,6 +14,9 @@ function lerDemo(env) {
     resetMinutos: numero(env.DEMO_RESET_MINUTOS, 0),
     // Pacientes efêmeras ao mesmo tempo; passando disso, a mais antiga sai.
     maxVisitantes: numero(env.DEMO_MAX_VISITANTES, 50),
+    // Tetos do que os visitantes criam como clínica (o cenário de exemplo conta).
+    maxMedicos: numero(env.DEMO_MAX_MEDICOS, 20),
+    maxHorarios: numero(env.DEMO_MAX_HORARIOS, 500),
     // "Entrar como" por IP por minuto.
     entradasPorMinuto: numero(env.DEMO_ENTRADAS_POR_MINUTO, 10),
     contas: {
@@ -55,6 +58,8 @@ function lerConfig(env = process.env) {
     limiteGlobalMax: numero(env.LIMITE_GLOBAL_POR_MINUTO, 300),
     // Consultas futuras ativas por paciente (uma conta não reserva a agenda toda).
     limiteConsultasAtivas: numero(env.LIMITE_CONSULTAS_ATIVAS, 3),
+    // Itens por listagem (horários, consultas, médicos): uma resposta nunca cresce sem fim.
+    limiteListagem: numero(env.LIMITE_LISTAGEM, 500),
     // Proxies na frente da API (1 no Render): o limite por IP passa a usar o IP do visitante.
     trustProxy: numero(env.TRUST_PROXY, 0),
     demo: lerDemo(env),

@@ -5,6 +5,7 @@ const { naoEncontrado, requisicaoInvalida, conflito } = require('../erros');
 const { ehFuturo, momentoLocal } = require('../dominio/tempo');
 const { agendamentoCom } = require('./apresentacao');
 const horarios = require('./horarios');
+const { protegerCenario } = require('./protecaoDemo');
 
 function agendar(r, { horario_id, medico_id }, ctx) {
   const horario = horarios.buscar(r, horario_id);
@@ -42,7 +43,7 @@ function agendar(r, { horario_id, medico_id }, ctx) {
 // Paciente vê só os seus; gestor vê todos.
 function listar(r, ctx) {
   const pacienteId = ctx.usuario.papel === 'gestor' ? undefined : ctx.usuario.id;
-  return r.agendamentos.listar(pacienteId).map((a) => agendamentoCom(ctx.agora, a));
+  return r.agendamentos.listar(pacienteId, ctx.config.limiteListagem).map((a) => agendamentoCom(ctx.agora, a));
 }
 
 // Agendamento de outra paciente responde 404 (não revela que existe).
@@ -59,6 +60,7 @@ function detalhar(r, id, ctx) {
 
 function cancelar(r, id, ctx) {
   const agendamento = buscarVisivel(r, id, ctx);
+  if (ctx.usuario.papel === 'gestor') protegerCenario(ctx, 'consulta', id);
   if (agendamento.status === 'cancelado') throw conflito('Esta consulta já foi cancelada.');
   if (!ehFuturo(agendamento.data, agendamento.hora, ctx.agora)) {
     throw conflito('Não é possível cancelar uma consulta que já passou.');
