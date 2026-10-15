@@ -13,14 +13,17 @@ import { gradeDeHoras, proximosDias } from '../../servicos/agenda';
 import { dataPorExtenso } from '../../servicos/formatacao';
 import { cores } from '../../tema/tokens';
 
-const DIAS = proximosDias(30);
 const HORAS = gradeDeHoras({ inicio: '07:00', fim: '19:00', passoMin: 30 });
 
 export default function NovosHorarios({ navigation, route }) {
   const { mostrar } = useAvisos();
   const medicos = useRecurso(() => api.medicos.listar());
   const [medicoId, setMedicoId] = useState(route.params?.medicoId || null);
-  const [dia, setDia] = useState(DIAS[0]);
+  // Os próximos 30 dias são calculados na tela, não no carregamento do módulo: com
+  // o app aberto de um dia para o outro, a lista acompanha a data de hoje.
+  const dias = proximosDias(30);
+  const [diaEscolhido, setDia] = useState(null);
+  const dia = dias.includes(diaEscolhido) ? diaEscolhido : dias[0];
   const [horas, setHoras] = useState([]);
   const [salvando, setSalvando] = useState(false);
   const existentes = useRecurso(() => (medicoId ? api.horarios.listar(medicoId) : Promise.resolve([])), [medicoId]);
@@ -78,7 +81,7 @@ export default function NovosHorarios({ navigation, route }) {
             />
             <TituloSecao>Dia</TituloSecao>
             <SeletorDia
-              dias={DIAS}
+              dias={dias}
               selecionado={dia}
               aoSelecionar={(novo) => {
                 setDia(novo);
