@@ -31,3 +31,33 @@ test('a API escuta só na própria máquina, a menos que HOST diga outra coisa',
   assert.equal(lerConfig({ JWT_SECRET: 'x'.repeat(32) }).host, '127.0.0.1');
   assert.equal(lerConfig({ JWT_SECRET: 'x'.repeat(32), HOST: '0.0.0.0' }).host, '0.0.0.0');
 });
+
+// Cada variável numérica: nome, campo lido e o menor valor aceito.
+const NUMERICAS = [
+  ['PORT', (c) => c.porta, 1],
+  ['BCRYPT_CUSTO', (c) => c.bcryptCusto, 4],
+  ['LIMITE_AUTH_POR_MINUTO', (c) => c.limiteAuthMax, 1],
+  ['LIMITE_GLOBAL_POR_MINUTO', (c) => c.limiteGlobalMax, 0],
+  ['LIMITE_CONSULTAS_ATIVAS', (c) => c.limiteConsultasAtivas, 1],
+  ['LIMITE_LISTAGEM', (c) => c.limiteListagem, 1],
+  ['TRUST_PROXY', (c) => c.trustProxy, 0],
+  ['DEMO_RESET_MINUTOS', (c) => c.demo.resetMinutos, 0],
+  ['DEMO_MAX_VISITANTES', (c) => c.demo.maxVisitantes, 1],
+  ['DEMO_VIDA_MINIMA_MINUTOS', (c) => c.demo.vidaMinimaMinutos, 0],
+  ['DEMO_MAX_MEDICOS', (c) => c.demo.maxMedicos, 1],
+  ['DEMO_MAX_HORARIOS', (c) => c.demo.maxHorarios, 1],
+  ['DEMO_MAX_BLOQUEADOS', (c) => c.demo.maxBloqueados, 0],
+  ['DEMO_JANELA_DIAS', (c) => c.demo.janelaDias, 1],
+  ['DEMO_ENTRADAS_POR_MINUTO', (c) => c.demo.entradasPorMinuto, 1],
+];
+
+for (const [nome, ler, minimo] of NUMERICAS) {
+  test(`${nome}: aceita inteiro válido e recusa texto, fração ou valor abaixo de ${minimo} na partida`, () => {
+    const base = { JWT_SECRET: 'x'.repeat(32) };
+    const valido = String(minimo + 7);
+    assert.equal(ler(lerConfig({ ...base, [nome]: valido })), Number(valido));
+    for (const invalido of ['abc', '2.5', String(minimo - 1), '10x']) {
+      assert.throws(() => lerConfig({ ...base, [nome]: invalido }), new RegExp(`${nome}.*inteiro`), invalido);
+    }
+  });
+}
