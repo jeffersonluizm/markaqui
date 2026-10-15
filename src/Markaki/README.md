@@ -74,7 +74,9 @@ O `iniciar.bat` da raiz faz tudo isso: confere o Node, instala, cria os dois `.e
 | `DEMO_ENABLED` | `false` | Liga o modo demonstração: "Entrar como paciente / clínica" sem senha (`GET /api/demo`, `POST /api/demo/entrar`). Só com banco exclusivo de demo. |
 | `DEMO_RESET_MINUTOS` | `0` | Recria o cenário de demonstração a cada N minutos (0: só com banco vazio) |
 | `DEMO_MAX_VISITANTES` | `50` | Pacientes efêmeras ao mesmo tempo (cada "Entrar como paciente" cria uma); acima disso, a mais antiga sai com as consultas dela |
-| `DEMO_MAX_MEDICOS`, `DEMO_MAX_HORARIOS` | `20`, `500` | Tetos do que os visitantes criam como clínica na demonstração (409 acima disso). O cenário de exemplo (ids `demo-*`) não sai nem muda de data (403) |
+| `DEMO_MAX_MEDICOS`, `DEMO_MAX_HORARIOS` | `20`, `500` | Tetos do que os visitantes criam como clínica na demonstração (409 acima disso; os horários do cenário não contam). O cenário de exemplo (ids `demo-*`) não sai nem muda de data (403) |
+| `DEMO_VIDA_MINIMA_MINUTOS` | `15` | Idade mínima de uma visitante para ceder a vaga no teto; antes disso, 503 "demonstração cheia" com `Retry-After` |
+| `DEMO_JANELA_DIAS`, `DEMO_MAX_BLOQUEADOS` | `60`, `20` | Na demonstração: horários novos só nos próximos N dias; horários do cenário bloqueados ao mesmo tempo |
 | `DEMO_ENTRADAS_POR_MINUTO` | `10` | "Entrar como" por IP por minuto |
 | `DEMO_GESTOR_EMAIL` | `gestor@markaqui.demo` | E-mail do gestor de demonstração (sem senha utilizável) |
 | `TRUST_PROXY` | `0` | Proxies na frente da API (`1` no Render), para o limite por IP valer por visitante |

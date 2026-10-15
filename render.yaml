@@ -37,6 +37,15 @@ services:
         value: "20"
       - key: DEMO_MAX_HORARIOS
         value: "500"
+      - key: DEMO_JANELA_DIAS
+        value: "60"
+      - key: DEMO_MAX_BLOQUEADOS
+        value: "20"
+      # Visitante só cede a vaga depois de 15 minutos (senão: 503, demonstração cheia).
+      - key: DEMO_MAX_VISITANTES
+        value: "50"
+      - key: DEMO_VIDA_MINIMA_MINUTOS
+        value: "15"
       - key: LIMITE_LISTAGEM
         value: "500"
       - key: TRUST_PROXY

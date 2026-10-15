@@ -32,14 +32,21 @@ Variáveis que o blueprint já define:
 | `DB_FILE` | `/tmp/markaqui.db` | Banco **só de demonstração**, efêmero |
 | `DEMO_ENABLED` | `true` | "Entrar como paciente / clínica" sem senha (`GET /api/demo` e `POST /api/demo/entrar`) |
 | `DEMO_RESET_MINUTOS` | `45` | Recria médicos, agenda e consultas a cada 45 minutos (e apaga as pacientes efêmeras). O gestor de demonstração é o mesmo para todos os visitantes; o reset desfaz o que mudaram |
-| `DEMO_MAX_MEDICOS` e `DEMO_MAX_HORARIOS` | `20` e `500` | Tetos do que os visitantes criam como clínica (contando o cenário de exemplo). Passando disso, a API responde 409 com uma mensagem clara |
+| `DEMO_MAX_MEDICOS` e `DEMO_MAX_HORARIOS` | `20` e `500` | Tetos do que os visitantes criam como clínica: médicos contando o cenário de exemplo; horários só os criados pelos visitantes. Passando disso, a API responde 409 com uma mensagem clara |
+| `DEMO_JANELA_DIAS` | `60` | Horários novos (ou com data mudada) só nos próximos 60 dias |
+| `DEMO_MAX_BLOQUEADOS` | `20` | Horários do cenário bloqueados ao mesmo tempo |
+| `DEMO_VIDA_MINIMA_MINUTOS` | `15` | Idade mínima de uma visitante para ceder a vaga quando o teto `DEMO_MAX_VISITANTES` é atingido; antes disso a API responde 503 "A demonstração está cheia" com `Retry-After` |
 | `LIMITE_LISTAGEM` | `500` | Itens por listagem (horários, consultas, médicos): nenhuma resposta cresce sem fim |
 | `TRUST_PROXY` | `1` | Limite de tentativas por visitante (atrás do proxy). Só use com um proxy na frente: sem ele, o cliente forjaria `X-Forwarded-For` |
 | `CORS_ORIGENS` | URL do app na Vercel | Só o app publicado chama a API pelo navegador |
 
-Proteções do modo demonstração (só valem com `DEMO_ENABLED=true`): os registros do cenário de exemplo (ids que começam com `demo-`) não podem ser removidos, renomeados nem mudar de data, e a clínica não cancela as consultas de exemplo; a API responde 403 com uma mensagem explicando o que dá para testar (bloquear e liberar horários, cadastrar médicos e horários novos). O que o visitante cria pode ser editado e removido normalmente.
+Proteções do modo demonstração (só valem com `DEMO_ENABLED=true`): os registros do cenário de exemplo (ids que começam com `demo-`) não podem ser removidos, renomeados nem mudar de data, e a clínica não cancela as consultas de exemplo; a API responde 403 com uma mensagem explicando o que dá para testar (bloquear e liberar horários, cadastrar médicos e horários novos). O que o visitante cria pode ser editado e removido normalmente. Além disso, a clínica não cancela consulta de visitante (só quem agendou), no máximo 20 horários do cenário ficam bloqueados ao mesmo tempo, e horários novos só valem nos próximos 60 dias.
 
-A demonstração não tem senha nenhuma: cada "Entrar como paciente" cria uma paciente efêmera só para quem clicou (com uma consulta marcada, uma cancelada e uma realizada), e "Entrar como clínica" entra no gestor de demonstração, que não aceita login por senha. Opcionais: `DEMO_MAX_VISITANTES` (padrão 50 pacientes efêmeras ao mesmo tempo; acima disso a mais antiga sai) e `DEMO_ENTRADAS_POR_MINUTO` (padrão 10 por visitante).
+**Cadastro na demonstração:** a tela de cadastro continua disponível, mas a conta criada é temporária (marcada como demo, conta no teto de visitantes e na vida mínima e some no próximo reset). A tela mostra o aviso "Demonstração: esta conta é temporária...".
+
+Todas as variáveis numéricas são conferidas na partida: um valor que não seja inteiro, ou fora da faixa (ex.: `DEMO_MAX_VISITANTES=abc` ou `0`), faz a API parar com uma mensagem dizendo qual variável corrigir, em vez de desligar a proteção em silêncio.
+
+A demonstração não tem senha nenhuma: cada "Entrar como paciente" cria uma paciente efêmera só para quem clicou (com uma consulta marcada, uma cancelada e uma realizada), e "Entrar como clínica" entra no gestor de demonstração, que não aceita login por senha. Opcionais: `DEMO_MAX_VISITANTES` (padrão 50 pacientes efêmeras ao mesmo tempo; acima disso sai a mais antiga que já tenha 15 minutos) e `DEMO_ENTRADAS_POR_MINUTO` (padrão 10 por visitante). Se a API subir sobre um banco demo de uma versão antiga, a senha publicada do gestor deixa de valer e a antiga paciente compartilhada é removida.
 
 **Conferir:** abra `https://SUA-API.onrender.com/api/saude` (deve responder `{"status":"ok"}`) e `https://SUA-API.onrender.com/api/demo` (lista os dois papéis, sem e-mail nem senha).
 
