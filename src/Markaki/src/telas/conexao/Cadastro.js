@@ -1,11 +1,13 @@
 // Cadastro de paciente (a única conta que se cria pelo app).
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Checkbox, Icon, Text } from 'react-native-paper';
 import { Tela, TituloTela } from '../../componentes/Tela';
 import { Campo, CampoSenha, BotaoPrincipal, BotaoTexto } from '../../componentes/Formulario';
 import { useSessao } from '../../contexto/Sessao';
 import { validarCadastro, semErros } from '../../servicos/validacao';
+import { api } from '../../servicos/api';
+import { mensagemAmigavel } from '../../servicos/demonstracao';
 import { cores, espaco, ALVO_MINIMO } from '../../tema/tokens';
 
 export default function Cadastro({ navigation }) {
@@ -14,6 +16,19 @@ export default function Cadastro({ navigation }) {
   const [erros, setErros] = useState({});
   const [erroGeral, setErroGeral] = useState(null);
   const [enviando, setEnviando] = useState(false);
+  // Com o modo demonstração ligado na API (GET /api/demo responde), a conta criada
+  // aqui é temporária: a tela avisa, sem atrapalhar o cadastro.
+  const [demonstracao, setDemonstracao] = useState(false);
+  useEffect(() => {
+    let ativo = true;
+    api.demo
+      .contas()
+      .then(() => ativo && setDemonstracao(true))
+      .catch(() => {});
+    return () => {
+      ativo = false;
+    };
+  }, []);
   const mudar = (campo) => (valor) => setForm((atual) => ({ ...atual, [campo]: valor }));
 
   async function enviar() {
@@ -31,7 +46,7 @@ export default function Cadastro({ navigation }) {
         aceite_termos: form.aceite,
       });
     } catch (erro) {
-      setErroGeral(erro.message);
+      setErroGeral(mensagemAmigavel(erro).message);
       setEnviando(false);
     }
   }
@@ -109,6 +124,15 @@ export default function Cadastro({ navigation }) {
         </View>
       ) : null}
 
+      {demonstracao ? (
+        <View style={estilos.avisoDemo}>
+          <Icon source="information-outline" size={18} color={cores.textoSecundario} />
+          <Text variant="bodySmall" style={estilos.textoAvisoDemo}>
+            Demonstração: esta conta é temporária e some quando os dados voltam ao original.
+          </Text>
+        </View>
+      ) : null}
+
       <BotaoPrincipal onPress={enviar} loading={enviando} disabled={enviando}>
         Criar conta
       </BotaoPrincipal>
@@ -122,6 +146,8 @@ const estilos = StyleSheet.create({
   textoAceite: { flex: 1, color: cores.texto },
   linkTermos: { alignSelf: 'flex-start' },
   erro: { color: cores.erro, flex: 1 },
+  avisoDemo: { flexDirection: 'row', alignItems: 'center', gap: espaco.xs },
+  textoAvisoDemo: { flex: 1, color: cores.textoSecundario },
   faixaErro: {
     flexDirection: 'row',
     gap: espaco.xs,
