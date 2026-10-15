@@ -5,7 +5,7 @@ const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const { gerarId } = require('../infra/ids');
 const { emitirToken } = require('../infra/tokens');
-const { naoAutenticado } = require('../erros');
+const { naoAutenticado, indisponivel } = require('../erros');
 const { momentoLocal } = require('../dominio/tempo');
 const { usuarioPublico } = require('./apresentacao');
 
@@ -54,6 +54,8 @@ function dadosDeDemonstracao({ hoje = new Date() } = {}) {
   }
   return { medicos: MEDICOS, horarios };
 }
+
+const MSG_CHEIA = 'A demonstração está cheia agora. Tente de novo em alguns minutos.';
 
 // E-mail da paciente compartilhada das versões antigas (antes da paciente efêmera).
 const PACIENTE_ANTIGA = 'paciente@markaqui.demo';
@@ -104,14 +106,29 @@ function prepararDemonstracao(armazenamento, config) {
 // Pacientes efêmeras: cada "Entrar como paciente" ganha uma conta própria, com uma
 // consulta futura, uma cancelada e uma realizada. Assim o limite de consultas
 // ativas vale por visitante, e ninguém herda a agenda (nem o limite) de outro.
-function criarVisitante(r, config, agora) {
-  // Teto: passando de maxVisitantes, a mais antiga sai junto com as consultas dela.
+// Abre vaga para uma visitante nova. Passando de maxVisitantes, sai a mais antiga
+// (com as consultas dela), mas só se ela já tiver vidaMinimaMinutos: assim quem
+// clica repetidamente não derruba as visitas em andamento. Se todas são recentes,
+// a demonstração está cheia (503 com Retry-After).
+function abrirVaga(r, config, agora) {
   const visitantes = r.usuarios.listarVisitantesDemo();
-  const sobra = visitantes.length - Math.max(1, config.demo.maxVisitantes) + 1;
-  for (const id of visitantes.slice(0, Math.max(0, sobra))) {
-    r.agendamentos.removerDoPaciente(id);
-    r.usuarios.remover(id);
+  const sobra = visitantes.length - config.demo.maxVisitantes + 1;
+  if (sobra <= 0) return;
+  const vidaMinimaMs = config.demo.vidaMinimaMinutos * 60 * 1000;
+  for (const visitante of visitantes.slice(0, sobra)) {
+    const idadeMs = agora.getTime() - new Date(visitante.criado_em).getTime();
+    if (idadeMs < vidaMinimaMs) {
+      throw indisponivel(MSG_CHEIA, (vidaMinimaMs - idadeMs) / 1000);
+    }
   }
+  for (const visitante of visitantes.slice(0, sobra)) {
+    r.agendamentos.removerDoPaciente(visitante.id);
+    r.usuarios.remover(visitante.id);
+  }
+}
+
+function criarVisitante(r, config, agora) {
+  abrirVaga(r, config, agora);
 
   const id = `demo-visitante-${gerarId()}`;
   const paciente = r.usuarios.inserir({

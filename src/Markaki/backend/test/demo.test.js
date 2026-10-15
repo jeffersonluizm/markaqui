@@ -20,7 +20,12 @@ const configDemo = (envExtra = {}) => lerConfig({ ...BASE, BCRYPT_CUSTO: '4', DE
 // Banco de demonstração com o cenário de exemplo, no "agora" fixo dos testes.
 function ambienteDemo(envExtra = {}) {
   const config = configDemo(envExtra);
-  const amb = criarAmbiente({ demo: config.demo });
+  // Relógio ajustável: amb.avancar(minutos) simula o tempo passando.
+  let agora = AGORA;
+  const amb = criarAmbiente({ demo: config.demo, relogio: () => agora });
+  amb.avancar = (minutos) => {
+    agora = new Date(agora.getTime() + minutos * 60 * 1000);
+  };
   ambientes.push(amb);
   amb.semear({ usuarios: [], medicos: [] });
   resetarDemonstracao(amb.armazenamento, config, AGORA);
@@ -124,7 +129,7 @@ test('papel desconhecido em /api/demo/entrar responde 400', async () => {
 });
 
 test('teto de visitantes: passando de DEMO_MAX_VISITANTES, a mais antiga sai com as consultas dela', async () => {
-  const amb = ambienteDemo({ DEMO_MAX_VISITANTES: '2' });
+  const amb = ambienteDemo({ DEMO_MAX_VISITANTES: '2', DEMO_VIDA_MINIMA_MINUTOS: '0' });
   const primeira = (await entrarComo(amb, 'paciente')).body;
   await entrarComo(amb, 'paciente');
   await entrarComo(amb, 'paciente');
@@ -328,4 +333,20 @@ test('banco demo antigo: a senha já publicada do gestor deixa de valer e a paci
   assert.equal((await login('paciente@markaqui.demo')).status, 401);
   assert.ok(!amb.dados().usuarios.some((u) => u.email === 'paciente@markaqui.demo'));
   assert.equal((await entrarComo(amb, 'gestor')).status, 200);
+});
+
+test('demonstração cheia: visitante com menos de DEMO_VIDA_MINIMA_MINUTOS não é expulsa (503 com Retry-After)', async () => {
+  const amb = ambienteDemo({ DEMO_MAX_VISITANTES: '2', DEMO_VIDA_MINIMA_MINUTOS: '15' });
+  const primeira = (await entrarComo(amb, 'paciente')).body;
+  amb.avancar(5);
+  await entrarComo(amb, 'paciente');
+  const cheia = await entrarComo(amb, 'paciente');
+  assert.equal(cheia.status, 503);
+  assert.match(cheia.body.erro, /cheia/);
+  assert.equal(cheia.headers['retry-after'], String(10 * 60));
+  assert.equal((await request(amb.app).get('/api/auth/eu').set(bearer(primeira.token))).status, 200);
+  // Passados os 15 minutos da mais antiga, ela dá lugar à nova.
+  amb.avancar(10);
+  assert.equal((await entrarComo(amb, 'paciente')).status, 200);
+  assert.equal((await request(amb.app).get('/api/auth/eu').set(bearer(primeira.token))).status, 401);
 });

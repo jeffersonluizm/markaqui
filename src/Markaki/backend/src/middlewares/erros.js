@@ -4,6 +4,7 @@ const { ErroHttp } = require('../erros');
 // da rota; o detalhe vai só para o log do servidor, nunca para o cliente.
 function responderErro(res, erro, mensagemPadrao) {
   if (erro instanceof ErroHttp) {
+    if (erro.cabecalhos) res.set(erro.cabecalhos);
     res.status(erro.status).json({ erro: erro.message });
   } else if (erro.code === 'SQLITE_CONSTRAINT_UNIQUE') {
     // Última linha de defesa: o índice UNIQUE barrou o que a regra não pegou.

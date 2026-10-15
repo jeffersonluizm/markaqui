@@ -57,7 +57,9 @@ function criarRepositorios(db) {
       VALUES (@id, @nome, @email, @telefone, @senha_hash, @papel, @criado_em, @demo)`),
     usuarioRemover: p('DELETE FROM usuarios WHERE id = ?'),
     // Pacientes efêmeras do modo demonstração, da mais antiga para a mais nova.
-    visitantesDemo: p("SELECT id FROM usuarios WHERE demo = 1 AND papel = 'paciente' ORDER BY criado_em, rowid"),
+    visitantesDemo: p(
+      "SELECT id, criado_em FROM usuarios WHERE demo = 1 AND papel = 'paciente' ORDER BY criado_em, rowid"
+    ),
 
     medicos: p('SELECT id, nome, especialidade FROM medicos ORDER BY rowid LIMIT ?'),
     medicoPorId: p('SELECT id, nome, especialidade FROM medicos WHERE id = ?'),
@@ -151,7 +153,7 @@ function criarRepositorios(db) {
       atualizarUsuario(id, campos);
       return usuarios.buscar(id);
     },
-    listarVisitantesDemo: () => q.visitantesDemo.all().map((u) => u.id),
+    listarVisitantesDemo: () => q.visitantesDemo.all(),
     remover: (id) => q.usuarioRemover.run(id).changes,
   };
 
