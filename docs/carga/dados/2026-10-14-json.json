@@ -3,7 +3,7 @@
   "data": "2026-10-15T00:00:13.900Z",
   "medicaoInicio": "2026-10-14T23:55:51.029Z",
   "medicaoFim": "2026-10-15T00:00:13.754Z",
-  "trava": "E:/Faculdade/Projeto - Faculdade/Projetos do portfólio/martorelli-oficina/.carga-lock",
+  "trava": ".carga-lock",
   "node": "v24.11.1",
   "cpu": "AMD Ryzen 5 5600 6-Core Processor              ",
   "nucleos": 12,

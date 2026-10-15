@@ -439,7 +439,7 @@ async function principal() {
           data: new Date().toISOString(),
           medicaoInicio: inicio,
           medicaoFim: fim,
-          trava: trava || null,
+          trava: trava ? path.basename(trava) : null,
           node: process.version,
           cpu: os.cpus()[0].model,
           nucleos: os.cpus().length,
