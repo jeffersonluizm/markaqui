@@ -22,7 +22,7 @@ Objetivo: medir a API antes e depois da troca do armazenamento (arquivo JSON com
 - Gerador: `autocannon` 8 (programático) e, no S2, `fetch` do Node com 200 pedidos em voo.
 - Aquecimento de 3 s antes de cada cenário de vazão. Latência em p50, p97,5 e p99 (o autocannon não calcula p95; no S2 o p95 é calculado pelo script).
 - Máquina: Ryzen 5 5600 (6 núcleos, 12 threads), 16 GB, Windows 11, Node 24.11.1. **Gerador e servidor dividem a mesma máquina**: os números servem para comparar versões, não como capacidade absoluta.
-- Trava `.carga-lock` na raiz da oficina, com caminho absoluto (o roteiro recusa caminho relativo): só uma carga por vez na máquina. O resumo grava a janela exata da medição (`medicaoInicio` e `medicaoFim`).
+- Trava `.carga-lock` na raiz da oficina, com caminho absoluto (o roteiro recusa caminho relativo): só uma carga por vez na máquina. A partir das rodadas Antes e Depois, o resumo grava a janela exata da medição (`medicaoInicio` e `medicaoFim`) e o nome da trava usada (`trava`, só o nome, sem o caminho da máquina).
 
 Como reproduzir, na pasta `src/Markaki/backend`:
 
@@ -42,11 +42,14 @@ node carga/grafico.js <antes.json> <depois.json> ../../../docs/carga/2026-10-14-
 |---|---|---|---|
 | **Antes**: arquivo JSON e fila global | `27c2754` | 14/10/2026, 20:55:51 a 21:00:13 | [`dados/2026-10-14-json.json`](dados/2026-10-14-json.json) |
 | **Depois**: SQLite, mesma API (sem login) | `3c2b2b1` | 14/10/2026, 00:14:32 a 00:18:47 | [`dados/2026-10-13-sqlite.json`](dados/2026-10-13-sqlite.json) |
-| **Final**: SQLite com login, papéis, validações, helmet e limites | `341ea71` | 13/10/2026, por volta de 23:13 a 23:37 | [`dados/2026-10-13-final.json`](dados/2026-10-13-final.json) |
+| **Final**: SQLite com login, papéis, validações, helmet e limites | `341ea71` | 13/10/2026, fim às 23:37 (início aproximado, 23:13) | [`dados/2026-10-13-final.json`](dados/2026-10-13-final.json) |
 
 A comparação do armazenamento é **Antes x Depois**: a mesma API, só o repositório muda. A versão **Final** mostra quanto custa a segurança (token conferido e usuário lido do banco a cada requisição, validações e limites).
 
-Rodadas descartadas: a de 04/10 (outras cargas na máquina e um erro do roteiro que mandava o S6 e o S7 para a raiz da API) e a do JSON de 13/10 (21:34 a 22:01), que cruzou com a carga do Cineclube, cujo roteiro não respeitava a trava (janelas dele: 04/10 18:26 a 18:47 e 13/10 21:39 a 22:06). As três rodadas acima não cruzam essas janelas e todas seguraram a trava.
+Rodadas descartadas: a de 04/10 (outras cargas na máquina e um erro do roteiro que mandava o S6 e o S7 para a raiz da API) e a do JSON de 13/10 (21:34 a 22:01), que cruzou com a carga do Cineclube, cujo roteiro não respeitava a trava (janelas dele: 04/10 18:26 a 18:47 e 13/10 21:39 a 22:06). O que cada resumo comprova:
+
+- **Antes** e **Depois**: o arquivo traz `medicaoInicio`, `medicaoFim` e `trava`, ou seja, a janela exata e a prova de que a rodada segurou a trava. Nenhuma das duas cruza as janelas do Cineclube.
+- **Final**: rodou antes de o roteiro gravar esses campos. O arquivo só traz o fim (`data`, 23:37 de Brasília); o início (por volta de 23:13) vem do registro da sessão, e **o arquivo não comprova que a trava foi usada**. A janela termina mais de uma hora depois da última carga conhecida do Cineclube (até 22:06), então não há sobreposição conhecida, mas os números da Final pesam menos que os de Antes e Depois. Ela serve para mostrar a ordem de grandeza do custo da segurança, não como medição de referência.
 
 ## Resultados
 
