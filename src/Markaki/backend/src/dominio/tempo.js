@@ -24,7 +24,11 @@ function formatador(fuso) {
 }
 
 function momentoNoFuso(data, fuso) {
-  const p = Object.fromEntries(formatador(fuso).formatToParts(data).map(({ type, value }) => [type, value]));
+  const p = Object.fromEntries(
+    formatador(fuso)
+      .formatToParts(data)
+      .map(({ type, value }) => [type, value])
+  );
   const dia = `${p.year}-${p.month}-${p.day}`;
   const hora = `${p.hour}:${p.minute}`;
   return { data: dia, hora, chave: `${dia}T${hora}` };
