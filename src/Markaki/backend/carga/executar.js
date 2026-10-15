@@ -8,6 +8,7 @@ const os = require('os');
 const path = require('path');
 const autocannon = require('autocannon');
 const { armazenamentos } = require('./armazenamentos');
+const { tomarTrava, liberarAoEncerrar } = require('./trava');
 
 const PORTA = 3101;
 const BASE = `http://127.0.0.1:${PORTA}`;
@@ -397,17 +398,21 @@ async function principal() {
   }
   const saida = argumento('saida');
 
+  // A trava guarda o dono (projeto, pid, início) e se solta também em Ctrl+C e
+  // SIGTERM, que pulam o finally.
+  let travaTomada = null;
   if (trava) {
     try {
-      fs.mkdirSync(trava);
+      travaTomada = tomarTrava(trava, { projeto: 'markaqui' });
     } catch (e) {
-      if (e.code === 'EEXIST') {
-        console.error(`Outra carga está rodando (${trava} existe). Tente depois.`);
+      if (e.code === 'TRAVA_OCUPADA') {
+        console.error(e.message);
         process.exitCode = 2;
         return;
       }
       throw e;
     }
+    liberarAoEncerrar(travaTomada);
   }
   const linhas = [];
   // Janela da medição (com a trava já tomada), para conferir sobreposição com outras cargas.
@@ -426,7 +431,7 @@ async function principal() {
     }
   } finally {
     fim = new Date().toISOString();
-    if (trava) fs.rmSync(trava, { recursive: true, force: true });
+    if (travaTomada) travaTomada.liberar();
   }
 
   if (saida) {
