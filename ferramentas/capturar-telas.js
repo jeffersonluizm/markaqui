@@ -24,7 +24,7 @@ const ROTEIRO = [
   ['esperar', 'Sua próxima consulta'],
   ['foto', '06-inicio-paciente'],
   ['clicar', 'Agendar consulta'],
-  ['clicar', 'Dr. Rafael Moura'],
+  ['clicar', 'Dr. Rafael Moura, Ortopedia'],
   ['esperar', '1. Escolha o dia'],
   ['clicar', '15:00'],
   ['foto', '08-agenda-do-medico'],
@@ -43,7 +43,8 @@ const ROTEIRO = [
   ['esperar', 'Conta de demonstração'],
   ['foto', '14-perfil'],
   ['clicar', 'Sair'],
-  ['clicar', 'Sair', 'dialogo'],
+  ['esperar', 'Sair da conta?'],
+  ['clicar', 'Sair'],
   ['esperar', 'Explore a demonstração'],
   ['clicar', 'Entrar como clínica'],
   ['esperar', 'consultas hoje'],
@@ -81,15 +82,15 @@ const ROTEIRO = [
   const erros = [];
   pagina.on('pageerror', (e) => erros.push(e.message));
   try {
-    for (const [acao, alvo, onde] of ROTEIRO) {
+    for (const [acao, alvo] of ROTEIRO) {
       if (acao === 'abrir') await pagina.goto(base + alvo);
       if (acao === 'esperar') await pagina.getByText(alvo, { exact: false }).first().waitFor({ timeout: 90000 });
       if (acao === 'clicar') {
-        // Botões com o mesmo nome (ex.: "Sair" na tela e no diálogo): o diálogo restringe.
-        const escopo = onde === 'dialogo' ? pagina.getByRole('dialog') : pagina;
-        await escopo
+        // Com dois botões de mesmo nome (ex.: "Sair" na tela e no diálogo), vale o último:
+        // o diálogo é desenhado depois, no fim da página.
+        await pagina
           .getByRole('button', { name: alvo, exact: true })
-          .or(escopo.getByRole('tab', { name: alvo }))
+          .or(pagina.getByRole('tab', { name: alvo }))
           .last()
           .click();
         await pagina.waitForTimeout(400);

@@ -17,6 +17,10 @@ App Expo (React Native) · API Node/Express · SQLite · login com papéis · te
 
 
 <p align="center">
+  <img src="docs/img/demo.gif" width="300" alt="Fluxo: entrar como paciente com um clique, agendar uma consulta, ver o histórico; depois entrar como clínica e ver o painel e a agenda">
+</p>
+
+<p align="center">
   <img src="docs/img/app/01-boas-vindas.png" width="200" alt="Tela de boas-vindas com missão, visão e valores">
   <img src="docs/img/app/08-agenda-do-medico.png" width="200" alt="Agenda do médico com escolha de dia e horário">
   <img src="docs/img/app/11-consultas.png" width="200" alt="Lista de próximas consultas da paciente">
