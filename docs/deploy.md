@@ -54,7 +54,7 @@ A demonstração não tem senha nenhuma: cada "Entrar como paciente" cria uma pa
 
 1. Em [vercel.com](https://vercel.com), **Add New > Project** e importe o repositório.
 2. **Root Directory:** `src/Markaki`. O `vercel.json` já define instalação, build (`node scripts/conferir-api-url.mjs && npx expo export --platform web`), pasta `dist`, rotas da SPA e cabeçalhos de segurança.
-3. Em **Environment Variables**, crie `EXPO_PUBLIC_API_URL` = `https://SUA-API.onrender.com/api`. Ela é obrigatória: sem ela (ou apontando para `localhost`, ou sem `https`), o build para com a mensagem `[build] EXPO_PUBLIC_API_URL ...` em vez de publicar um app que procura a API na máquina do visitante.
+3. Em **Environment Variables**, crie `EXPO_PUBLIC_API_URL` = `https://SUA-API.onrender.com/api`. Ela é obrigatória: sem ela (ou apontando para `localhost`, ou sem `https`), o build para com a mensagem `[build] EXPO_PUBLIC_API_URL ...` em vez de publicar um app que procura a API na máquina do visitante. O mesmo script lê a Content-Security-Policy do `vercel.json` e para o build se o host da API não couber no `connect-src` (o navegador bloquearia as chamadas).
 4. **Deploy.** Anote a URL (por exemplo `https://markaqui.vercel.app`).
 5. Volte ao Render e confira se `CORS_ORIGENS` é exatamente essa URL (sem barra no fim). Se mudou, salve: o serviço reinicia.
 
@@ -92,14 +92,14 @@ Os nomes `markaqui.vercel.app` e `markaqui-api.onrender.com` são os **endereço
 2. **Render:** `CORS_ORIGENS` = URL exata da Vercel (sem barra no fim).
 3. **Vercel:** `EXPO_PUBLIC_API_URL` = `https://URL-DO-RENDER/api` e publique de novo (o endereço entra no build).
 4. **Prévia de link:** em `src/Markaki/public/index.html`, use a URL completa da imagem (`https://URL-DA-VERCEL/og-image.png`).
-5. **CSP:** se a API não ficar em `*.onrender.com`, ajuste `connect-src` no `src/Markaki/vercel.json`.
+5. **CSP:** o `connect-src` do `src/Markaki/vercel.json` vem com `https://*.onrender.com` só para o primeiro deploy funcionar antes de a URL existir. Com a URL definitiva, **fixe o host exato** (por exemplo `connect-src 'self' https://markaqui-api.onrender.com`): assim o site só conversa com a sua API, e não com qualquer serviço do Render. Se a API ficar em outro domínio, o build avisa (`[build] ... não cabe no connect-src`) até o `vercel.json` ser ajustado.
 6. Abra a URL da Vercel numa janela anônima e repita a seção "Conferir" do passo 3.
 
 ## Segurança da demonstração
 
 - A API só liga o modo demonstração num banco vazio ou criado pelo próprio modo demo (marcado como banco de demonstração). Num banco com dados reais ela se recusa a subir: nunca abre a conta de um gestor real nem apaga dados.
 - Não há senha de demonstração. O gestor demo é compartilhado: o cenário de exemplo é protegido (403), o que os visitantes criam tem teto e tudo volta ao original no próximo reset (45 min). Cadastros de visitantes ficam visíveis para quem entra como clínica até lá.
-- O app web na Vercel envia uma Content-Security-Policy que só permite chamar a API do Render (`connect-src https://*.onrender.com`). Se a API ficar em outro domínio, ajuste o `vercel.json`.
+- O app web na Vercel envia uma Content-Security-Policy que só permite chamar o Render (`connect-src https://*.onrender.com`). Depois da publicação, troque pelo host exato da API (passo 6). O build confere se a `EXPO_PUBLIC_API_URL` cabe nessa CSP.
 
 - O banco hospedado é exclusivo da demo e descartável: nunca aponte `DB_FILE` para dados reais com `DEMO_ENABLED=true`.
 - Contas demo não trocam senha nem perfil; qualquer outra bagunça some no próximo reset.
