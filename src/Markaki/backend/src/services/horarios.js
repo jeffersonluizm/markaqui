@@ -7,7 +7,16 @@ const { protegerCenario, respeitarTeto } = require('./protecaoDemo');
 
 const MSG_DUPLICADO = 'Este médico já tem um horário nessa data e hora.';
 const MSG_AGENDADO = 'Este horário tem consulta marcada. Cancele a consulta primeiro.';
+const MSG_REALIZADO =
+  'A consulta deste horário já aconteceu. Ele fica no histórico e não pode ser alterado nem removido.';
 const MSG_PASSADO = 'Escolha uma data e hora no futuro.';
+
+// Horário com consulta ativa: se ela ainda vai acontecer, dá para cancelar antes;
+// se já aconteceu, o horário é histórico.
+function exigirSemConsulta(horario, ctx) {
+  if (!horario.agendado) return;
+  throw conflito(ehFuturo(horario.data, horario.hora, ctx.agora) ? MSG_AGENDADO : MSG_REALIZADO);
+}
 
 function buscar(r, id) {
   const horario = r.horarios.buscar(id);
@@ -46,10 +55,10 @@ function cadastrar(r, novo, ctx) {
 }
 
 // Bloquear, desbloquear ou mudar data e hora. Horário com consulta marcada só é
-// liberado cancelando a consulta.
+// liberado cancelando a consulta (se ela ainda não aconteceu).
 function atualizar(r, id, campos, ctx) {
   const horario = buscar(r, id);
-  if (horario.agendado) throw conflito(MSG_AGENDADO);
+  exigirSemConsulta(horario, ctx);
 
   const data = campos.data ?? horario.data;
   const hora = campos.hora ?? horario.hora;
@@ -67,7 +76,7 @@ function atualizar(r, id, campos, ctx) {
 function remover(r, id, ctx) {
   const horario = buscar(r, id);
   protegerCenario(ctx, 'horario', id);
-  if (horario.agendado) throw conflito(MSG_AGENDADO);
+  exigirSemConsulta(horario, ctx);
   r.horarios.remover(id);
   return { mensagem: 'Horário removido.' };
 }

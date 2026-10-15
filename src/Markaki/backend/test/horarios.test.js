@@ -200,3 +200,20 @@ test('edição sem nenhum campo responde 400', async () => {
 test('GET /api/horarios/:id inexistente responde 404', async () => {
   assert.equal((await gestor().get('/api/horarios/nada')).status, 404);
 });
+
+test('horário cuja consulta já aconteceu fica no histórico: não sai nem muda, sem pedir para cancelar', async () => {
+  const passado = { data: '2030-01-09', hora: '09:00' };
+  amb.semear({
+    horarios: [horario('h-passado', 'm1', passado)],
+    agendamentos: [agendamento('a-realizada', 'h-passado', 'u-ana', passado)],
+  });
+  for (const res of [
+    await gestor().delete('/api/horarios/h-passado'),
+    await gestor().put('/api/horarios/h-passado').send({ bloqueado: true }),
+  ]) {
+    assert.equal(res.status, 409);
+    assert.match(res.body.erro, /já aconteceu/);
+    assert.doesNotMatch(res.body.erro, /[Cc]ancele/);
+  }
+  assert.ok(amb.dados().horarios.some((h) => h.id === 'h-passado'));
+});
