@@ -13,8 +13,9 @@ const SEGREDO = 'segredo-dos-testes-com-mais-de-32-caracteres';
 const SENHA = 'Senha123';
 const HASH = bcrypt.hashSync(SENHA, 4);
 
-// "Agora" dos testes: 2030-01-10 às 12:00 (horário local).
-const AGORA = new Date(2030, 0, 10, 12, 0, 0);
+// "Agora" dos testes: 2030-01-10 às 12:00 no horário de Brasília (fuso da clínica),
+// para os testes valerem com qualquer fuso na máquina (ex.: TZ=UTC).
+const AGORA = new Date('2030-01-10T12:00:00-03:00');
 
 const usuarios = {
   gestor: { id: 'u-gestor', nome: 'Gestora Lia', email: 'gestor@teste.dev', telefone: '', papel: 'gestor' },

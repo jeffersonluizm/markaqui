@@ -62,6 +62,7 @@ O `iniciar.bat` da raiz faz tudo isso: confere o Node, instala, cria os dois `.e
 | Variável | Padrão | Para quê |
 |---|---|---|
 | `JWT_SECRET` | (obrigatória) | Segredo dos tokens. A API não sobe com menos de 32 caracteres. |
+| `FUSO_HORARIO` | `America/Sao_Paulo` | Fuso da clínica para "hoje" e "agora" (o servidor pode estar em UTC) |
 | `PORT` / `HOST` | `3000` / `127.0.0.1` | Use `HOST=0.0.0.0` para o celular na mesma rede alcançar a API. |
 | `DB_FILE` | `backend/dados/markaqui.db` | Arquivo do SQLite (fora do Git). |
 | `CORS_ORIGENS` | `http://localhost:8081,http://localhost:19006` | Origens do navegador liberadas. |

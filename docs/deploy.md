@@ -26,6 +26,7 @@ Variáveis que o blueprint já define:
 | Variável | Valor | Para quê |
 |---|---|---|
 | `NODE_VERSION` | `22` | Versão do Node |
+| `FUSO_HORARIO` e `TZ` | `America/Sao_Paulo` | Fuso da clínica. A API calcula "hoje" e "agora" nele (o Render roda em UTC); sem isso, às 14:30 de Brasília a API acharia que são 17:30 |
 | `HOST` | `0.0.0.0` | Aceitar conexões do proxy do Render |
 | `JWT_SECRET` | gerado pelo Render | Segredo dos tokens (nunca vai para o Git) |
 | `DB_FILE` | `/tmp/markaqui.db` | Banco **só de demonstração**, efêmero |

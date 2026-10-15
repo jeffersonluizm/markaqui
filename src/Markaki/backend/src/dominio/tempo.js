@@ -1,13 +1,36 @@
-// Datas e horas da agenda são da clínica (horário local): data "AAAA-MM-DD" e
-// hora "HH:MM". Como textos nesse formato ordenam como datas, comparar a chave
-// "AAAA-MM-DDTHH:MM" basta para saber o que é passado ou futuro.
-const doisDigitos = (n) => String(n).padStart(2, '0');
+// Datas e horas da agenda são da clínica: data "AAAA-MM-DD" e hora "HH:MM" no fuso
+// dela (FUSO_HORARIO, padrão America/Sao_Paulo), qualquer que seja o fuso do
+// servidor (na hospedagem ele roda em UTC). Como textos nesse formato ordenam como
+// datas, comparar a chave "AAAA-MM-DDTHH:MM" basta para saber o que é passado ou futuro.
+const FUSO_PADRAO = process.env.FUSO_HORARIO || 'America/Sao_Paulo';
+const formatadores = new Map();
 
-function momentoLocal(data) {
-  const dia = `${data.getFullYear()}-${doisDigitos(data.getMonth() + 1)}-${doisDigitos(data.getDate())}`;
-  const hora = `${doisDigitos(data.getHours())}:${doisDigitos(data.getMinutes())}`;
+function formatador(fuso) {
+  if (!formatadores.has(fuso)) {
+    formatadores.set(
+      fuso,
+      new Intl.DateTimeFormat('en-CA', {
+        timeZone: fuso,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hourCycle: 'h23',
+      })
+    );
+  }
+  return formatadores.get(fuso);
+}
+
+function momentoNoFuso(data, fuso) {
+  const p = Object.fromEntries(formatador(fuso).formatToParts(data).map(({ type, value }) => [type, value]));
+  const dia = `${p.year}-${p.month}-${p.day}`;
+  const hora = `${p.hour}:${p.minute}`;
   return { data: dia, hora, chave: `${dia}T${hora}` };
 }
+
+const momentoLocal = (data) => momentoNoFuso(data, FUSO_PADRAO);
 
 const chave = (data, hora) => `${data}T${hora}`;
 
@@ -30,4 +53,4 @@ function dataValida(texto) {
 
 const horaValida = (texto) => /^([01]\d|2[0-3]):[0-5]\d$/.test(texto);
 
-module.exports = { momentoLocal, chave, ehFuturo, somarDias, dataValida, horaValida };
+module.exports = { FUSO_PADRAO, momentoNoFuso, momentoLocal, chave, ehFuturo, somarDias, dataValida, horaValida };

@@ -18,9 +18,9 @@ test('padrões seguros: login limitado a 5 por minuto e bcrypt custo 10', () => 
 });
 
 test('dados de demonstração: médicos e horários só em dias úteis futuros, sem contas', async () => {
-  const dias = proximosDiasUteis(5, new Date(2030, 0, 11)); // sexta-feira
+  const dias = proximosDiasUteis(5, new Date('2030-01-11T12:00:00-03:00')); // sexta-feira
   assert.deepEqual(dias, ['2030-01-14', '2030-01-15', '2030-01-16', '2030-01-17', '2030-01-18']);
-  const dados = dadosDeDemonstracao({ hoje: new Date(2030, 0, 11) });
+  const dados = dadosDeDemonstracao({ hoje: new Date('2030-01-11T12:00:00-03:00') });
   assert.equal(dados.usuarios, undefined);
   assert.ok(dados.medicos.length > 0);
   assert.ok(dados.horarios.length > 0);

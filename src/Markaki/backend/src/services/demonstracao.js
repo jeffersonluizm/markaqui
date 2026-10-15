@@ -4,6 +4,7 @@
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const { gerarId } = require('../infra/ids');
+const { momentoLocal } = require('../dominio/tempo');
 
 const MEDICOS = [
   { id: 'demo-medico-1', nome: 'Dra. Helena Duarte', especialidade: 'Cardiologia' },
@@ -25,7 +26,9 @@ const dataTexto = (d) => d.toISOString().slice(0, 10);
 
 function diasUteis(quantidade, hoje, sentido) {
   const dias = [];
-  const dia = new Date(Date.UTC(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()));
+  // "Hoje" no fuso da clínica, não no do servidor.
+  const [a, m, d] = momentoLocal(hoje).data.split('-').map(Number);
+  const dia = new Date(Date.UTC(a, m - 1, d));
   while (dias.length < quantidade) {
     dia.setUTCDate(dia.getUTCDate() + sentido);
     const semana = dia.getUTCDay();

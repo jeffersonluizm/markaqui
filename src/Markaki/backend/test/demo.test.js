@@ -142,7 +142,7 @@ test('nenhuma senha de demonstração escrita no código-fonte', () => {
 test('resetarDemonstracao recria médicos, agenda e consultas de exemplo e as contas demo', async () => {
   const amb = ambienteDemo({ DEMO_ENABLED: 'true' });
   const config = lerConfig({ ...BASE, DEMO_ENABLED: 'true', BCRYPT_CUSTO: '4' });
-  resetarDemonstracao(amb.armazenamento, config, new Date(2030, 0, 11, 9, 0));
+  resetarDemonstracao(amb.armazenamento, config, new Date('2030-01-11T09:00:00-03:00'));
   const dados = amb.dados();
   assert.ok(dados.medicos.length >= 4);
   assert.ok(dados.horarios.length > 100);
