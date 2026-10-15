@@ -295,6 +295,7 @@ module.exports = {
   prepararDemonstracao,
   resetarDemonstracao,
   entrarNaDemonstracao,
+  abrirVaga,
   podeSemear,
   iniciarDemonstracao,
 };

@@ -78,7 +78,8 @@ test('a clínica demo não cancela as consultas de exemplo; a visitante cancela 
 });
 
 test('teto de médicos e de horários na demonstração (409 com mensagem clara)', async () => {
-  const amb = ambienteDemo({ DEMO_MAX_MEDICOS: '5', DEMO_MAX_HORARIOS: String(242) });
+  // O teto de horários conta só os criados pelos visitantes (os 241 do cenário não contam).
+  const amb = ambienteDemo({ DEMO_MAX_MEDICOS: '5', DEMO_MAX_HORARIOS: '2' });
   assert.equal(amb.dados().horarios.length, 241);
   const gestor = await sessao(amb, 'gestor');
   const medico = (nome) => gestor.post('/api/medicos').send({ nome, especialidade: 'Pediatria' });
@@ -88,10 +89,11 @@ test('teto de médicos e de horários na demonstração (409 com mensagem clara)
   assert.match(cheio.body.erro, /até 5 médicos/);
 
   const novo = (hora) => gestor.post('/api/horarios').send({ medico_id: 'demo-medico-1', data: '2030-03-01', hora });
-  assert.equal((await novo('08:00')).status, 201);
+  assert.equal((await novo('07:00')).status, 201);
+  assert.equal((await novo('07:30')).status, 201);
   const lotado = await novo('09:00');
   assert.equal(lotado.status, 409);
-  assert.match(lotado.body.erro, /até 242 horários/);
+  assert.match(lotado.body.erro, /até 2 horários/);
 });
 
 test('fora do modo demonstração nada disso vale (ids demo-* são ids comuns)', async () => {
@@ -131,4 +133,81 @@ test('lista de consultas da clínica tem limite e traz as mais recentes, em orde
   });
   const lista = (await amb.como(usuarios.gestor).get('/api/agendamentos')).body.map((a) => a.data);
   assert.deepEqual(lista, dias.slice(2));
+});
+
+test('na demonstração, horários novos só nos próximos DEMO_JANELA_DIAS dias (nada de 2099)', async () => {
+  const amb = ambienteDemo({ DEMO_JANELA_DIAS: '60' });
+  const gestor = await sessao(amb, 'gestor');
+  const novo = (data) => gestor.post('/api/horarios').send({ medico_id: 'demo-medico-1', data, hora: '07:00' });
+  assert.equal((await novo('2030-03-10')).status, 201); // 59 dias depois de 10/01/2030
+  const longe = await novo('2099-01-01');
+  assert.equal(longe.status, 400);
+  assert.match(longe.body.erro, /60 dias/);
+  // Mudar a data de um horário criado para longe também não vale.
+  const criado = (await novo('2030-02-20')).body;
+  const mover = await gestor.put(`/api/horarios/${criado.id}`).send({ data: '2099-01-01' });
+  assert.equal(mover.status, 400);
+});
+
+test('na demonstração, a clínica bloqueia no máximo DEMO_MAX_BLOQUEADOS horários do cenário', async () => {
+  const amb = ambienteDemo({ DEMO_MAX_BLOQUEADOS: '3' });
+  const gestor = await sessao(amb, 'gestor');
+  const { horarios, agendamentos } = amb.dados();
+  const ocupados = new Set(agendamentos.filter((a) => a.status === 'agendado').map((a) => a.horario_id));
+  const livres = horarios.filter((h) => h.id.startsWith('demo-') && !h.bloqueado && !ocupados.has(h.id));
+  // O cenário já vem com 1 bloqueado: cabem mais 2.
+  assert.equal((await gestor.put(`/api/horarios/${livres[0].id}`).send({ bloqueado: true })).status, 200);
+  assert.equal((await gestor.put(`/api/horarios/${livres[1].id}`).send({ bloqueado: true })).status, 200);
+  const demais = await gestor.put(`/api/horarios/${livres[2].id}`).send({ bloqueado: true });
+  assert.equal(demais.status, 409);
+  assert.match(demais.body.erro, /bloquead/);
+  // Liberar continua permitido e abre espaço.
+  assert.equal((await gestor.put(`/api/horarios/${livres[0].id}`).send({ bloqueado: false })).status, 200);
+  assert.equal((await gestor.put(`/api/horarios/${livres[2].id}`).send({ bloqueado: true })).status, 200);
+});
+
+test('na demonstração, a clínica não cancela consulta de visitante (403); a própria visitante cancela', async () => {
+  const amb = ambienteDemo();
+  const paciente = await sessao(amb, 'paciente');
+  const futura = (await paciente.get('/api/agendamentos')).body.find((c) => c.situacao === 'agendado');
+  const gestor = await sessao(amb, 'gestor');
+  const res = await gestor.patch(`/api/agendamentos/${futura.id}/cancelar`);
+  assert.equal(res.status, 403);
+  assert.match(res.body.erro, /visitante/);
+  assert.equal((await paciente.patch(`/api/agendamentos/${futura.id}/cancelar`)).status, 200);
+});
+
+const cadastro = (email) => ({
+  nome: 'Rita Recrutadora',
+  email,
+  telefone: '(11) 98888-7777',
+  senha: 'Senha456x',
+  aceite_termos: true,
+});
+
+test('cadastro na demonstração cria conta temporária: marcada como demo, conta no teto e some no reset', async () => {
+  const amb = ambienteDemo({ DEMO_MAX_VISITANTES: '2', DEMO_VIDA_MINIMA_MINUTOS: '15' });
+  const res = await request(amb.app).post('/api/auth/cadastro').send(cadastro('rita@exemplo.dev'));
+  assert.equal(res.status, 201);
+  assert.equal(res.body.usuario.demo, true);
+  assert.equal(res.body.usuario.papel, 'paciente');
+  // Entra de novo com a própria senha enquanto a conta existir.
+  const login = await request(amb.app).post('/api/auth/login').send({ email: 'rita@exemplo.dev', senha: 'Senha456x' });
+  assert.equal(login.status, 200);
+  // Conta no teto de visitantes e na vida mínima.
+  await request(amb.app).post('/api/demo/entrar').send({ papel: 'paciente' });
+  const cheia = await request(amb.app).post('/api/auth/cadastro').send(cadastro('outra@exemplo.dev'));
+  assert.equal(cheia.status, 503);
+  // O reset apaga.
+  resetarDemonstracao(amb.armazenamento, lerConfig({ ...BASE, DEMO_ENABLED: 'true' }), AGORA);
+  assert.ok(!amb.dados().usuarios.some((u) => u.email === 'rita@exemplo.dev'));
+});
+
+test('fora da demonstração o cadastro cria conta comum (não demo)', async () => {
+  const amb = criarAmbiente();
+  ambientes.push(amb);
+  amb.semear();
+  const res = await request(amb.app).post('/api/auth/cadastro').send(cadastro('comum@exemplo.dev'));
+  assert.equal(res.status, 201);
+  assert.equal(res.body.usuario.demo, false);
 });

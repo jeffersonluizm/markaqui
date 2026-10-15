@@ -5,7 +5,7 @@ const { naoEncontrado, requisicaoInvalida, conflito } = require('../erros');
 const { ehFuturo, momentoLocal } = require('../dominio/tempo');
 const { agendamentoCom } = require('./apresentacao');
 const horarios = require('./horarios');
-const { protegerCenario } = require('./protecaoDemo');
+const { protegerCenario, protegerConsultaDeVisitante } = require('./protecaoDemo');
 
 function agendar(r, { horario_id, medico_id }, ctx) {
   const horario = horarios.buscar(r, horario_id);
@@ -61,6 +61,7 @@ function detalhar(r, id, ctx) {
 function cancelar(r, id, ctx) {
   const agendamento = buscarVisivel(r, id, ctx);
   if (ctx.usuario.papel === 'gestor') protegerCenario(ctx, 'consulta', id);
+  protegerConsultaDeVisitante(ctx, r, agendamento);
   if (agendamento.status === 'cancelado') throw conflito('Esta consulta já foi cancelada.');
   if (!ehFuturo(agendamento.data, agendamento.hora, ctx.agora)) {
     throw conflito('Não é possível cancelar uma consulta que já passou.');

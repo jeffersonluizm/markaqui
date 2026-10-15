@@ -2,7 +2,8 @@
 // visitantes: o cenário de exemplo (ids que começam com "demo-") não pode ser
 // apagado nem desfigurado, e o que os visitantes criam tem teto. Fora do modo
 // demonstração nada disto vale.
-const { semPermissao, conflito } = require('../erros');
+const { semPermissao, conflito, requisicaoInvalida } = require('../erros');
+const { momentoLocal, somarDias } = require('../dominio/tempo');
 
 const MENSAGENS = {
   medico:
@@ -11,6 +12,8 @@ const MENSAGENS = {
     'Na demonstração, os horários de exemplo não podem ser removidos nem mudar de data. Você pode bloquear e liberar, ou abrir horários novos.',
   consulta:
     'Na demonstração, as consultas de exemplo não podem ser canceladas pela clínica. Entre como paciente para testar o cancelamento.',
+  visitante:
+    'Na demonstração, a clínica não cancela consultas de visitantes. Quem agendou pode cancelar pela própria conta.',
 };
 
 const emDemonstracao = (ctx) => Boolean(ctx.config && ctx.config.demo && ctx.config.demo.ativo);
@@ -32,4 +35,39 @@ function respeitarTeto(ctx, { atual, chave, rotulo }) {
   }
 }
 
-module.exports = { protegerCenario, respeitarTeto, emDemonstracao };
+// Horários novos (ou com data mudada) só nos próximos janelaDias dias: o teto não
+// se esgota com datas como 2099.
+function limitarJanela(ctx, data) {
+  if (!emDemonstracao(ctx)) return;
+  const dias = ctx.config.demo.janelaDias;
+  if (data > somarDias(momentoLocal(ctx.agora).data, dias)) {
+    throw requisicaoInvalida(`Na demonstração, abra horários para os próximos ${dias} dias.`);
+  }
+}
+
+// Bloquear um horário do cenário: no máximo maxBloqueados ao mesmo tempo.
+function limitarBloqueio(ctx, r, horario, campos) {
+  if (!emDemonstracao(ctx) || campos.bloqueado !== true || horario.bloqueado || !ehDoCenario(horario.id)) return;
+  const maximo = ctx.config.demo.maxBloqueados;
+  if (r.horarios.contarBloqueadosDoCenario() >= maximo) {
+    throw conflito(
+      `Na demonstração, no máximo ${maximo} horários de exemplo ficam bloqueados ao mesmo tempo. Libere um antes de bloquear outro.`
+    );
+  }
+}
+
+// A clínica (gestor compartilhado) não cancela consulta de uma visitante efêmera.
+function protegerConsultaDeVisitante(ctx, r, agendamento) {
+  if (!emDemonstracao(ctx) || ctx.usuario.papel !== 'gestor') return;
+  const paciente = r.usuarios.buscar(agendamento.paciente_id);
+  if (paciente && paciente.demo) throw semPermissao(MENSAGENS.visitante);
+}
+
+module.exports = {
+  protegerCenario,
+  respeitarTeto,
+  emDemonstracao,
+  limitarJanela,
+  limitarBloqueio,
+  protegerConsultaDeVisitante,
+};

@@ -3,7 +3,7 @@ const { gerarId } = require('../infra/ids');
 const { naoEncontrado, requisicaoInvalida, conflito } = require('../erros');
 const { ehFuturo, momentoLocal } = require('../dominio/tempo');
 const { horarioPara } = require('./apresentacao');
-const { protegerCenario, respeitarTeto } = require('./protecaoDemo');
+const { protegerCenario, respeitarTeto, limitarJanela, limitarBloqueio } = require('./protecaoDemo');
 
 const MSG_DUPLICADO = 'Este médico já tem um horário nessa data e hora.';
 const MSG_AGENDADO = 'Este horário tem consulta marcada. Cancele a consulta primeiro.';
@@ -45,7 +45,8 @@ function detalhar(r, id, ctx) {
 
 function cadastrar(r, novo, ctx) {
   if (!r.medicos.buscar(novo.medico_id)) throw requisicaoInvalida('Médico não encontrado.');
-  respeitarTeto(ctx, { atual: r.horarios.contar(), chave: 'maxHorarios', rotulo: 'horários' });
+  limitarJanela(ctx, novo.data);
+  respeitarTeto(ctx, { atual: r.horarios.contarCriados(), chave: 'maxHorarios', rotulo: 'horários' });
   if (!ehFuturo(novo.data, novo.hora, ctx.agora)) throw requisicaoInvalida(MSG_PASSADO);
   // Dois médicos podem ter o mesmo horário; o mesmo médico, não.
   if (r.horarios.existeIgual({ medicoId: novo.medico_id, data: novo.data, hora: novo.hora })) {
@@ -59,12 +60,14 @@ function cadastrar(r, novo, ctx) {
 function atualizar(r, id, campos, ctx) {
   const horario = buscar(r, id);
   exigirSemConsulta(horario, ctx);
+  limitarBloqueio(ctx, r, horario, campos);
 
   const data = campos.data ?? horario.data;
   const hora = campos.hora ?? horario.hora;
   const mudouMomento = data !== horario.data || hora !== horario.hora;
   if (mudouMomento) {
     protegerCenario(ctx, 'horario', id);
+    limitarJanela(ctx, data);
     if (!ehFuturo(data, hora, ctx.agora)) throw requisicaoInvalida(MSG_PASSADO);
     if (r.horarios.existeIgual({ medicoId: horario.medico_id, data, hora, excetoId: id })) {
       throw conflito(MSG_DUPLICADO);

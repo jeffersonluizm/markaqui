@@ -77,6 +77,9 @@ function criarRepositorios(db) {
     horariosLivresDoMedico: p(`${SELECT_HORARIO}
       WHERE h.medico_id = @medicoId AND ${LIVRE} AND ${DEPOIS_DE} ORDER BY h.data, h.hora LIMIT @limite`),
     horariosContar: p('SELECT COUNT(*) AS n FROM horarios'),
+    // Modo demonstração: os do cenário têm id "demo-..."; os criados pelos visitantes, não.
+    horariosCriadosContar: p("SELECT COUNT(*) AS n FROM horarios WHERE id NOT LIKE 'demo-%'"),
+    horariosBloqueadosDoCenario: p("SELECT COUNT(*) AS n FROM horarios WHERE bloqueado = 1 AND id LIKE 'demo-%'"),
     horariosLivresContar: p(`
       SELECT COUNT(*) AS n FROM horarios h
       LEFT JOIN agendamentos a ON a.horario_id = h.id AND a.status = 'agendado'
@@ -183,6 +186,8 @@ function criarRepositorios(db) {
         : q.horariosLivres.all({ ...momento, limite })
       ).map(paraHorario),
     contar: () => q.horariosContar.get().n,
+    contarCriados: () => q.horariosCriadosContar.get().n,
+    contarBloqueadosDoCenario: () => q.horariosBloqueadosDoCenario.get().n,
     contarLivres: (momento) => q.horariosLivresContar.get(momento).n,
     buscar: (id) => paraHorario(q.horarioPorId.get(id)),
     listarBrutos: () => q.horariosBrutos.all().map((h) => ({ ...h, bloqueado: Boolean(h.bloqueado) })),
