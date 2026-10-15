@@ -8,7 +8,7 @@ const os = require('os');
 const path = require('path');
 const autocannon = require('autocannon');
 const { armazenamentos } = require('./armazenamentos');
-const { tomarTrava, liberarAoEncerrar } = require('./trava');
+const { tomarTrava, liberarAoEncerrar, apagarPasta } = require('./trava');
 
 const PORTA = 3101;
 const BASE = `http://127.0.0.1:${PORTA}`;
@@ -62,7 +62,13 @@ async function derrubar({ filho, pasta }) {
     filho.send({ tipo: 'parar' });
     await saida;
   }
-  fs.rmSync(pasta, { recursive: true, force: true });
+  // Pasta temporária: se o Windows ainda segurar algum arquivo, avisa e segue (a
+  // medição não depende disso).
+  try {
+    apagarPasta(pasta);
+  } catch (erro) {
+    console.warn(`[carga] pasta temporária não apagada (${pasta}): ${erro.message}`);
+  }
 }
 
 // ---------------------------------------------------------------- medições

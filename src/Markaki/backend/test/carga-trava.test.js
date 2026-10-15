@@ -7,10 +7,13 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { EventEmitter } = require('events');
-const { tomarTrava, lerDono, liberarAoEncerrar } = require('../carga/trava');
+const { tomarTrava, lerDono, liberarAoEncerrar, apagarPasta } = require('../carga/trava');
 
-const raiz = fs.mkdtempSync(path.join(os.tmpdir(), 'markaqui-trava-'));
-after(() => fs.rmSync(raiz, { recursive: true, force: true }));
+// Caminho com acento de propósito, como "Projetos do portfólio": no Windows, o
+// fs.rmSync do Node 24 volta sem erro e sem apagar nesse caso.
+const raiz = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'markaqui-trava-')), 'portfólio');
+fs.mkdirSync(raiz);
+after(() => apagarPasta(path.dirname(raiz)));
 let n = 0;
 const novaTrava = () => path.join(raiz, `.carga-lock-${(n += 1)}`);
 const AGORA = new Date('2026-10-14T23:55:51.000Z');
@@ -52,9 +55,20 @@ test('liberar só apaga a própria trava (outro processo pode ter assumido depoi
   assert.equal(fs.existsSync(caminho), true);
 });
 
+test('apagarPasta remove pasta com acento e conteúdo aninhado, e confere que sumiu', () => {
+  const pasta = path.join(raiz, 'saída-ç');
+  fs.mkdirSync(path.join(pasta, 'sub', 'mais'), { recursive: true });
+  fs.writeFileSync(path.join(pasta, 'a.json'), '{}');
+  fs.writeFileSync(path.join(pasta, 'sub', 'mais', 'b.txt'), 'x');
+  apagarPasta(pasta);
+  assert.equal(fs.existsSync(pasta), false);
+  apagarPasta(pasta); // inexistente: não faz nada
+});
+
 for (const [sinal, codigo] of [
   ['SIGINT', 130],
   ['SIGTERM', 143],
+  ['SIGHUP', 129],
 ]) {
   test(`${sinal} solta a trava e encerra com ${codigo} (o finally não roda num encerramento forçado)`, () => {
     const caminho = novaTrava();

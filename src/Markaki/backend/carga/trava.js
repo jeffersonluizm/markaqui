@@ -2,13 +2,27 @@
 // É uma pasta (mkdir é atômico) com um dono.json dentro: projeto, pid e início.
 // - Ocupada: mostra quem é o dono e se o processo dele ainda existe; nunca apaga a
 //   trava de outro (quem decide se ela está órfã é uma pessoa).
-// - Solta no fim normal (finally), em Ctrl+C (SIGINT), SIGTERM e na saída do
-//   processo. Um encerramento que não pode ser capturado (kill -9, "Finalizar
+// - Solta no fim normal (finally), em Ctrl+C (SIGINT), SIGTERM, SIGHUP e na
+//   saída do processo. Um encerramento que não pode ser capturado (kill -9, "Finalizar
 //   tarefa") ainda deixa a pasta, mas o dono.json diz de quem ela é.
 const fs = require('fs');
 const path = require('path');
 
 const ARQUIVO_DONO = 'dono.json';
+
+// Apaga uma pasta e o que houver dentro, e confere que sumiu. Não usa fs.rmSync: no
+// Windows, com Node 24, ele volta sem erro e sem apagar quando o caminho tem acento
+// ("Projetos do portfólio"), o que deixou uma trava órfã em 14/10.
+function apagarPasta(caminho) {
+  if (!fs.existsSync(caminho)) return;
+  for (const item of fs.readdirSync(caminho, { withFileTypes: true })) {
+    const completo = path.join(caminho, item.name);
+    if (item.isDirectory()) apagarPasta(completo);
+    else fs.unlinkSync(completo);
+  }
+  fs.rmdirSync(caminho);
+  if (fs.existsSync(caminho)) throw new Error(`Não foi possível apagar ${caminho}.`);
+}
 
 function lerDono(caminho) {
   try {
@@ -61,13 +75,14 @@ function tomarTrava(caminho, { projeto, pid = process.pid, agora = new Date() })
       liberada = true;
       const atual = lerDono(caminho);
       if (atual && atual.pid === dono.pid && atual.inicio === dono.inicio) {
-        fs.rmSync(caminho, { recursive: true, force: true });
+        apagarPasta(caminho);
       }
     },
   };
 }
 
-// Solta a trava em SIGINT (130), SIGTERM (143) e na saída do processo.
+// Solta a trava em SIGINT (130, Ctrl+C), SIGTERM (143), SIGHUP (129, janela do
+// console fechada no Windows) e na saída do processo.
 function liberarAoEncerrar(trava, { processo = process, sair = (codigo) => process.exit(codigo) } = {}) {
   const porSinal = (sinal, codigo) => () => {
     console.error(`\n[carga] ${sinal} recebido: liberando a trava ${trava.caminho}.`);
@@ -76,7 +91,8 @@ function liberarAoEncerrar(trava, { processo = process, sair = (codigo) => proce
   };
   processo.once('SIGINT', porSinal('SIGINT', 130));
   processo.once('SIGTERM', porSinal('SIGTERM', 143));
+  processo.once('SIGHUP', porSinal('SIGHUP', 129));
   processo.once('exit', () => trava.liberar());
 }
 
-module.exports = { tomarTrava, lerDono, liberarAoEncerrar };
+module.exports = { tomarTrava, lerDono, liberarAoEncerrar, apagarPasta };

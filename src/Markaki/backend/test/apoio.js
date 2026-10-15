@@ -8,6 +8,7 @@ const request = require('supertest');
 const { criarApp } = require('../src/app');
 const { criarArmazenamentoSqlite } = require('../src/infra/sqlite/armazenamento');
 const { emitirToken } = require('../src/infra/tokens');
+const { apagarPasta } = require('../carga/trava');
 
 const SEGREDO = 'segredo-dos-testes-com-mais-de-32-caracteres';
 const SENHA = 'Senha123';
@@ -96,7 +97,7 @@ function criarAmbiente(opcoes = {}) {
     },
     fechar() {
       armazenamento.fechar();
-      fs.rmSync(pasta, { recursive: true, force: true });
+      apagarPasta(pasta);
     },
   };
   return ambiente;
