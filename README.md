@@ -78,8 +78,8 @@ Decisões registradas em [ADRs](docs/adr/README.md). Detalhes: [Arquitetura da S
 ## Testes
 
 ```bash
-npm test --prefix src/Markaki/backend   # 103 testes da API, banco SQLite temporário
-npm test --prefix src/Markaki           # 53 testes do app (cliente HTTP, validação, agenda, servidor acordando, demonstração, build, contraste)
+npm test --prefix src/Markaki/backend   # 133 testes da API, banco SQLite temporário
+npm test --prefix src/Markaki           # 56 testes do app (cliente HTTP, validação, agenda, servidor acordando, demonstração, build, contraste)
 npm run lint && npm run formato        # em cada pacote: ESLint e Prettier (também no CI)
 ```
 

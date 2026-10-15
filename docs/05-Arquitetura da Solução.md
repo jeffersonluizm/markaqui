@@ -123,7 +123,7 @@ Características da ISO/IEC 25010 priorizadas e como são verificadas:
 
 | Característica | Como o projeto atende | Métrica |
 |---|---|---|
-| Adequação funcional (correção) | Regras na camada de serviços, com testes para cada uma | 103 testes da API e 53 do app verdes; lint e formato no CI |
+| Adequação funcional (correção) | Regras na camada de serviços, com testes para cada uma | 133 testes da API e 56 do app verdes; lint e formato no CI |
 | Confiabilidade (tolerância a falhas) | Transações e índices UNIQUE; estados de erro e "sem conexão" no app | 0 agendamento duplicado sob carga (S2) |
 | Segurança (confidencialidade, autenticidade) | Hash, token, papéis, limites | Testes 401/403/429 e revisão de segurança |
 | Eficiência de desempenho | SQLite com índices | req/s e p97,5 no teste de carga |

@@ -8,8 +8,8 @@ Ambiente: Windows 11, Node.js 24.11.1, Chrome 154 (headless), Lighthouse 12.8.2,
 
 | Suíte | Comando | Resultado |
 |---|---|---|
-| API (CT01 a CT13, CT18) | `npm test --prefix src/Markaki/backend` | 103 de 103 aprovados (9 arquivos: auth, demo, proteções da demo, médicos, horários, agendamentos, configuração, fuso, resumos de carga); também com `TZ=UTC` |
-| App (CT14, CT15) | `npm test --prefix src/Markaki` | 53 de 53 aprovados (cliente HTTP, servidor acordando, validação, formatação, agenda, entrada na demonstração, conferência do build, contraste) |
+| API (CT01 a CT13, CT18) | `npm test --prefix src/Markaki/backend` | 133 de 133 aprovados (10 arquivos: auth, demo, proteções da demo, médicos, horários, agendamentos, configuração, fuso, resumos de carga, trava de carga); também com `TZ=UTC` |
+| App (CT14, CT15) | `npm test --prefix src/Markaki` | 56 de 56 aprovados (cliente HTTP, servidor acordando, validação, formatação, agenda, entrada na demonstração, conferência do build, contraste) |
 | Lint e formato | `npm run lint` e `npm run formato` nos dois pacotes | Sem erros nem avisos (ESLint 9, Prettier 3) |
 | Build web | `node scripts/conferir-api-url.mjs && npx expo export --platform web` | Gerado sem erros (1,57 MB). A demonstração não usa senha, então não há senha nenhuma no bundle |
 | Lighthouse (build de produção, tela inicial, celular) | `lighthouse --only-categories=accessibility,best-practices --form-factor=mobile` | Acessibilidade 100, Boas práticas 100 (14/10/2026, 22:27). Resumo versionado: [`lighthouse/2026-10-14-inicio.json`](lighthouse/2026-10-14-inicio.json); a única auditoria sem aprovação é a de source maps, de peso 0 |
