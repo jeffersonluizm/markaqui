@@ -70,9 +70,11 @@ O `iniciar.bat` da raiz faz tudo isso: confere o Node, instala, cria os dois `.e
 | `LIMITE_GLOBAL_POR_MINUTO` | `300` | Requisições por IP (0 desliga). |
 | `LIMITE_CONSULTAS_ATIVAS` | `3` | Consultas futuras ativas por paciente. |
 | `BCRYPT_CUSTO` / `JWT_VALIDADE` | `10` / `8h` | Custo do hash e validade da sessão. |
-| `DEMO_ENABLED` | `false` | Liga o modo demonstração: contas "Entrar como paciente / clínica" e `GET /api/demo`. Só com banco exclusivo de demo. |
+| `DEMO_ENABLED` | `false` | Liga o modo demonstração: "Entrar como paciente / clínica" sem senha (`GET /api/demo`, `POST /api/demo/entrar`). Só com banco exclusivo de demo. |
 | `DEMO_RESET_MINUTOS` | `0` | Recria o cenário de demonstração a cada N minutos (0: só com banco vazio) |
-| `DEMO_PACIENTE_*`, `DEMO_GESTOR_*` | e-mails `*@markaqui.demo`, senhas geradas | E-mail e senha das contas demo. Sem senha definida, uma senha forte é gerada a cada partida. |
+| `DEMO_MAX_VISITANTES` | `50` | Pacientes efêmeras ao mesmo tempo (cada "Entrar como paciente" cria uma); acima disso, a mais antiga sai com as consultas dela |
+| `DEMO_ENTRADAS_POR_MINUTO` | `10` | "Entrar como" por IP por minuto |
+| `DEMO_GESTOR_EMAIL` | `gestor@markaqui.demo` | E-mail do gestor de demonstração (sem senha utilizável) |
 | `TRUST_PROXY` | `0` | Proxies na frente da API (`1` no Render), para o limite por IP valer por visitante |
 
 ### Variáveis do app (`src/Markaki/.env`)
@@ -88,7 +90,8 @@ Todas as rotas, menos `saude`, `auth/login` e `auth/cadastro`, pedem `Authorizat
 | Método e rota | Quem | O que faz |
 |---|---|---|
 | `GET /api/saude` | todos | Confere se a API está no ar (health check da hospedagem) |
-| `GET /api/demo` | todos | Com `DEMO_ENABLED=true`, as contas de demonstração; senão 404 |
+| `GET /api/demo` | todos | Com `DEMO_ENABLED=true`, os papéis da demonstração (sem e-mail nem senha); senão 404 |
+| `POST /api/demo/entrar` | todos | `{ papel }`: sessão de uma paciente efêmera nova ou do gestor de demonstração; senão 404 |
 | `POST /api/auth/cadastro` | sem login | Cria conta de **paciente** (`nome`, `email`, `telefone`, `senha`, `aceite_termos`) |
 | `POST /api/auth/login` | sem login | Devolve `{ token, usuario }` |
 | `GET` / `PUT /api/auth/eu` | logado | Perfil (altera só `nome` e `telefone`) |

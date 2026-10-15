@@ -30,14 +30,14 @@ Variáveis que o blueprint já define:
 | `HOST` | `0.0.0.0` | Aceitar conexões do proxy do Render |
 | `JWT_SECRET` | gerado pelo Render | Segredo dos tokens (nunca vai para o Git) |
 | `DB_FILE` | `/tmp/markaqui.db` | Banco **só de demonstração**, efêmero |
-| `DEMO_ENABLED` | `true` | Contas "Entrar como paciente / clínica" e `GET /api/demo` |
+| `DEMO_ENABLED` | `true` | "Entrar como paciente / clínica" sem senha (`GET /api/demo` e `POST /api/demo/entrar`) |
 | `DEMO_RESET_MINUTOS` | `360` | Recria médicos, agenda e consultas a cada 6 horas |
 | `TRUST_PROXY` | `1` | Limite de tentativas por visitante (atrás do proxy). Só use com um proxy na frente: sem ele, o cliente forjaria `X-Forwarded-For` |
 | `CORS_ORIGENS` | URL do app na Vercel | Só o app publicado chama a API pelo navegador |
 
-As senhas das contas de demonstração são geradas a cada partida (não há senha no código). Para fixá-las, crie `DEMO_PACIENTE_SENHA` e `DEMO_GESTOR_SENHA` no painel do Render.
+A demonstração não tem senha nenhuma: cada "Entrar como paciente" cria uma paciente efêmera só para quem clicou (com uma consulta marcada, uma cancelada e uma realizada), e "Entrar como clínica" entra no gestor de demonstração, que não aceita login por senha. Opcionais: `DEMO_MAX_VISITANTES` (padrão 50 pacientes efêmeras ao mesmo tempo; acima disso a mais antiga sai) e `DEMO_ENTRADAS_POR_MINUTO` (padrão 10 por visitante).
 
-**Conferir:** abra `https://SUA-API.onrender.com/api/saude` (deve responder `{"status":"ok"}`) e `https://SUA-API.onrender.com/api/demo` (lista as duas contas).
+**Conferir:** abra `https://SUA-API.onrender.com/api/saude` (deve responder `{"status":"ok"}`) e `https://SUA-API.onrender.com/api/demo` (lista os dois papéis, sem e-mail nem senha).
 
 ## 3. App web na Vercel
 

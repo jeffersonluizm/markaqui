@@ -103,7 +103,7 @@ Antes de trocar o armazenamento, as hipóteses foram escritas e a API foi medida
 - **Clínica médica, não B2B genérico.** A proposta acadêmica (abaixo) era agendamento para prestadoras de serviço; o código sempre foi de clínica, então a versão 2.0 assume esse domínio. A situação de cada requisito está em [docs/02](docs/02-Especificação%20do%20Projeto.md#situação-na-versão-20-outubro-de-2026).
 - **SQLite no lugar do arquivo JSON:** transações e índices UNIQUE em vez de uma fila global que relia e regravava o arquivo inteiro a cada escrita. Medido antes e depois.
 - **Segurança por padrão:** gestor real só por script, papel lido do banco, paciente vê só os próprios dados, senha com bcrypt, limite de tentativas, API em `127.0.0.1` a menos que se peça a rede.
-- **Modo demonstração sem senha no código:** `DEMO_ENABLED` liga contas de exemplo com senhas do ambiente ou geradas na partida, expostas só por `GET /api/demo`; contas protegidas e dados recriados de tempos em tempos ([ADR 0004](docs/adr/0004-modo-demonstracao.md)).
+- **Modo demonstração sem senha:** com `DEMO_ENABLED`, cada "Entrar como paciente" cria uma paciente efêmera só para quem clicou (o limite de consultas vale por visitante) e "Entrar como clínica" usa um gestor de demonstração; nenhuma senha existe nem é publicada, as contas são protegidas e os dados voltam ao original de tempos em tempos ([ADR 0004](docs/adr/0004-modo-demonstracao.md)).
 - **Hospedagem gratuita:** API no Render e app web na Vercel, com tela de "acordando o servidor" ([ADR 0005](docs/adr/0005-hospedagem.md)).
 - **Cancelamento lógico:** a consulta cancelada fica no histórico, com data e quem cancelou.
 - **Identidade do próprio projeto:** marinho, azul-gelo e Inter, tirados dos protótipos da equipe ([docs/06](docs/06-Template%20Padrão%20da%20Aplicação.md)). O mascote dos protótipos saiu por ser parecido com um personagem de terceiros; fotos externas deram lugar a avatares com iniciais.
@@ -127,7 +127,7 @@ Pré-requisito: [Node.js](https://nodejs.org/) 22 ou mais novo.
 
 **Qualquer sistema:** passos em [src/Markaki/README.md](src/Markaki/README.md#rodar).
 
-As contas de demonstração não têm senha fixa: a API gera senhas novas a cada partida e o app as obtém em `GET /api/demo`. Para uma instalação real, desligue o modo demonstração e crie o gestor com `npm run criar-gestor`.
+A demonstração não usa senha: o app chama `POST /api/demo/entrar` e recebe uma sessão pronta (paciente efêmera ou gestor de demonstração). Para uma instalação real, desligue o modo demonstração e crie o gestor com `npm run criar-gestor`.
 
 ## Projeto acadêmico
 

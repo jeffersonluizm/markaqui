@@ -28,7 +28,7 @@ Três níveis de teste, todos automatizados ou roteirizados:
 | CT14 Cliente HTTP do app | RNF-001 | Token no cabeçalho, timeout, erro de conexão, aviso de sessão perdida | `src/servicos/cliente.test.mjs` | Erros com mensagem para a pessoa; aviso só com token |
 | CT15 Validação e contraste | RNF-003 | Formulários com as mesmas regras da API; pares de cor com contraste AA | `validacao.test.mjs`, `contraste.test.mjs` | Todos os pares >= 4,5:1 |
 | CT16 Fluxos nas telas | RF-001, RF-002, RF-004 | Paciente: cadastro (validação), login, agendar, consultas, cancelar. Clínica: painel, bloquear, abrir horários, editar médico. Sem conexão e 404 | Roteiros no navegador; prints em `docs/img/app` | Fluxos concluídos sem erro de tela |
-| CT18 Modo demonstração | RNF-001 | Contas demo sem senha no código, `GET /api/demo`, contas protegidas, reset do cenário | `backend/test/demo.test.js` | 404 com o modo desligado; login das duas contas; 403 ao trocar senha; nenhuma senha conhecida no código |
+| CT18 Modo demonstração | RNF-001 | Entrada sem senha, paciente efêmera por visita (limite próprio, teto, limpeza no reset), contas protegidas, reset do cenário | `backend/test/demo.test.js`, `src/servicos/demonstracao.test.mjs` | 404 com o modo desligado; `GET /api/demo` sem e-mail nem senha; visitantes distintas; 403 ao trocar senha ou perfil; nenhuma senha no código |
 | CT17 Carga | RNF-002 | Hipóteses S1 a S7 antes e depois da troca para SQLite | `backend/carga` | Ver [resultados](carga/2026-10-04-resultados.md) |
 
 ## Plano original (versão acadêmica)

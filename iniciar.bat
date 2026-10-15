@@ -47,7 +47,7 @@ if not exist "%APP%\node_modules" (
 echo [ok] Dependencias instaladas.
 
 rem 3. Configuracao da API (src\Markaki\backend\.env): segredo aleatorio e modo
-rem    demonstracao ligado. As senhas das contas demo sao geradas a cada partida.
+rem    demonstracao ligado (entrar como paciente ou clinica, sem senha).
 if not exist "%API%\.env" (
     for /f "usebackq delims=" %%s in (`node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"`) do set "JWT=%%s"
     > "%API%\.env" echo # Criado pelo iniciar.bat. Nao vai para o Git. Modelo: .env.example
