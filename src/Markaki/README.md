@@ -124,8 +124,8 @@ Erros sempre em JSON: `{ "erro": "mensagem para a pessoa" }`, com 400 (dado inv�
 ## Testes
 
 ```bash
-npm test --prefix src/Markaki/backend   # API: 81 testes (auth, papéis, demo, médicos, agenda, agendamentos, concorrência, configuração)
-npm test --prefix src/Markaki           # app: 44 testes (cliente HTTP, servidor acordando, validação, formatação, agenda, contraste)
+npm test --prefix src/Markaki/backend   # API: 103 testes (auth, papéis, demo e proteções da demo, médicos, agenda, agendamentos, concorrência, configuração, fuso, resumos de carga)
+npm test --prefix src/Markaki           # app: 53 testes (cliente HTTP, servidor acordando, validação, formatação, agenda, demonstração, conferência do build, contraste)
 npm run lint && npm run formato         # ESLint e Prettier, em cada pacote (também no CI)
 ```
 
