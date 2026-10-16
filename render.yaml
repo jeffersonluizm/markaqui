@@ -46,6 +46,11 @@ services:
         value: "50"
       - key: DEMO_VIDA_MINIMA_MINUTOS
         value: "15"
+      # Limites por IP: um visitante sozinho não enche a demo nem esgota o teto de horários.
+      - key: DEMO_VISITANTES_POR_IP
+        value: "3"
+      - key: DEMO_HORARIOS_POR_IP
+        value: "100"
       - key: LIMITE_LISTAGEM
         value: "500"
       - key: TRUST_PROXY

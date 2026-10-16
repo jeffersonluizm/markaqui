@@ -75,6 +75,7 @@ O `iniciar.bat` da raiz faz tudo isso: confere o Node, instala, cria os dois `.e
 | `DEMO_RESET_MINUTOS` | `0` | Recria o cenário de demonstração a cada N minutos (0: só com banco vazio) |
 | `DEMO_MAX_VISITANTES` | `50` | Pacientes efêmeras ao mesmo tempo (cada "Entrar como paciente" cria uma); acima disso, a mais antiga sai com as consultas dela |
 | `DEMO_MAX_MEDICOS`, `DEMO_MAX_HORARIOS` | `20`, `500` | Tetos do que os visitantes criam como clínica na demonstração (409 acima disso; os horários do cenário não contam). O cenário de exemplo (ids `demo-*`) não sai nem muda de data (403) |
+| `DEMO_VISITANTES_POR_IP`, `DEMO_HORARIOS_POR_IP` | `3`, `100` | Na demonstração, por IP: contas temporárias vivas (o mesmo IP perde a própria mais antiga) e horários criados com o gestor demo |
 | `DEMO_VIDA_MINIMA_MINUTOS` | `15` | Idade mínima de uma visitante para ceder a vaga no teto; antes disso, 503 "demonstração cheia" com `Retry-After` |
 | `DEMO_JANELA_DIAS`, `DEMO_MAX_BLOQUEADOS` | `60`, `20` | Na demonstração: horários novos só nos próximos N dias; horários do cenário bloqueados ao mesmo tempo |
 | `DEMO_ENTRADAS_POR_MINUTO` | `10` | "Entrar como" por IP por minuto |
