@@ -8,7 +8,7 @@ Ambiente: Windows 11, Node.js 24.11.1, Chrome 154 (headless), Lighthouse 12.8.2,
 
 | Suíte | Comando | Resultado |
 |---|---|---|
-| API (CT01 a CT13, CT18) | `npm test --prefix src/Markaki/backend` | 133 de 133 aprovados (10 arquivos: auth, demo, proteções da demo, médicos, horários, agendamentos, configuração, fuso, resumos de carga, trava de carga); também com `TZ=UTC` |
+| API (CT01 a CT13, CT18) | `npm test --prefix src/Markaki/backend` | 143 de 143 aprovados (11 arquivos: auth, demo, proteções da demo, limites por IP da demo, médicos, horários, agendamentos, configuração, fuso, resumos de carga, trava de carga); também com `TZ=UTC` |
 | App (CT14, CT15) | `npm test --prefix src/Markaki` | 56 de 56 aprovados (cliente HTTP, servidor acordando, validação, formatação, agenda, entrada na demonstração, conferência do build, contraste) |
 | Lint e formato | `npm run lint` e `npm run formato` nos dois pacotes | Sem erros nem avisos (ESLint 9, Prettier 3) |
 | Build web | `node scripts/conferir-api-url.mjs && npx expo export --platform web` | Gerado sem erros (1,57 MB). A demonstração não usa senha, então não há senha nenhuma no bundle |
