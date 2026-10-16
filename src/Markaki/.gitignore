@@ -1,7 +1,16 @@
 node_modules/
 .expo/
 dist/
+web-build/
+# segredos: .env e variações (.env.local, .env.production...); os modelos .example vão
 .env
-.env.local
-# temporarios da gravacao atomica do backend (database.json.*.tmp)
+.env.*
+!*.example
+# banco SQLite local da API (criado por npm run semear)
+backend/dados/
+*.db
+*.db-*
+# saídas temporárias da carga (os resultados versionados ficam em docs/carga)
+backend/carga/saidas/
 *.tmp
+*.log

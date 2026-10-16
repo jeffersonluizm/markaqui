@@ -1,6 +1,24 @@
 # Registro de Testes de Software
 
-<span style="color:red">Pré-requisitos: <a href="3-Projeto de Interface.md"> Projeto de Interface</a></span>, <a href="8-Plano de Testes de Software.md"> Plano de Testes de Software</a>
+<span style="color:red">Pré-requisitos: <a href="04-Projeto de Interface.md"> Projeto de Interface</a></span>, <a href="08-Plano de Testes de Software.md"> Plano de Testes de Software</a>
+
+## Versão 2.0 (registro de 14 de outubro de 2026)
+
+Ambiente: Windows 11, Node.js 24.11.1, Chrome 154 (headless), Lighthouse 12.8.2, Ryzen 5 5600, 16 GB. Revisão final refeita sobre um clone limpo do repositório (`iniciar.bat` do zero).
+
+| Suíte | Comando | Resultado |
+|---|---|---|
+| API (CT01 a CT13, CT18) | `npm test --prefix src/Markaki/backend` | 143 de 143 aprovados (11 arquivos: auth, demo, proteções da demo, limites por IP da demo, médicos, horários, agendamentos, configuração, fuso, resumos de carga, trava de carga); também com `TZ=UTC` |
+| App (CT14, CT15) | `npm test --prefix src/Markaki` | 56 de 56 aprovados (cliente HTTP, servidor acordando, validação, formatação, agenda, entrada na demonstração, conferência do build, contraste) |
+| Lint e formato | `npm run lint` e `npm run formato` nos dois pacotes | Sem erros nem avisos (ESLint 9, Prettier 3) |
+| Build web | `node scripts/conferir-api-url.mjs && npx expo export --platform web` | Gerado sem erros (1,57 MB). A demonstração não usa senha, então não há senha nenhuma no bundle |
+| Lighthouse (build de produção, tela inicial, celular) | `lighthouse --only-categories=accessibility,best-practices --form-factor=mobile` | Acessibilidade 100, Boas práticas 100 (14/10/2026, 22:27). Resumo versionado: [`lighthouse/2026-10-14-inicio.json`](lighthouse/2026-10-14-inicio.json); a única auditoria sem aprovação é a de source maps, de peso 0 |
+| Fluxos nas telas (CT16) | Roteiros no Chrome headless contra a API com banco de demonstração | Paciente: escolha de perfil, cadastro com erros, login, agendar, consultas, histórico, diálogo de cancelamento, perfil. Clínica: painel, bloquear horário, abrir 3 horários, editar médico, consultas. Sem conexão, 404 e Sobre. Todos concluídos |
+| Carga (CT17) | `npm run carga` (JSON remedido em 15/10 com a máquina conferida livre, depois de a rodada de 14/10 ser descartada por contaminação; SQLite 14/10 com a trava registrada; final 13/10 sem esse registro) | 7 hipóteses confirmadas (no S3, os tetos de escrita previstos para o JSON foram refutados: ele escreveu mais que o previsto); 0 agendamento duplicado nas três versões. Ver [resultados](carga/2026-10-04-resultados.md) |
+
+Evidências dos fluxos: prints em [`docs/img/app`](img/app). Aviso conhecido no console do navegador: o `@react-navigation/bottom-tabs` registra um alerta do React sobre `style` num `Fragment` interno da biblioteca; não afeta o uso.
+
+## Registro da versão acadêmica
 
 Para cada caso de teste definido no Plano de Testes de Software, realize o registro das evidências dos testes feitos na aplicação pela equipe, que comprovem que o critério de êxito foi alcançado (ou não!!!). Para isso, utilize uma ferramenta de captura de tela que mostre cada um dos casos de teste definidos (obs.: cada caso de teste deverá possuir um vídeo do tipo _screencast_ para caracterizar uma evidência do referido caso).
 

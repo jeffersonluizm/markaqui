@@ -1,0 +1,29 @@
+# Dependências e saídas de build
+node_modules/
+dist/
+web-build/
+.expo/
+.expo-shared/
+
+# Segredos: nunca vão para o Git (os modelos *.example vão)
+.env
+.env.*
+!*.example
+*.pem
+*.key
+
+# Bancos SQLite locais (dados/markaqui.db e os arquivos -wal e -shm)
+*.db
+*.db-*
+src/Markaki/backend/dados/
+
+# Saídas temporárias de carga e de ferramentas (os resultados versionados ficam em docs/carga)
+src/Markaki/backend/carga/saidas/
+.carga-lock/
+*.tmp
+*.log
+npm-debug.log*
+
+# Sistema
+.DS_Store
+Thumbs.db

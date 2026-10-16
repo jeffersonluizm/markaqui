@@ -1,0 +1,29 @@
+{
+  "ferramenta": "Lighthouse",
+  "versao": "12.8.2",
+  "navegador": "Chrome/154.0.0.0 (headless)",
+  "data": "2026-10-15T01:27:49.835Z",
+  "alvo": "build de produção do app web (npx expo export --platform web), servido localmente; tela inicial com o modo demonstração ligado na API",
+  "url": "http://127.0.0.1:3132/",
+  "formato": "mobile",
+  "categorias": {
+    "accessibility": {
+      "pontuacao": 100,
+      "auditorias": 73
+    },
+    "best-practices": {
+      "pontuacao": 100,
+      "auditorias": 22
+    }
+  },
+  "auditoriasQueNaoPassaram": [
+    {
+      "categoria": "best-practices",
+      "id": "valid-source-maps",
+      "titulo": "Missing source maps for large first-party JavaScript",
+      "peso": 0,
+      "modo": "binary"
+    }
+  ],
+  "comoReproduzir": "npx lighthouse <url-do-build> --only-categories=accessibility,best-practices --form-factor=mobile --output=json"
+}

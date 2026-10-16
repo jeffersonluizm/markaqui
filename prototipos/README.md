@@ -12,4 +12,6 @@ Telas e experimentos feitos pela equipe durante o semestre, antes do app final. 
 | `page_perfil/` | Projeto Expo (Snack) com a tela "Meu Perfil": tipo de conta, notificações, nome, cidade e telefone, salvos no `localStorage` quando roda na web. | Tela isolada, sem integração com a API. |
 | `Sobre/` | App Expo Router ("markaquiapp", feito por Jefferson Luiz) com as telas institucionais e de fluxo: sobre, contrato, início, home, agendamento, cliente, profissional e perfil. Textos em `content.json`. | Protótipo de navegação e conteúdo; não usa a API do `src/Markaki`. |
 
+Na versão 2.0 saiu a ilustração da tela inicial (um mascote parecido com um personagem de terceiros, carregado de um link externo): `Home/` ficou sem ela e `Sobre/app/home.js` usa o logo próprio do Markaqui.
+
 Para abrir um protótipo que tenha `package.json`: entre na pasta, rode `npm install` e `npx expo start`.

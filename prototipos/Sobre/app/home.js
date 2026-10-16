@@ -35,7 +35,7 @@ export default function HomeScreen() {
         </Text>
         <View style={styles.illustrationContainer}>
           <Image
-            source={{ uri: 'https://i.imgur.com/vVSHkO9.png' }}
+            source={require('../assets/images/markaqui-logo.png')}
             style={styles.illustration}
             resizeMode="contain"
           />

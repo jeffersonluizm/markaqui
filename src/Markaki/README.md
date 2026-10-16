@@ -1,468 +1,137 @@
-# 🏥 Sistema Integrado de Agendamento de Consultas Médicas
+# Markaqui: código-fonte
 
-## 📋 Sobre o Sistema
+App Expo (React Native) e API Node/Express com SQLite. Visão geral, prints e decisões estão no [README da raiz](../../README.md); aqui fica o guia técnico.
 
-Sistema completo que integra:
-- ✅ **Gestão de Médicos** - Cadastrar, listar, remover médicos
-- ✅ **Gestão de Horários** - Cada médico tem a própria agenda de horários
-- ✅ **Agendamento de Consultas** - Escolher o médico e um horário livre da agenda dele
-- ✅ **Meus Agendamentos** - Visualizar e cancelar consultas agendadas
+## Estrutura
 
----
+```
+src/Markaki/
+├── App.js                      # fontes, tema, sessão, avisos e navegação
+├── app.json                    # nome, ícone, splash e favicon do Markaqui
+├── assets/                     # ícones gerados por scripts/gerar-icones.js
+├── scripts/gerar-icones.js     # desenha o logo em PNG (sem dependências)
+├── src/
+│   ├── tema/                   # tokens (cores, raios, espaços, Inter) e tema Paper MD3
+│   ├── componentes/            # Logo, Tela, Estados, Formulario, Cartoes, Seletores, ErroGlobal
+│   ├── contexto/               # Sessao (login, token, sessão expirada) e Avisos (Snackbar e confirmação)
+│   ├── hooks/useRecurso.js     # carregando / erro / dados, recarrega ao voltar à tela
+│   ├── navegacao/              # React Navigation: pilha de conexão e abas por papel
+│   ├── servicos/               # cliente HTTP, endpoints, validação, formatação, agenda (+ testes)
+│   └── telas/                  # conexao/, paciente/, gestor/, comum/
+└── backend/
+    ├── server.js               # lê a configuração, abre o banco e sobe a API
+    ├── src/
+    │   ├── app.js              # helmet, CORS, limites, rotas e tratamento de erro
+    │   ├── config.js           # variáveis de ambiente (JWT_SECRET obrigatório)
+    │   ├── middlewares/        # autenticação por token, papel, respostas de erro
+    │   ├── routes/             # auth, medicos, horarios, agendamentos (+ painel)
+    │   ├── validators/         # formato e tamanho de cada campo
+    │   ├── services/           # regras de negócio (o que pode e o que não pode)
+    │   ├── dominio/tempo.js    # data e hora da clínica, passado e futuro
+    │   └── infra/              # SQLite (esquema, migrações, repositórios), tokens, ids
+    ├── scripts/semear.js       # cenário de demonstração (médicos, agenda, consultas)
+    ├── scripts/criar-gestor.js # conta real de gestor (o app não tem autocadastro de gestor)
+    ├── test/                   # node:test + supertest, banco temporário por arquivo
+    └── carga/                  # teste de carga (autocannon), ver docs/carga
+```
 
-## 🎯 Funcionalidades
+## Rodar
 
-### 1. Lista de Médicos
-- Busca e filtros por especialidade
-- Cadastro de novos médicos
-- Remoção de médicos (bloqueada enquanto o médico tiver agendamentos)
-- Pull-to-refresh
-
-### 2. Gerenciar Horários
-- Criar horários escolhendo o médico (o horário entra na agenda dele)
-- Ver o médico de cada horário
-- Visualizar horários ocupados/disponíveis
-- Remover horários (apenas os não agendados)
-- Ver informações de agendamentos
-
-### 3. Agendar Consulta
-- **Seleção de Médico** - Escolha entre os médicos cadastrados
-- **Seleção de Horário** - Só aparecem os horários livres do médico escolhido
-- **Nome do Paciente** - Digite seu nome
-- Confirmação do agendamento com todos os detalhes
-
-### 4. Meus Agendamentos
-- Lista de todas as consultas agendadas
-- Detalhes completos (médico, data, hora, paciente)
-- Cancelar agendamentos
-- Histórico com data de criação
-
----
-
-## 🚀 Instalação
-
-### Passo 1: Backend
+Pré-requisito: Node.js 22 ou mais novo (testado no 24). No Windows, o `iniciar.bat` da raiz faz tudo abaixo sozinho.
 
 ```bash
-# Entre na pasta do backend
-cd backend
-
-# Instale as dependências
+# API
+cd src/Markaki/backend
 npm install
+cp .env.example .env         # preencha JWT_SECRET (32+ caracteres) e DEMO_ENABLED=true para a demonstração
+npm run semear               # cria dados/markaqui.db com médicos, agenda e consultas de exemplo
+npm start                    # http://127.0.0.1:3000/api/saude (com a demo: /api/demo)
+npm run criar-gestor -- --nome "Ana Souza" --email ana@clinica.com.br   # gestor real (fora da demo)
 
-# Inicie o servidor
-npm start
-```
-
-O backend estará rodando em `http://localhost:3000`
-
-### Passo 2: Frontend
-
-```bash
-# Nesta pasta (src/Markaki)
+# App (outro terminal)
+cd src/Markaki
 npm install
-
-# Crie o .env a partir do modelo e ajuste EXPO_PUBLIC_API_URL
-copy .env.example .env      # Windows (no Mac/Linux: cp .env.example .env)
-
-# Inicie o app
-npm start
+cp .env.example .env         # EXPO_PUBLIC_API_URL
+npx expo start               # "w" abre no navegador, "a" no emulador Android, QR code no Expo Go
 ```
 
-Atalho no Windows: o `iniciar.bat` na raiz do repositório abre a API e o Expo em janelas separadas.
+O `iniciar.bat` da raiz faz tudo isso: confere o Node, instala, cria os dois `.env` (com um `JWT_SECRET` aleatório e `DEMO_ENABLED=true`), prepara o banco, espera a API e abre o app no navegador.
 
----
+### Variáveis da API (`backend/.env`)
 
-## 📁 Estrutura do Projeto
+| Variável | Padrão | Para quê |
+|---|---|---|
+| `JWT_SECRET` | (obrigatória) | Segredo dos tokens. A API não sobe com menos de 32 caracteres. |
+| `FUSO_HORARIO` | `America/Sao_Paulo` | Fuso da clínica para "hoje" e "agora" (o servidor pode estar em UTC) |
+| `PORT` / `HOST` | `3000` / `127.0.0.1` | Use `HOST=0.0.0.0` para o celular na mesma rede alcançar a API. |
+| `DB_FILE` | `backend/dados/markaqui.db` | Arquivo do SQLite (fora do Git). |
+| `CORS_ORIGENS` | `http://localhost:8081,http://localhost:19006` | Origens do navegador liberadas. |
+| `LIMITE_AUTH_POR_MINUTO` | `5` | Tentativas de login, cadastro e troca de senha por IP. |
+| `LIMITE_GLOBAL_POR_MINUTO` | `300` | Requisições por IP (0 desliga). |
+| `LIMITE_CONSULTAS_ATIVAS` | `3` | Consultas futuras ativas por paciente. |
+| `LIMITE_LISTAGEM` | `500` | Itens por listagem: a clínica recebe os mais recentes por data, a paciente os horários livres mais próximos |
+| `BCRYPT_CUSTO` / `JWT_VALIDADE` | `10` / `8h` | Custo do hash e validade da sessão. |
+| `DEMO_ENABLED` | `false` | Liga o modo demonstração: "Entrar como paciente / clínica" sem senha (`GET /api/demo`, `POST /api/demo/entrar`). Só com banco exclusivo de demo. |
+| `DEMO_RESET_MINUTOS` | `0` | Recria o cenário de demonstração a cada N minutos (0: só com banco vazio) |
+| `DEMO_MAX_VISITANTES` | `50` | Pacientes efêmeras ao mesmo tempo (cada "Entrar como paciente" cria uma); acima disso, a mais antiga sai com as consultas dela |
+| `DEMO_MAX_MEDICOS`, `DEMO_MAX_HORARIOS` | `20`, `500` | Tetos do que os visitantes criam como clínica na demonstração (409 acima disso; os horários do cenário não contam). O cenário de exemplo (ids `demo-*`) não sai nem muda de data (403) |
+| `DEMO_VISITANTES_POR_IP`, `DEMO_HORARIOS_POR_IP` | `3`, `100` | Na demonstração, por IP: contas temporárias vivas (o mesmo IP perde a própria mais antiga) e horários criados com o gestor demo |
+| `DEMO_VIDA_MINIMA_MINUTOS` | `15` | Idade mínima de uma visitante para ceder a vaga no teto; antes disso, 503 "demonstração cheia" com `Retry-After` |
+| `DEMO_JANELA_DIAS`, `DEMO_MAX_BLOQUEADOS` | `60`, `20` | Na demonstração: horários novos só nos próximos N dias; horários do cenário bloqueados ao mesmo tempo |
+| `DEMO_ENTRADAS_POR_MINUTO` | `10` | "Entrar como" por IP por minuto |
+| `DEMO_GESTOR_EMAIL` | `gestor@markaqui.demo` | E-mail do gestor de demonstração (sem senha utilizável) |
+| `TRUST_PROXY` | `0` | Proxies na frente da API (`1` no Render), para o limite por IP valer por visitante |
 
-```
-sistema-integrado/
-│
-├── backend/
-│   ├── server.js           # Servidor Express
-│   ├── database.json       # Banco de dados
-│   └── package.json        # Dependências
-│
-├── screens/
-│   ├── ListaMedicos.js     # Tela de médicos
-│   ├── GerenciarHorarios.js # Tela de horários
-│   ├── AgendarConsulta.js  # Tela de agendamento
-│   └── MeusAgendamentos.js # Tela de consultas
-│
-├── services/
-│   ├── api.js              # Funções de API
-│   ├── http.js             # URL da API (EXPO_PUBLIC_API_URL) e erros com status
-│   └── horarios.js         # Regras puras dos horários (testadas)
-│
-├── .env.example            # Modelo do .env (o .env não vai para o Git)
-├── App.js                  # Componente principal
-└── package.json            # Dependências frontend
-```
+### Variáveis do app (`src/Markaki/.env`)
 
----
-
-## 🔌 Endpoints da API
-
-### Médicos
-- `GET /api/medicos` - Listar todos
-- `GET /api/medicos/:id` - Buscar por ID
-- `POST /api/medicos` - Cadastrar
-- `PUT /api/medicos/:id` - Atualizar
-- `DELETE /api/medicos/:id` - Remover
-
-### Horários
-- `GET /api/horarios` - Listar todos (`?medico_id=ID` traz só a agenda de um médico)
-- `GET /api/horarios/:id` - Buscar por ID
-- `POST /api/horarios` - Cadastrar (`medico_id`, `data` e `hora` obrigatórios)
-- `PUT /api/horarios/:id` - Atualizar (só `disponivel`, `data` e `hora`)
-- `DELETE /api/horarios/:id` - Remover
-
-### Agendamentos
-- `GET /api/agendamentos` - Listar todos
-- `POST /api/agendamentos` - Criar agendamento (`horario_id` e `paciente_nome`; `medico_id` é opcional, mas, se vier, tem de ser o médico do horário)
-- `DELETE /api/agendamentos/:id` - Cancelar (o horário volta a ficar livre na agenda do mesmo médico)
-
-### Regras da agenda por médico
-
-| Situação | Resposta |
+| Variável | Exemplo |
 |---|---|
-| `POST /api/horarios` sem `medico_id` ou com médico inexistente | 400 |
-| Mesmo médico, mesma data e hora já cadastradas (POST ou PUT) | 409 |
-| Dois médicos diferentes na mesma data e hora | permitido |
-| `POST /api/agendamentos` com `medico_id` diferente do médico do horário | 400 |
-| Agendar horário antigo sem médico | 400 |
-| `PUT /api/horarios/:id` com outro campo além de `disponivel`, `data`, `hora` | 400 |
-| `POST` ou `PUT` de horário com `disponivel` que não é booleano, ou `data`/`hora` que não são texto preenchido | 400 (`data` e `hora` são gravadas sem espaços nas pontas) |
-| `PUT` ou `DELETE` em horário agendado | 409 (cancele o agendamento primeiro) |
-| `DELETE /api/medicos/:id` com agendamentos | 409 ("cancele os agendamentos primeiro") |
-| `DELETE /api/medicos/:id` sem agendamentos | 200; os horários livres ou bloqueados do médico saem junto (`horarios_removidos`), porque sem o médico ninguém conseguiria agendá-los |
+| `EXPO_PUBLIC_API_URL` | navegador ou iOS na mesma máquina: `http://localhost:3000/api`; emulador Android: `http://10.0.2.2:3000/api`; celular: `http://IP_DO_COMPUTADOR:3000/api` |
 
-As rotas que alteram dados passam por uma fila: uma requisição só lê e grava o `database.json` depois que a anterior terminou, e a gravação usa arquivo temporário + `rename`. Se o `database.json` estiver com JSON inválido, a API responde 500 e não sobrescreve o arquivo (arquivo inexistente vale como base vazia).
+## API
 
-Os ids novos são gerados com `crypto.randomUUID()` (antes era `Date.now()`, que repetia o id quando dois cadastros caíam no mesmo milissegundo).
+Todas as rotas, menos `saude`, `auth/login` e `auth/cadastro`, pedem `Authorization: Bearer <token>`.
 
----
+| Método e rota | Quem | O que faz |
+|---|---|---|
+| `GET /api/saude` | todos | Confere se a API está no ar (health check da hospedagem) |
+| `GET /api/demo` | todos | Com `DEMO_ENABLED=true`, os papéis da demonstração (sem e-mail nem senha); senão 404 |
+| `POST /api/demo/entrar` | todos | `{ papel }`: sessão de uma paciente efêmera nova ou do gestor de demonstração; senão 404 |
+| `POST /api/auth/cadastro` | sem login | Cria conta de **paciente** (`nome`, `email`, `telefone`, `senha`, `aceite_termos`) |
+| `POST /api/auth/login` | sem login | Devolve `{ token, usuario }` |
+| `GET` / `PUT /api/auth/eu` | logado | Perfil (altera só `nome` e `telefone`) |
+| `PUT /api/auth/senha` | logado | Troca a senha, derruba as outras sessões e devolve token novo (contas demo: 403) |
+| `GET /api/medicos`, `GET /api/medicos/:id` | logado | Lista e detalhe |
+| `POST`, `PUT`, `DELETE /api/medicos/:id` | gestor | Cadastrar, editar (o nome novo vale para a agenda e as consultas ativas) e remover (409 com consulta futura) |
+| `GET /api/horarios?medico_id=` | logado | Paciente: só livres e futuros, sem dados de outras pessoas. Gestor: agenda completa com estado e paciente |
+| `POST /api/horarios` | gestor | `medico_id`, `data` (AAAA-MM-DD), `hora` (HH:MM), nada no passado |
+| `PUT /api/horarios/:id` | gestor | `bloqueado`, `data`, `hora` (409 se tem consulta) |
+| `DELETE /api/horarios/:id` | gestor | Remove horário sem consulta (o histórico continua) |
+| `GET /api/agendamentos` | logado | Paciente: os seus. Gestor: todos. Cada um com `situacao` (agendado, cancelado, realizado) |
+| `GET /api/agendamentos/:id` | dona ou gestor | Detalhe (404 para consulta de outra paciente) |
+| `POST /api/agendamentos` | paciente | `{ horario_id }`. A paciente vem do token. 409 se o horário acabou de ser reservado |
+| `PATCH /api/agendamentos/:id/cancelar` | dona ou gestor | Cancelamento lógico: guarda quando e quem cancelou |
+| `GET /api/painel` | gestor | Consultas de hoje e dos próximos 7 dias, horários livres, médicos e a agenda do dia |
 
-## 📊 Fluxo de Uso
+Erros sempre em JSON: `{ "erro": "mensagem para a pessoa" }`, com 400 (dado inválido), 401 (sem sessão, sessão expirada ou senha trocada), 403 (papel errado), 404, 409 (conflito de regra), 413 (corpo acima de 10 KB) e 429 (limite de tentativas).
 
-### Para o Administrador:
+### Modelo de dados (SQLite)
 
-1. **Cadastrar Médicos**
-   - Vá para a aba "👨‍⚕️" (Médicos)
-   - Clique no botão "+"
-   - Preencha nome, especialidade e imagem
-   - Salve
+- `usuarios`: id, nome, email (único, sem diferenciar maiúsculas), telefone, senha_hash (bcrypt), papel (`paciente` ou `gestor`), criado_em, versao_token (troca de senha derruba sessões), demo (conta protegida).
+- `medicos`: id, nome, especialidade.
+- `horarios`: id, medico_id, data, hora, bloqueado. UNIQUE (medico_id, data, hora).
+- `agendamentos`: id, horario_id, medico_id, paciente_id, cópia de médico, paciente, data e hora (para o histórico), status (`agendado` ou `cancelado`), criado_em, cancelado_em, cancelado_por. Índices UNIQUE parciais: um agendamento ativo por horário e uma consulta ativa por paciente no mesmo dia e hora.
 
-2. **Criar Horários**
-   - Vá para a aba "🕐" (Horários)
-   - Clique no botão "+"
-   - Defina data e hora
-   - Salve
+"Livre", "bloqueado" e "agendado" são calculados na consulta a partir do agendamento ativo, sem coluna duplicada. Migrações em `backend/src/infra/sqlite/esquema.js` (versão no `PRAGMA user_version`).
 
-### Para o Paciente:
-
-3. **Agendar Consulta**
-   - Vá para a aba "📅+" (Agendar)
-   - Selecione o médico desejado
-   - Selecione o horário disponível
-   - Digite seu nome
-   - Confirme o agendamento
-
-4. **Ver Agendamentos**
-   - Vá para a aba "✓" (Agendamentos)
-   - Visualize suas consultas
-   - Cancele se necessário
-
----
-
-## 🎨 Interface
-
-### Navegação por Abas
-
-```
-┌─────────────────────────────────┐
-│  Sistema de Agendamentos        │
-├─────────────────────────────────┤
-│  👨‍⚕️   🕐   📅+   ✓            │
-│ Médicos Horários Agendar Consultas│
-└─────────────────────────────────┘
-```
-
-### Tela de Agendamento
-
-```
-┌─────────────────────────────────┐
-│ Agendar Nova Consulta           │
-├─────────────────────────────────┤
-│                                 │
-│ 1. Selecione o Médico           │
-│ ┌─────────────────────────────┐ │
-│ │ [Foto] Dr. João Silva       │ │
-│ │        Cardiologista    [↻] │ │
-│ └─────────────────────────────┘ │
-│                                 │
-│ 2. Selecione o Horário          │
-│ ┌─────────────────────────────┐ │
-│ │ 2025-11-25                  │ │
-│ │ 14:00 - 15:00          [↻]  │ │
-│ └─────────────────────────────┘ │
-│                                 │
-│ 3. Seu Nome                     │
-│ ┌─────────────────────────────┐ │
-│ │ Maria Silva                 │ │
-│ └─────────────────────────────┘ │
-│                                 │
-│ [ Confirmar Agendamento ]       │
-└─────────────────────────────────┘
-```
-
----
-
-## 🔧 Configuração da API
-
-O endereço da API vem da variável `EXPO_PUBLIC_API_URL`, lida do arquivo `.env` nesta pasta. O `.env` fica fora do Git; copie o modelo `.env.example`:
+## Testes
 
 ```bash
-# Navegador ou emulador iOS na mesma máquina
-EXPO_PUBLIC_API_URL=http://localhost:3000/api
-
-# Emulador Android
-EXPO_PUBLIC_API_URL=http://10.0.2.2:3000/api
-
-# Dispositivo físico (use o IP do computador)
-EXPO_PUBLIC_API_URL=http://192.168.1.XXX:3000/api
+npm test --prefix src/Markaki/backend   # API: 143 testes (auth, papéis, demo, proteções e limites por IP da demo, médicos, agenda, agendamentos, concorrência, configuração, fuso, resumos e trava de carga)
+npm test --prefix src/Markaki           # app: 56 testes (cliente HTTP, servidor acordando, validação, formatação, agenda, demonstração, conferência do build, contraste)
+npm run lint && npm run formato         # ESLint e Prettier, em cada pacote (também no CI)
 ```
 
-Sem a variável, o app usa `http://localhost:3000/api`. Depois de mudar o `.env`, reinicie o Expo (`npm start -- --clear`).
+## Teste de carga
 
-**Como descobrir seu IP:**
-```bash
-# Windows
-ipconfig
-
-# Mac/Linux
-ifconfig
-```
-
----
-
-## 📝 Estrutura dos Dados
-
-### Médico
-```json
-{
-  "id": "1",
-  "nome": "Dr. João Silva",
-  "especialidade": "Cardiologista",
-  "imagem": "https://..."
-}
-```
-
-### Horário
-```json
-{
-  "id": "h1",
-  "data": "2025-11-25",
-  "hora": "09:00 - 10:00",
-  "disponivel": true,
-  "paciente_nome": "",
-  "medico_id": "1",
-  "medico_nome": "Dr. Levi Alves"
-}
-```
-
-O horário pertence a um médico (`medico_id`). `paciente_nome` só é preenchido pelo agendamento.
-
-### Dados antigos (horários sem médico)
-
-Antes da agenda por médico, o horário era criado com `medico_id: null` e o médico só era gravado ao agendar. Tratamento:
-
-- Os seis horários de exemplo do `backend/database.json` foram migrados: cada um foi atribuído a um médico do próprio arquivo.
-- Se outra cópia do `database.json` ainda tiver horários com `medico_id: null`, a API continua listando esses horários em `GET /api/horarios` (fora do filtro por médico) e permite removê-los, mas recusa agendá-los (400). No app eles aparecem como "Sem médico (cadastro antigo)" na aba de horários: remova e cadastre de novo na agenda do médico certo.
-
-### Agendamento
-```json
-{
-  "id": "a1",
-  "horario_id": "h1",
-  "medico_id": "1",
-  "medico_nome": "Dr. João Silva",
-  "medico_especialidade": "Cardiologista",
-  "paciente_nome": "Maria Silva",
-  "data": "2025-11-25",
-  "hora": "09:00 - 10:00",
-  "status": "agendado",
-  "criado_em": "2025-11-22T10:30:00.000Z"
-}
-```
-
----
-
-## 🐛 Solução de Problemas
-
-### Backend não inicia
-```bash
-# Verifique se a porta 3000 está livre
-# Windows
-netstat -ano | findstr :3000
-
-# Mac/Linux
-lsof -i :3000
-
-# Se ocupada, suba em outra porta com a variável PORT
-# Windows (cmd): set PORT=3001 && npm start
-# Mac/Linux:     PORT=3001 npm start
-# e ajuste a porta em EXPO_PUBLIC_API_URL no .env
-```
-
-### Frontend não conecta
-1. Backend está rodando?
-2. `EXPO_PUBLIC_API_URL` no `.env` está correto? (reinicie o Expo depois de mudar)
-3. Celular e PC na mesma rede? (dispositivo físico)
-4. Testou no navegador: `http://localhost:3000/api/medicos`?
-
-### Horário não aparece na lista de agendamento
-- O horário aparece só para o médico dono dele: confira o médico escolhido
-- Certifique-se de que o horário está marcado como `disponível: true`
-- Recarregue a tela (pull-to-refresh)
-
-### Não consegue cadastrar médico/horário
-- Verifique os campos obrigatórios
-- Veja o console do backend para erros
-- Teste a API diretamente com Postman
-
----
-
-## ✨ Funcionalidades Especiais
-
-### 1. Validações Automáticas
-- Não permite agendar em horários ocupados
-- Não permite agendar com médico diferente do dono do horário
-- Não permite remover médicos/horários com agendamentos
-- Valida campos obrigatórios
-
-### 2. Atualização Automática
-- Ao criar agendamento, horário fica ocupado
-- Ao cancelar agendamento, horário fica disponível
-- Pull-to-refresh em todas as telas
-
-### 3. Interface Intuitiva
-- Status visuais (disponível/ocupado)
-- Confirmações antes de ações destrutivas
-- Feedback imediato de ações
-
----
-
-## 📱 Testando o Sistema
-
-### Teste Completo (5 minutos)
-
-1. **Backend** (1 min)
-   ```bash
-   cd backend
-   npm install
-   npm start
-   # Abra: http://localhost:3000/api/medicos
-   ```
-
-2. **Frontend** (2 min)
-   ```bash
-   npm install
-   # Crie o .env a partir do .env.example
-   npm start
-   ```
-
-3. **Teste Funcional** (2 min)
-   - ✅ Lista médicos carrega?
-   - ✅ Consegue adicionar médico?
-   - ✅ Consegue criar horário?
-   - ✅ Consegue agendar consulta?
-   - ✅ Agendamento aparece na lista?
-
----
-
-## 🎯 Próximos Passos
-
-### Melhorias Sugeridas:
-- [ ] Autenticação de usuários
-- [ ] Notificações de lembrete
-- [ ] Calendario visual para seleção de data
-- [ ] Filtros avançados
-- [ ] Exportar agendamentos (PDF/Excel)
-- [ ] Sistema de confirmação por e-mail/SMS
-- [ ] Upload de imagens do médico
-- [ ] Histórico de consultas
-- [ ] Avaliações dos médicos
-- [ ] Dashboard com estatísticas
-
----
-
-## 📞 Comandos Úteis
-
-```bash
-# Backend
-cd backend
-npm start              # Iniciar servidor
-npm run dev           # Modo desenvolvimento (auto-reload)
-npm test              # Testes das rotas (node:test + supertest, arquivo de dados temporário)
-
-# Frontend
-npm test              # Testes das regras puras em services/
-npm start             # Iniciar Metro
-npm run android       # Rodar no Android
-npm run ios           # Rodar no iOS
-npm run web           # Rodar no navegador
-
-# Debug
-# Limpar cache
-npm start -- --reset-cache
-
-# Reinstalar dependências
-rm -rf node_modules
-npm install
-```
-
----
-
-## 🎓 Tecnologias Utilizadas
-
-### Backend:
-- Node.js
-- Express
-- CORS
-- File System (JSON)
-
-### Frontend:
-- React Native
-- Expo
-- React Native Paper
-- React Hooks
-
----
-
-## ✅ Checklist de Implementação
-
-- [x] Backend com CRUD completo
-- [x] Frontend com 4 telas principais
-- [x] Integração médicos + horários
-- [x] Sistema de agendamento
-- [x] Cancelamento de consultas
-- [x] Validações e tratamento de erros
-- [x] Interface responsiva
-- [x] Pull-to-refresh
-- [x] Documentação completa
-
----
-
-## 🎉 Status do Projeto
-
-✅ **COMPLETO E PRONTO PARA USO**
-
-O sistema está totalmente funcional e integrado, pronto para ser usado imediatamente!
-
----
-
-**Criado por:** Bruno  
-**Data:** Novembro 2024  
-**Versão:** 1.0.0  
-**Licença:** MIT
+`npm run carga -- --armazenamento final` (na pasta `backend`) mede os cenários S1 a S7 numa pasta temporária. Hipóteses, protocolo e resultados: [`docs/carga`](../../docs/carga/2026-10-04-resultados.md).

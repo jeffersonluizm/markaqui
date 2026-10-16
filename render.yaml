@@ -1,0 +1,59 @@
+# Blueprint do Render para a API de demonstração do Markaqui (plano gratuito).
+# Render: New > Blueprint > este repositório. Depois, preencha CORS_ORIGENS com o
+# endereço do app na Vercel. Passo a passo em docs/deploy.md.
+services:
+  - type: web
+    name: markaqui-api
+    runtime: node
+    plan: free
+    rootDir: src/Markaki/backend
+    buildCommand: npm ci --omit=dev
+    startCommand: node server.js
+    healthCheckPath: /api/saude
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      # Horário da clínica (a API calcula "hoje" e "agora" nesse fuso; o Render roda em UTC).
+      - key: FUSO_HORARIO
+        value: America/Sao_Paulo
+      - key: TZ
+        value: America/Sao_Paulo
+      - key: HOST
+        value: 0.0.0.0
+      - key: JWT_SECRET
+        generateValue: true
+      # Banco de demonstração descartável: o disco do plano gratuito é efêmero e o
+      # cenário é recriado a cada partida e a cada 45 minutos (o gestor demo é
+      # compartilhado; o reset desfaz o que os visitantes mudaram).
+      - key: DB_FILE
+        value: /tmp/markaqui.db
+      - key: DEMO_ENABLED
+        value: "true"
+      - key: DEMO_RESET_MINUTOS
+        value: "45"
+      # Tetos do que os visitantes criam como clínica.
+      - key: DEMO_MAX_MEDICOS
+        value: "20"
+      - key: DEMO_MAX_HORARIOS
+        value: "500"
+      - key: DEMO_JANELA_DIAS
+        value: "60"
+      - key: DEMO_MAX_BLOQUEADOS
+        value: "20"
+      # Visitante só cede a vaga depois de 15 minutos (senão: 503, demonstração cheia).
+      - key: DEMO_MAX_VISITANTES
+        value: "50"
+      - key: DEMO_VIDA_MINIMA_MINUTOS
+        value: "15"
+      # Limites por IP: um visitante sozinho não enche a demo nem esgota o teto de horários.
+      - key: DEMO_VISITANTES_POR_IP
+        value: "3"
+      - key: DEMO_HORARIOS_POR_IP
+        value: "100"
+      - key: LIMITE_LISTAGEM
+        value: "500"
+      - key: TRUST_PROXY
+        value: "1"
+      - key: CORS_ORIGENS
+        sync: false

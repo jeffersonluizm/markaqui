@@ -109,14 +109,8 @@ export default function HomeScreen() {
           com profissionais e serviços
         </p>
 
-        {/* Ilustração */}
-        <div style={styles.illustrationContainer}>
-          <img 
-            src="https://i.imgur.com/vVSHkO9.png" 
-            alt="Ilustração Markaqui" 
-            style={styles.illustration}
-          />
-        </div>
+        {/* A ilustração original (mascote parecido com personagem de terceiros, por
+            link externo) foi retirada na versão 2.0. */}
 
         {/* Botão */}
         <button 

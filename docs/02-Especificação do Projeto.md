@@ -1,12 +1,32 @@
 # Especificações do Projeto
 
 <!--
-<span style="color:red">Pré-requisitos: <a href="1-Documentação de Contexto.md"> Documentação de Contexto</a></span>
+<span style="color:red">Pré-requisitos: <a href="01-Documentação de Contexto.md"> Documentação de Contexto</a></span>
 
 Definição do problema e ideia de solução a partir da perspectiva do usuário. É composta pela definição do  diagrama de personas, histórias de usuários, requisitos funcionais e não funcionais além das restrições do projeto.
 
 Apresente uma visão geral do que será abordado nesta parte do documento, enumerando as técnicas e/ou ferramentas utilizadas para realizar a especificações do projeto
 -->
+
+## Situação na versão 2.0 (outubro de 2026)
+
+A proposta original (abaixo, preservada como registro acadêmico) era um agendamento B2B para empresas prestadoras de serviço. A versão 2.0 assume o domínio que o código já tinha: **agendamento de consultas em uma clínica médica**, com dois papéis (paciente e gestor da clínica). Médico faz o papel do "profissional" e especialidade, o do "serviço".
+
+| Requisito | Situação | Onde |
+|---|---|---|
+| RF-001 Agendamento em até 5 etapas | Implementado: Médicos, médico, dia e hora, confirmar (4 toques) | `src/telas/paciente/` |
+| RF-002 Agendas de todos os profissionais | Parcial: agenda por médico com troca rápida e lista de todas as consultas | `src/telas/gestor/Agenda.js`, `src/telas/comum/Consultas.js` |
+| RF-003 Notificações push | Não implementado | Limitação conhecida |
+| RF-004 Perfis e autenticação | Implementado com e-mail e senha (bcrypt, token, papéis). Login com Google não | `backend/src/routes/auth.js` |
+| RF-005 Painel gerencial | Parcial: consultas de hoje e da semana, horários livres e agenda do dia (sem receita) | `src/telas/gestor/Painel.js`, `GET /api/painel` |
+| RF-006 Serviços com preço | Não implementado (no domínio de clínica, a especialidade substitui o serviço) | |
+| RNF-001 Segurança e LGPD | Parcial: senha com hash, paciente só vê os próprios dados, limites de tentativa. HTTPS depende da hospedagem | [Arquitetura](05-Arquitetura%20da%20Solução.md) |
+| RNF-002 Desempenho | Medido na API: leitura da agenda com p97,5 de 13 ms (100 horários) a 60 ms (10.000) na versão final; ver [teste de carga](carga/2026-10-04-resultados.md) | `backend/carga/` |
+| RNF-003 Material Design | Implementado: React Native Paper (MD3) com o tema do projeto | [Template](06-Template%20Padrão%20da%20Aplicação.md) |
+| RNF-004 Compatibilidade Android | Expo SDK 54 / React Native 0.81 | |
+| RNF-005 Consumo de bateria e dados | Não medido | |
+
+Restrições: R-02 (cadastro obrigatório) vale. R-03 (CPF) e R-05 (verificar e-mail) ficaram de fora: o app não pede CPF (minimização de dados, LGPD) e não envia e-mail.
 
 ## Personas
 

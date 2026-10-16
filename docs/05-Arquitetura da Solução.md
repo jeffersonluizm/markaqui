@@ -1,68 +1,131 @@
 # Arquitetura da Solução
 
-<span style="color:red">Pré-requisitos: <a href="3-Projeto de Interface.md"> Projeto de Interface</a></span>
+<span style="color:red">Pré-requisitos: <a href="04-Projeto de Interface.md"> Projeto de Interface</a></span>
 
-Definição de como o software é estruturado em termos dos componentes que fazem parte da solução e do ambiente de hospedagem da aplicação.
+Arquitetura real da versão 2.0 (outubro de 2026). O código está em [`src/Markaki`](../src/Markaki/README.md).
 
-![Arquitetura da Solução](img/02-mob-arch.png)
+## Visão geral
 
-## Diagrama de Classes
+```mermaid
+flowchart TB
+  subgraph App["App Expo (React Native + React Native Paper)"]
+    Telas["Telas por papel<br/>conexão · paciente · clínica"] --> Nav["React Navigation<br/>pilha + abas"]
+    Telas --> Hooks["useRecurso<br/>carregando · vazio · erro"]
+    Hooks --> Cliente["Cliente HTTP<br/>token, timeout de 10 s"]
+    Sessao["Sessão<br/>expo-secure-store"] --> Cliente
+  end
+  Cliente -- "JSON + Authorization: Bearer" --> MW
+  subgraph API["API Node.js + Express"]
+    MW["Middlewares<br/>helmet · CORS por lista · 10 KB · limites por IP"] --> Auth["Autenticação (JWT HS256)<br/>e papel lido do banco"]
+    Auth --> Rotas["Rotas"] --> Val["Validações<br/>formato e tamanho"]
+    Val --> Serv["Serviços<br/>regras de negócio"]
+    Serv --> Repo["Repositórios<br/>consultas preparadas"]
+  end
+  Repo -- "transação IMMEDIATE" --> DB[("SQLite (WAL)<br/>UNIQUE: 1 agendamento ativo por horário")]
+```
 
-O diagrama de classes ilustra graficamente como será a estrutura do software, e como cada uma das classes da sua estrutura estarão interligadas. Essas classes servem de modelo para materializar os objetos que executarão na memória.
+### Camadas da API
 
-As referências abaixo irão auxiliá-lo na geração do artefato “Diagrama de Classes”.
+| Camada | Pasta | Responsabilidade |
+|---|---|---|
+| Entrada | `backend/server.js`, `src/config.js` | Lê o ambiente (sem `JWT_SECRET` forte a API não sobe), abre o banco e escuta em `HOST:PORT`. |
+| Aplicação | `src/app.js` | Monta helmet, CORS, limitadores, `express.json({ limit: '10kb' })`, rotas e o 404 em JSON. |
+| Middlewares | `src/middlewares/` | Autenticação por token, exigência de papel e conversão de erros em respostas (`{ erro }`). |
+| Rotas | `src/routes/` | Só HTTP: chama a validação, abre leitura ou escrita no armazenamento e devolve o status. |
+| Validações | `src/validators/` | Tipo, formato (data AAAA-MM-DD, hora HH:MM, e-mail, telefone) e tamanho, antes de abrir a transação. |
+| Serviços | `src/services/` | Regras: agenda por médico, nada no passado, um agendamento por horário, até 3 consultas ativas por paciente, cancelamento lógico, quem vê o quê. |
+| Repositórios | `src/infra/sqlite/` | SQL preparado, esquema e migrações. O estado do horário (livre, bloqueado, agendado) é calculado na consulta. |
 
-> - [Diagramas de Classes - Documentação da IBM](https://www.ibm.com/docs/pt-br/rational-soft-arch/9.6.1?topic=diagrams-class)
-> - [O que é um diagrama de classe UML? | Lucidchart](https://www.lucidchart.com/pages/pt/o-que-e-diagrama-de-classe-uml)
+Cada escrita roda numa transação `IMMEDIATE` do better-sqlite3: verificar ("o horário está livre?") e gravar acontecem juntos, e um erro no meio desfaz tudo. Os índices UNIQUE parciais são a última linha de defesa contra agendamento duplicado.
 
-## Modelo ER
+### Segurança
 
-O Modelo ER representa através de um diagrama como as entidades (coisas, objetos) se relacionam entre si na aplicação interativa.]
+- Senhas com bcrypt (custo 10); login responde igual para e-mail inexistente e senha errada e sempre calcula um hash.
+- Token JWT HS256 com validade de 8 h; o papel usado na autorização vem do banco a cada requisição; trocar a senha invalida os tokens anteriores.
+- Autocadastro cria só paciente. Gestor real existe apenas pelo script `npm run criar-gestor`.
+- Modo demonstração (`DEMO_ENABLED`, desligado por padrão): `POST /api/demo/entrar` devolve uma sessão sem senha, de uma paciente efêmera por visita (com teto e limpeza no reset) ou do gestor de demonstração; contas protegidas contra troca de senha e perfil ([ADR 0004](adr/0004-modo-demonstracao.md)).
+- Atrás do proxy da hospedagem, `TRUST_PROXY=1` faz o limite de tentativas valer por visitante.
+- Paciente vê só as próprias consultas e só horários livres e futuros, sem nome de outras pessoas; consulta de outra paciente responde 404.
+- Limites: 5 tentativas de login, cadastro ou troca de senha por minuto por IP, 300 requisições por minuto por IP, corpo de até 10 KB, até 3 consultas futuras ativas por paciente.
+- A API escuta em `127.0.0.1` por padrão; `HOST=0.0.0.0` só para testar no celular na mesma rede.
+- No celular o token fica no armazenamento seguro do sistema; no navegador (Expo web) fica no `localStorage`.
+- Não há uma tela "sem permissão" separada: cada papel só monta as próprias telas (não existe caminho para a área do outro). Se a API responder 403, o estado de erro da tela mostra "Sem permissão".
 
-As referências abaixo irão auxiliá-lo na geração do artefato “Modelo ER”.
+## Modelo de dados
 
-> - [Como fazer um diagrama entidade relacionamento | Lucidchart](https://www.lucidchart.com/pages/pt/como-fazer-um-diagrama-entidade-relacionamento)
+```mermaid
+erDiagram
+  usuarios ||--o{ agendamentos : "agenda (paciente)"
+  medicos ||--o{ horarios : "tem agenda"
+  horarios ||--o| agendamentos : "no máximo 1 ativo"
+  medicos ||--o{ agendamentos : "atende"
+  usuarios {
+    text id PK
+    text nome
+    text email UK
+    text telefone
+    text senha_hash
+    text papel "paciente | gestor"
+    int versao_token
+    int demo
+  }
+  medicos {
+    text id PK
+    text nome
+    text especialidade
+  }
+  horarios {
+    text id PK
+    text medico_id FK
+    text data "AAAA-MM-DD"
+    text hora "HH:MM"
+    int bloqueado
+  }
+  agendamentos {
+    text id PK
+    text horario_id FK
+    text medico_id FK
+    text paciente_id FK
+    text medico_nome "cópia para o histórico"
+    text data
+    text hora
+    text status "agendado | cancelado"
+    text cancelado_em
+    text cancelado_por
+  }
+```
 
-## Esquema Relacional
+O esquema físico está em [`backend/src/infra/sqlite/esquema.js`](../src/Markaki/backend/src/infra/sqlite/esquema.js). Nome do médico e da paciente, data e hora ficam copiados no agendamento: o histórico continua legível se o horário ou o médico forem removidos. Renomear o médico atualiza só as consultas ativas.
 
-O Esquema Relacional corresponde à representação dos dados em tabelas juntamente com as restrições de integridade e chave primária.
- 
-As referências abaixo irão auxiliá-lo na geração do artefato “Esquema Relacional”.
+### Por que SQLite (e não mais o arquivo JSON)
 
-> - [Criando um modelo relacional - Documentação da IBM](https://www.ibm.com/docs/pt-br/cognos-analytics/10.2.2?topic=designer-creating-relational-model)
+A primeira versão gravava tudo num `database.json` relido e regravado inteiro a cada requisição, com uma fila global para não perder escritas simultâneas. A troca por SQLite foi medida antes e depois com as mesmas hipóteses: ver [teste de carga](carga/2026-10-04-resultados.md).
 
-## Modelo Físico
+## Tecnologias
 
-Entregar um arquivo banco.sql contendo os scripts de criação das tabelas do banco de dados. Este arquivo deverá ser incluído dentro da pasta src\bd.
-
-## Tecnologias Utilizadas
-
-Descreva aqui qual(is) tecnologias você vai usar para resolver o seu problema, ou seja, implementar a sua solução. Liste todas as tecnologias envolvidas, linguagens a serem utilizadas, serviços web, frameworks, bibliotecas, IDEs de desenvolvimento, e ferramentas.
-
-Apresente também uma figura explicando como as tecnologias estão relacionadas ou como uma interação do usuário com o sistema vai ser conduzida, por onde ela passa até retornar uma resposta ao usuário.
+| Parte | Tecnologia |
+|---|---|
+| App | Expo SDK 54, React Native 0.81, React 19, React Navigation 7 (native-stack e bottom-tabs), React Native Paper 5 (MD3), Inter (`@expo-google-fonts/inter`), react-native-svg, expo-secure-store |
+| API | Node.js 24, Express 4, better-sqlite3, jsonwebtoken, bcryptjs, helmet, express-rate-limit, cors |
+| Testes | `node:test`, supertest, banco temporário por arquivo de teste |
+| Carga | autocannon (programático), `fetch` do Node para o teste de corretude |
 
 ## Hospedagem
 
-Explique como a hospedagem e o lançamento da plataforma foi feita.
+Ver [Publicar a demonstração](deploy.md) e o [ADR 0005](adr/0005-hospedagem.md): API no Render (banco de demonstração efêmero recriado a cada partida e a cada 45 minutos) e app como Expo web na Vercel.
 
-> **Links Úteis**:
->
-> - [Website com GitHub Pages](https://pages.github.com/)
-> - [Programação colaborativa com Repl.it](https://repl.it/)
-> - [Getting Started with Heroku](https://devcenter.heroku.com/start)
-> - [Publicando Seu Site No Heroku](http://pythonclub.com.br/publicando-seu-hello-world-no-heroku.html)
 
-## Qualidade de Software
+Localmente, `iniciar.bat` sobe tudo. O SQLite atende um único processo; para vários processos ou máquinas, o próximo passo é PostgreSQL com o mesmo desenho de repositórios.
 
-Conceituar qualidade de fato é uma tarefa complexa, mas ela pode ser vista como um método gerencial que através de procedimentos disseminados por toda a organização, busca garantir um produto final que satisfaça às expectativas dos stakeholders.
+## Qualidade de software
 
-No contexto de desenvolvimento de software, qualidade pode ser entendida como um conjunto de características a serem satisfeitas, de modo que o produto de software atenda às necessidades de seus usuários. Entretanto, tal nível de satisfação nem sempre é alcançado de forma espontânea, devendo ser continuamente construído. Assim, a qualidade do produto depende fortemente do seu respectivo processo de desenvolvimento.
+Características da ISO/IEC 25010 priorizadas e como são verificadas:
 
-A norma internacional ISO/IEC 25010, que é uma atualização da ISO/IEC 9126, define oito características e 30 subcaracterísticas de qualidade para produtos de software.
-Com base nessas características e nas respectivas sub-características, identifique as sub-características que sua equipe utilizará como base para nortear o desenvolvimento do projeto de software considerando-se alguns aspectos simples de qualidade. Justifique as subcaracterísticas escolhidas pelo time e elenque as métricas que permitirão a equipe avaliar os objetos de interesse.
-
-> **Links Úteis**:
->
-> - [ISO/IEC 25010:2011 - Systems and software engineering — Systems and software Quality Requirements and Evaluation (SQuaRE) — System and software quality models](https://www.iso.org/standard/35733.html/)
-> - [Análise sobre a ISO 9126 – NBR 13596](https://www.tiespecialistas.com.br/analise-sobre-iso-9126-nbr-13596/)
-> - [Qualidade de Software - Engenharia de Software 29](https://www.devmedia.com.br/qualidade-de-software-engenharia-de-software-29/18209/)
+| Característica | Como o projeto atende | Métrica |
+|---|---|---|
+| Adequação funcional (correção) | Regras na camada de serviços, com testes para cada uma | 143 testes da API e 56 do app verdes; lint e formato no CI |
+| Confiabilidade (tolerância a falhas) | Transações e índices UNIQUE; estados de erro e "sem conexão" no app | 0 agendamento duplicado sob carga (S2) |
+| Segurança (confidencialidade, autenticidade) | Hash, token, papéis, limites | Testes 401/403/429 e revisão de segurança |
+| Eficiência de desempenho | SQLite com índices | req/s e p97,5 no teste de carga |
+| Usabilidade (acessibilidade) | Rótulos, alvos de 48 dp, contraste AA testado | `src/tema/contraste.test.mjs` |
+| Manutenibilidade (modularidade) | Camadas separadas, tokens de tema num lugar só | Revisão de código |

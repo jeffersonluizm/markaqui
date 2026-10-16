@@ -1,85 +1,68 @@
-import React, { useState } from 'react';
-import { View, StyleSheet } from 'react-native';
-import { Appbar } from 'react-native-paper';
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+// Raiz do app: fontes da marca, tema, sessão, avisos e navegação por papel.
+import React, { useCallback } from 'react';
+import { View } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+import * as SplashScreen from 'expo-splash-screen';
+import {
+  useFonts,
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+} from '@expo-google-fonts/inter';
+import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
+import { PaperProvider } from 'react-native-paper';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import ListaMedicos from './screens/ListaMedicos';
-import GerenciarHorarios from './screens/GerenciarHorarios';
-import AgendarConsulta from './screens/AgendarConsulta';
-import MeusAgendamentos from './screens/MeusAgendamentos';
+import { tema, temaNavegacao } from './src/tema/tema';
+import { cores } from './src/tema/tokens';
+import { ProvedorSessao, useSessao } from './src/contexto/Sessao';
+import { ProvedorAvisos } from './src/contexto/Avisos';
+import { ErroGlobal } from './src/componentes/ErroGlobal';
+import Navegacao, { linking } from './src/navegacao/Navegacao';
+import Abertura from './src/telas/conexao/Abertura';
 
-export default function App() {
-  const [telaAtiva, setTelaAtiva] = useState('medicos');
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
-  const renderTela = () => {
-    switch (telaAtiva) {
-      case 'medicos':
-        return <ListaMedicos />;
-      case 'horarios':
-        return <GerenciarHorarios />;
-      case 'agendar':
-        return <AgendarConsulta />;
-      case 'agendamentos':
-        return <MeusAgendamentos />;
-      default:
-        return <ListaMedicos />;
-    }
-  };
+const temaNav = temaNavegacao(DefaultTheme);
+const tituloDaAba = (opcoes, rota) => `${opcoes?.title || rota?.name || 'Markaqui'} · Markaqui`;
 
+// A navegação só monta depois de conferir a sessão: assim o endereço aberto no
+// navegador (ex.: /entrar) é aplicado à pilha certa, e não à tela de abertura.
+function Conteudo() {
+  const { carregando, erroInicial } = useSessao();
+  if (carregando || erroInicial) return <Abertura />;
   return (
-    <SafeAreaProvider>
-      <SafeAreaView style={styles.container}>
-        <Appbar.Header>
-          <Appbar.Content title="Sistema de Agendamentos" />
-        </Appbar.Header>
-
-        <View style={styles.tabContainer}>
-          <Appbar style={styles.tabs}>
-            <Appbar.Action
-              icon="doctor"
-              onPress={() => setTelaAtiva('medicos')}
-              color={telaAtiva === 'medicos' ? '#007bff' : '#666'}
-            />
-            <Appbar.Action
-              icon="clock-outline"
-              onPress={() => setTelaAtiva('horarios')}
-              color={telaAtiva === 'horarios' ? '#007bff' : '#666'}
-            />
-            <Appbar.Action
-              icon="calendar-plus"
-              onPress={() => setTelaAtiva('agendar')}
-              color={telaAtiva === 'agendar' ? '#007bff' : '#666'}
-            />
-            <Appbar.Action
-              icon="calendar-check"
-              onPress={() => setTelaAtiva('agendamentos')}
-              color={telaAtiva === 'agendamentos' ? '#007bff' : '#666'}
-            />
-          </Appbar>
-        </View>
-
-        <View style={styles.content}>
-          {renderTela()}
-        </View>
-      </SafeAreaView>
-    </SafeAreaProvider>
+    <NavigationContainer theme={temaNav} linking={linking} documentTitle={{ formatter: tituloDaAba }}>
+      <Navegacao />
+    </NavigationContainer>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  tabContainer: {
-    backgroundColor: '#fff',
-    elevation: 4,
-  },
-  tabs: {
-    backgroundColor: '#fff',
-    justifyContent: 'space-around',
-  },
-  content: {
-    flex: 1,
-  },
-});
+export default function App() {
+  const [fontesProntas, erroFontes] = useFonts({ Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold });
+  const pronto = fontesProntas || Boolean(erroFontes);
+
+  const aoDesenhar = useCallback(() => {
+    if (pronto) SplashScreen.hideAsync().catch(() => {});
+  }, [pronto]);
+
+  if (!pronto) return null;
+
+  return (
+    <SafeAreaProvider>
+      <PaperProvider theme={tema}>
+        <View style={{ flex: 1, backgroundColor: cores.fundo }} onLayout={aoDesenhar}>
+          <ErroGlobal>
+            <ProvedorSessao>
+              <ProvedorAvisos>
+                <Conteudo />
+              </ProvedorAvisos>
+            </ProvedorSessao>
+          </ErroGlobal>
+          <StatusBar style="dark" />
+        </View>
+      </PaperProvider>
+    </SafeAreaProvider>
+  );
+}
