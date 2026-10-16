@@ -91,13 +91,13 @@ Antes de trocar o armazenamento, as hipóteses foram escritas e a API foi medida
 
 | Cenário (10.000 horários) | Arquivo JSON (antes) | SQLite (depois) |
 |---|---|---|
-| Leitura da agenda de um médico | 93 req/s, p97,5 620 ms | 1.266 req/s, p97,5 48 ms |
-| Escrita com 50 conexões | 43 escritas/s, p97,5 1,5 s | 5.863 escritas/s, p97,5 10 ms |
-| Misto 90/10 com 300 conexões | 4.663 erros, p97,5 7,3 s | 0 erro, p97,5 250 ms |
-| Leitores e escritores ao mesmo tempo | 100% das escritas com erro 500 (`EPERM` no Windows) | 0 erro |
+| Leitura da agenda de um médico | 141 req/s, p97,5 389 ms | 1.266 req/s, p97,5 48 ms |
+| Escrita com 50 conexões | 61 escritas/s, p97,5 851 ms | 5.863 escritas/s, p97,5 10 ms |
+| Misto 90/10 com 300 conexões | 1.927 erros, p97,5 4,7 s | 0 erro, p97,5 250 ms |
+| Leitores e escritores ao mesmo tempo | 99,6% das escritas com erro 500 (`EPERM` no Windows) | 0 erro |
 | 4.000 pedidos no mesmo horário (200 horários) | 0 duplicado | 0 duplicado |
 
-<img src="docs/carga/2026-10-14-grafico.svg" alt="Gráfico: leitura, escrita e latência do arquivo JSON e do SQLite" width="760">
+<img src="docs/carga/2026-10-15-grafico.svg" alt="Gráfico: leitura, escrita e latência do arquivo JSON e do SQLite" width="760">
 
 ## Decisões
 
