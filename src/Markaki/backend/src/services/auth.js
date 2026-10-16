@@ -7,6 +7,7 @@ const { conflito, naoAutenticado, requisicaoInvalida, semPermissao } = require('
 const { usuarioPublico } = require('./apresentacao');
 const { momentoLocal } = require('../dominio/tempo');
 const { abrirVaga } = require('./demonstracao');
+const { hashDoIp } = require('./protecaoDemo');
 
 const MSG_LOGIN = 'E-mail ou senha inválidos.';
 const MSG_DEMO = 'Contas de demonstração não podem ser alteradas.';
@@ -31,14 +32,15 @@ function criarServicoAuth(armazenamento, config) {
     // Autocadastro cria sempre paciente. Gestor só pelo script criar-gestor. No modo
     // demonstração a conta é temporária: marcada como demo, entra no teto de
     // visitantes (e na vida mínima) e some no próximo reset.
-    async cadastrar({ nome, email, telefone, senha }) {
+    async cadastrar({ nome, email, telefone, senha }, { ip } = {}) {
       const senha_hash = await bcrypt.hash(senha, config.bcryptCusto);
       const demo = Boolean(config.demo && config.demo.ativo);
       const usuario = await armazenamento.escrita((r) => {
         if (r.usuarios.buscarPorEmail(email)) throw conflito('Este e-mail já tem cadastro. Tente entrar.');
         if (!demo) return r.usuarios.inserir({ id: gerarId(), nome, email, telefone, senha_hash, papel: 'paciente' });
         const agora = config.relogio();
-        abrirVaga(r, config, agora);
+        const ipHash = hashDoIp(config, ip);
+        abrirVaga(r, config, agora, ipHash);
         return r.usuarios.inserir({
           id: `demo-visitante-${gerarId()}`,
           nome,
@@ -48,6 +50,7 @@ function criarServicoAuth(armazenamento, config) {
           papel: 'paciente',
           demo: true,
           criado_em: agora.toISOString(),
+          ip_hash: ipHash,
         });
       });
       return sessao(usuario);

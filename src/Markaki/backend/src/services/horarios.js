@@ -3,7 +3,13 @@ const { gerarId } = require('../infra/ids');
 const { naoEncontrado, requisicaoInvalida, conflito } = require('../erros');
 const { ehFuturo, momentoLocal } = require('../dominio/tempo');
 const { horarioPara } = require('./apresentacao');
-const { protegerCenario, respeitarTeto, limitarJanela, limitarBloqueio } = require('./protecaoDemo');
+const {
+  protegerCenario,
+  respeitarTeto,
+  limitarJanela,
+  limitarBloqueio,
+  limitarHorariosPorIp,
+} = require('./protecaoDemo');
 
 const MSG_DUPLICADO = 'Este médico já tem um horário nessa data e hora.';
 const MSG_AGENDADO = 'Este horário tem consulta marcada. Cancele a consulta primeiro.';
@@ -47,12 +53,13 @@ function cadastrar(r, novo, ctx) {
   if (!r.medicos.buscar(novo.medico_id)) throw requisicaoInvalida('Médico não encontrado.');
   limitarJanela(ctx, novo.data);
   respeitarTeto(ctx, { atual: r.horarios.contarCriados(), chave: 'maxHorarios', rotulo: 'horários' });
+  const ipHash = limitarHorariosPorIp(ctx, r);
   if (!ehFuturo(novo.data, novo.hora, ctx.agora)) throw requisicaoInvalida(MSG_PASSADO);
   // Dois médicos podem ter o mesmo horário; o mesmo médico, não.
   if (r.horarios.existeIgual({ medicoId: novo.medico_id, data: novo.data, hora: novo.hora })) {
     throw conflito(MSG_DUPLICADO);
   }
-  return horarioPara(ctx.usuario, r.horarios.inserir({ id: gerarId(), ...novo }));
+  return horarioPara(ctx.usuario, r.horarios.inserir({ id: gerarId(), ...novo, ip_hash: ipHash }));
 }
 
 // Bloquear, desbloquear ou mudar data e hora. Horário com consulta marcada só é

@@ -2,6 +2,7 @@
 // visitantes: o cenário de exemplo (ids que começam com "demo-") não pode ser
 // apagado nem desfigurado, e o que os visitantes criam tem teto. Fora do modo
 // demonstração nada disto vale.
+const crypto = require('crypto');
 const { semPermissao, conflito, requisicaoInvalida } = require('../erros');
 const { momentoLocal, somarDias } = require('../dominio/tempo');
 
@@ -18,6 +19,29 @@ const MENSAGENS = {
 
 const emDemonstracao = (ctx) => Boolean(ctx.config && ctx.config.demo && ctx.config.demo.ativo);
 const ehDoCenario = (id) => typeof id === 'string' && id.startsWith('demo-');
+
+// Hash do IP (HMAC com o segredo da API): permite contar por visitante sem guardar
+// o IP. Sem segredo (testes de unidade), cai num hash simples.
+function hashDoIp(config, ip) {
+  return crypto
+    .createHmac('sha256', String(config.jwtSegredo || 'markaqui'))
+    .update(String(ip || 'desconhecido'))
+    .digest('hex')
+    .slice(0, 32);
+}
+
+// Horários criados por um mesmo IP com o gestor demo compartilhado: no máximo horariosPorIp.
+function limitarHorariosPorIp(ctx, r) {
+  if (!emDemonstracao(ctx)) return null;
+  const ipHash = hashDoIp(ctx.config, ctx.ip);
+  const maximo = ctx.config.demo.horariosPorIp;
+  if (r.horarios.contarCriadosPorIp(ipHash) >= maximo) {
+    throw conflito(
+      `A demonstração aceita até ${maximo} horários por visitante. Remova um que você criou ou aguarde a próxima recriação dos dados.`
+    );
+  }
+  return ipHash;
+}
 
 // 403 com mensagem amigável quando o registro é do cenário de exemplo.
 function protegerCenario(ctx, tipo, id) {
@@ -70,4 +94,6 @@ module.exports = {
   limitarJanela,
   limitarBloqueio,
   protegerConsultaDeVisitante,
+  hashDoIp,
+  limitarHorariosPorIp,
 };

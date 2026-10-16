@@ -29,7 +29,7 @@ function rotasDemo(armazenamento, config, { limiteDemo }) {
     '/entrar',
     limiteDemo,
     executar('Erro ao entrar na demonstração.', 200, (req) =>
-      entrarNaDemonstracao(armazenamento, config, validarEntrada(req.body))
+      entrarNaDemonstracao(armazenamento, config, validarEntrada(req.body), req.ip)
     )
   );
   return rotas;

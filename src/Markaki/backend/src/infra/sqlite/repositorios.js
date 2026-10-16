@@ -53,12 +53,12 @@ function criarRepositorios(db) {
     usuarioPorEmail: p('SELECT * FROM usuarios WHERE email = ?'),
     usuarios: p('SELECT * FROM usuarios ORDER BY rowid'),
     usuarioInserir: p(`
-      INSERT INTO usuarios (id, nome, email, telefone, senha_hash, papel, criado_em, demo)
-      VALUES (@id, @nome, @email, @telefone, @senha_hash, @papel, @criado_em, @demo)`),
+      INSERT INTO usuarios (id, nome, email, telefone, senha_hash, papel, criado_em, demo, ip_hash)
+      VALUES (@id, @nome, @email, @telefone, @senha_hash, @papel, @criado_em, @demo, @ip_hash)`),
     usuarioRemover: p('DELETE FROM usuarios WHERE id = ?'),
     // Pacientes efêmeras do modo demonstração, da mais antiga para a mais nova.
     visitantesDemo: p(
-      "SELECT id, criado_em FROM usuarios WHERE demo = 1 AND papel = 'paciente' ORDER BY criado_em, rowid"
+      "SELECT id, criado_em, ip_hash FROM usuarios WHERE demo = 1 AND papel = 'paciente' ORDER BY criado_em, rowid"
     ),
 
     medicos: p('SELECT id, nome, especialidade FROM medicos ORDER BY rowid LIMIT ?'),
@@ -87,8 +87,9 @@ function criarRepositorios(db) {
     horarioPorId: p(`${SELECT_HORARIO} WHERE h.id = ?`),
     horariosBrutos: p('SELECT id, medico_id, data, hora, bloqueado FROM horarios ORDER BY rowid'),
     horarioInserir: p(`
-      INSERT INTO horarios (id, medico_id, data, hora, bloqueado)
-      VALUES (@id, @medico_id, @data, @hora, @bloqueado)`),
+      INSERT INTO horarios (id, medico_id, data, hora, bloqueado, ip_hash)
+      VALUES (@id, @medico_id, @data, @hora, @bloqueado, @ip_hash)`),
+    horariosCriadosPorIp: p('SELECT COUNT(*) AS n FROM horarios WHERE ip_hash = ?'),
     horarioRemover: p('DELETE FROM horarios WHERE id = ?'),
     horariosRemoverDoMedico: p('DELETE FROM horarios WHERE medico_id = ?'),
     horarioIgual: p(`
@@ -149,7 +150,13 @@ function criarRepositorios(db) {
     buscarPorEmail: (email) => q.usuarioPorEmail.get(email),
     listar: () => q.usuarios.all(),
     inserir(u) {
-      q.usuarioInserir.run({ telefone: '', criado_em: new Date().toISOString(), ...u, demo: Number(Boolean(u.demo)) });
+      q.usuarioInserir.run({
+        telefone: '',
+        criado_em: new Date().toISOString(),
+        ip_hash: null,
+        ...u,
+        demo: Number(Boolean(u.demo)),
+      });
       return usuarios.buscar(u.id);
     },
     atualizar(id, campos) {
@@ -187,6 +194,7 @@ function criarRepositorios(db) {
       ).map(paraHorario),
     contar: () => q.horariosContar.get().n,
     contarCriados: () => q.horariosCriadosContar.get().n,
+    contarCriadosPorIp: (ipHash) => q.horariosCriadosPorIp.get(ipHash).n,
     contarBloqueadosDoCenario: () => q.horariosBloqueadosDoCenario.get().n,
     contarLivres: (momento) => q.horariosLivresContar.get(momento).n,
     buscar: (id) => paraHorario(q.horarioPorId.get(id)),
@@ -198,6 +206,7 @@ function criarRepositorios(db) {
         data: h.data,
         hora: h.hora,
         bloqueado: Number(Boolean(h.bloqueado)),
+        ip_hash: h.ip_hash ?? null,
       });
       return horarios.buscar(h.id);
     },

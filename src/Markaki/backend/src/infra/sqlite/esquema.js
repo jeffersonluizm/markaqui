@@ -62,6 +62,10 @@ const MIGRACOES = [
   `ALTER TABLE usuarios ADD COLUMN demo INTEGER NOT NULL DEFAULT 0;`,
   // 4: marcas do banco (ex.: banco_demo = este banco é só de demonstração).
   `CREATE TABLE meta (chave TEXT PRIMARY KEY, valor TEXT NOT NULL);`,
+  // 5: modo demonstração, limites por IP. Guarda só um hash (HMAC) do IP de quem
+  // criou a conta temporária ou o horário, nunca o IP.
+  `ALTER TABLE usuarios ADD COLUMN ip_hash TEXT;
+   ALTER TABLE horarios ADD COLUMN ip_hash TEXT;`,
 ];
 
 function migrar(db) {

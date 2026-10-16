@@ -23,6 +23,8 @@ function criarManipuladores(armazenamento, config) {
     config,
     usuario: req.usuario,
     agora: config.relogio(),
+    // IP do visitante (atrás de proxy, conforme TRUST_PROXY): limites por IP da demo.
+    ip: req.ip,
     params: req.params,
     query: req.query,
   });

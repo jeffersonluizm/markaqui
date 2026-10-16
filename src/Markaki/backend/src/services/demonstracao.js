@@ -8,6 +8,7 @@ const { emitirToken } = require('../infra/tokens');
 const { naoAutenticado, indisponivel } = require('../erros');
 const { momentoLocal } = require('../dominio/tempo');
 const { usuarioPublico } = require('./apresentacao');
+const { hashDoIp } = require('./protecaoDemo');
 
 const MEDICOS = [
   { id: 'demo-medico-1', nome: 'Dra. Helena Duarte', especialidade: 'Cardiologia' },
@@ -110,7 +111,16 @@ function prepararDemonstracao(armazenamento, config) {
 // (com as consultas dela), mas só se ela já tiver vidaMinimaMinutos: assim quem
 // clica repetidamente não derruba as visitas em andamento. Se todas são recentes,
 // a demonstração está cheia (503 com Retry-After).
-function abrirVaga(r, config, agora) {
+function abrirVaga(r, config, agora, ipHash) {
+  // Primeiro o limite por IP: o mesmo IP perde a própria conta mais antiga (sem
+  // esperar a vida mínima, porque é dele), nunca a de outro IP.
+  const doMesmoIp = r.usuarios.listarVisitantesDemo().filter((v) => v.ip_hash === ipHash);
+  const excessoDoIp = doMesmoIp.length - config.demo.visitantesPorIp + 1;
+  for (const visitante of doMesmoIp.slice(0, Math.max(0, excessoDoIp))) {
+    r.agendamentos.removerDoPaciente(visitante.id);
+    r.usuarios.remover(visitante.id);
+  }
+
   const visitantes = r.usuarios.listarVisitantesDemo();
   const sobra = visitantes.length - config.demo.maxVisitantes + 1;
   if (sobra <= 0) return;
@@ -127,8 +137,8 @@ function abrirVaga(r, config, agora) {
   }
 }
 
-function criarVisitante(r, config, agora) {
-  abrirVaga(r, config, agora);
+function criarVisitante(r, config, agora, ipHash) {
+  abrirVaga(r, config, agora, ipHash);
 
   const id = `demo-visitante-${gerarId()}`;
   const paciente = r.usuarios.inserir({
@@ -140,6 +150,7 @@ function criarVisitante(r, config, agora) {
     senha_hash: hashInutilizavel(),
     demo: true,
     criado_em: agora.toISOString(),
+    ip_hash: ipHash,
   });
 
   const consulta = (h, extra = {}) =>
@@ -185,10 +196,10 @@ function criarVisitante(r, config, agora) {
 }
 
 // "Entrar como paciente / clínica": devolve uma sessão como a do login.
-async function entrarNaDemonstracao(armazenamento, config, papel) {
+async function entrarNaDemonstracao(armazenamento, config, papel, ip) {
   const agora = config.relogio();
   const usuario = await armazenamento.escrita((r) => {
-    if (papel === 'paciente') return criarVisitante(r, config, agora);
+    if (papel === 'paciente') return criarVisitante(r, config, agora, hashDoIp(config, ip));
     const gestor = r.usuarios.buscarPorEmail(config.demo.contas.gestor.email);
     if (!gestor || !gestor.demo) throw naoAutenticado('A demonstração está sendo preparada. Tente de novo.');
     return gestor;

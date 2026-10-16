@@ -12,7 +12,7 @@ function rotasAuth(armazenamento, config, { limiteAuth, autenticar }) {
   rotas.post(
     '/cadastro',
     limiteAuth,
-    executar('Erro ao criar a conta.', 201, (req) => auth.cadastrar(validarCadastro(req.body)))
+    executar('Erro ao criar a conta.', 201, (req) => auth.cadastrar(validarCadastro(req.body), { ip: req.ip }))
   );
   rotas.post(
     '/login',

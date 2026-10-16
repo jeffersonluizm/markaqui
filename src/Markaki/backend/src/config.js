@@ -27,12 +27,17 @@ function lerDemo(env) {
     resetMinutos: inteiro(env, 'DEMO_RESET_MINUTOS', 0),
     // Pacientes efêmeras ao mesmo tempo; passando disso, a mais antiga sai...
     maxVisitantes: inteiro(env, 'DEMO_MAX_VISITANTES', 50, { min: 1 }),
+    // Contas temporárias vivas por IP: passando disso, o mesmo IP perde a própria
+    // mais antiga (um IP sozinho não enche a demo nem toma as vagas que abrem).
+    visitantesPorIp: inteiro(env, 'DEMO_VISITANTES_POR_IP', 3, { min: 1 }),
     // ...desde que tenha pelo menos esta idade (senão a demo responde "cheia", 503).
     vidaMinimaMinutos: inteiro(env, 'DEMO_VIDA_MINIMA_MINUTOS', 15),
     // Tetos do que os visitantes criam como clínica: médicos (o cenário conta) e
     // horários criados (os do cenário não contam), só dentro de janelaDias.
     maxMedicos: inteiro(env, 'DEMO_MAX_MEDICOS', 20, { min: 1 }),
     maxHorarios: inteiro(env, 'DEMO_MAX_HORARIOS', 500, { min: 1 }),
+    // Horários criados por IP: o gestor demo é compartilhado, então um IP não esgota o teto geral.
+    horariosPorIp: inteiro(env, 'DEMO_HORARIOS_POR_IP', 100, { min: 1 }),
     janelaDias: inteiro(env, 'DEMO_JANELA_DIAS', 60, { min: 1 }),
     // Horários do cenário bloqueados ao mesmo tempo.
     maxBloqueados: inteiro(env, 'DEMO_MAX_BLOQUEADOS', 20),
